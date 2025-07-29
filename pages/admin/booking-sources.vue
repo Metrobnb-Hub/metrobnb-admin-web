@@ -73,7 +73,7 @@
 <script setup lang="ts">
 import { z } from 'zod'
 
-const { getBookingSources } = useMockApi()
+const { getBookingSources, createBookingSource, updateBookingSource } = useApi()
 
 const sources = ref([])
 const showCreateModal = ref(false)
@@ -121,16 +121,25 @@ const editSource = (source: any) => {
   showCreateModal.value = true
 }
 
-const toggleStatus = (source: any) => {
-  // In real app, this would call API
-  source.isActive = !source.isActive
-  
-  const toast = useToast()
-  toast.add({
-    title: 'Status updated',
-    description: `${source.name} is now ${source.isActive ? 'active' : 'inactive'}`,
-    color: 'green'
-  })
+const toggleStatus = async (source: any) => {
+  try {
+    await updateBookingSource(source.id, { ...source, isActive: !source.isActive })
+    source.isActive = !source.isActive
+    
+    const toast = useToast()
+    toast.add({
+      title: 'Status updated',
+      description: `${source.name} is now ${source.isActive ? 'active' : 'inactive'}`,
+      color: 'green'
+    })
+  } catch (error) {
+    const toast = useToast()
+    toast.add({
+      title: 'Error',
+      description: 'Failed to update booking source status',
+      color: 'red'
+    })
+  }
 }
 
 const closeModal = () => {
@@ -143,27 +152,32 @@ const closeModal = () => {
   })
 }
 
-const onSubmit = () => {
-  if (editingSource.value) {
-    // Update existing source
-    Object.assign(editingSource.value, formState)
-  } else {
-    // Add new source
-    sources.value.push({
-      id: `source-${Date.now()}`,
-      ...formState,
-      createdAt: new Date().toISOString()
+const onSubmit = async () => {
+  try {
+    if (editingSource.value) {
+      const updated = await updateBookingSource(editingSource.value.id, formState)
+      Object.assign(editingSource.value, updated)
+    } else {
+      const newSource = await createBookingSource(formState)
+      sources.value.push(newSource)
+    }
+    
+    const toast = useToast()
+    toast.add({
+      title: editingSource.value ? 'Source updated' : 'Source created',
+      description: `${formState.name} has been ${editingSource.value ? 'updated' : 'created'} successfully`,
+      color: 'green'
+    })
+    
+    closeModal()
+  } catch (error) {
+    const toast = useToast()
+    toast.add({
+      title: 'Error',
+      description: `Failed to ${editingSource.value ? 'update' : 'create'} booking source`,
+      color: 'red'
     })
   }
-  
-  const toast = useToast()
-  toast.add({
-    title: editingSource.value ? 'Source updated' : 'Source created',
-    description: `${formState.name} has been ${editingSource.value ? 'updated' : 'created'} successfully`,
-    color: 'green'
-  })
-  
-  closeModal()
 }
 
 onMounted(async () => {

@@ -11,31 +11,25 @@ interface Expense {
 
 export const useExpenseStore = defineStore('expenses', () => {
   const expenses = ref<Expense[]>([])
-  const { getExpenses } = useMockApi()
+  const { getExpenses, createExpense, updateExpense: apiUpdateExpense, deleteExpense: apiDeleteExpense } = useApi()
   
-  const addExpense = (expense: Omit<Expense, 'id' | 'createdAt'>) => {
-    const newExpense: Expense = {
-      ...expense,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    }
-    
+  const addExpense = async (expense: Omit<Expense, 'id' | 'createdAt'>) => {
+    const newExpense = await createExpense(expense)
     expenses.value.push(newExpense)
-    persistData()
     return newExpense.id
   }
   
-  const updateExpense = (id: string, updatedExpense: Expense) => {
+  const updateExpense = async (id: string, updatedExpense: Expense) => {
     const index = expenses.value.findIndex(e => e.id === id)
     if (index !== -1) {
+      await apiUpdateExpense(id, updatedExpense)
       expenses.value[index] = updatedExpense
-      persistData()
     }
   }
   
-  const deleteExpense = (id: string) => {
+  const deleteExpense = async (id: string) => {
+    await apiDeleteExpense(id)
     expenses.value = expenses.value.filter(e => e.id !== id)
-    persistData()
   }
   
   const getExpensesByPartner = (partnerId: string) => {
@@ -46,16 +40,11 @@ export const useExpenseStore = defineStore('expenses', () => {
     expenses.value.reduce((sum, expense) => sum + expense.amount, 0)
   )
   
-  const persistData = () => {
-    if (process.client) {
-      localStorage.setItem('metrobnb-expenses', JSON.stringify(expenses.value))
-    }
-  }
+
   
   const loadFromStorage = async () => {
     try {
-      const mockExpenses = await getExpenses()
-      expenses.value = mockExpenses
+      expenses.value = await getExpenses()
     } catch (error) {
       console.error('Failed to load expenses:', error)
     }

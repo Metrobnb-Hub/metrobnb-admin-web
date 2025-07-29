@@ -73,7 +73,7 @@ const partner = computed(() => getPartnerByIdSync(partnerId))
 
 const onSubmit = async () => {
   try {
-    addUnit({
+    await addUnit({
       name: state.name,
       location: state.location || undefined,
       notes: state.notes || undefined,

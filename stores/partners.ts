@@ -9,17 +9,11 @@ interface Partner {
 
 export const usePartnerStore = defineStore('partners', () => {
   const partners = ref<Partner[]>([])
-  const { getPartners, getPartnerById } = useMockApi()
+  const { getPartners, getPartnerById, createPartner, updatePartner, deletePartner } = useApi()
   
-  const addPartner = (partner: Omit<Partner, 'id' | 'createdAt'>) => {
-    const newPartner: Partner = {
-      ...partner,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    }
-    
+  const addPartner = async (partner: Omit<Partner, 'id' | 'createdAt'>) => {
+    const newPartner = await createPartner(partner)
     partners.value.push(newPartner)
-    persistData()
     return newPartner.id
   }
   
@@ -27,19 +21,28 @@ export const usePartnerStore = defineStore('partners', () => {
     return partners.value.find(p => p.id === id)
   }
   
-  const persistData = () => {
-    if (process.client) {
-      localStorage.setItem('metrobnb-partners', JSON.stringify(partners.value))
-    }
-  }
+
   
   const loadFromStorage = async () => {
     try {
-      const mockPartners = await getPartners()
-      partners.value = mockPartners
+      partners.value = await getPartners()
     } catch (error) {
       console.error('Failed to load partners:', error)
     }
+  }
+  
+  const updatePartnerStore = async (id: string, partner: Partial<Partner>) => {
+    const updated = await updatePartner(id, partner)
+    const index = partners.value.findIndex(p => p.id === id)
+    if (index !== -1) {
+      partners.value[index] = updated
+    }
+    return updated
+  }
+  
+  const deletePartnerStore = async (id: string) => {
+    await deletePartner(id)
+    partners.value = partners.value.filter(p => p.id !== id)
   }
   
   return {
@@ -47,6 +50,8 @@ export const usePartnerStore = defineStore('partners', () => {
     addPartner,
     getPartnerByIdSync,
     getPartnerById,
+    updatePartner: updatePartnerStore,
+    deletePartner: deletePartnerStore,
     loadFromStorage
   }
 })

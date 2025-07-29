@@ -35,7 +35,7 @@ interface Unit {
 
 export const useAccountingStore = defineStore('accounting', () => {
   const bookings = ref<Booking[]>([])
-  const { getBookings, getBookingTotal } = useMockApi()
+  const { getBookings, createBooking, updateBooking: apiUpdateBooking, deleteBooking: apiDeleteBooking, getBookingTotal } = useApi()
   const partnerEarnings = ref<Record<string, number>>({})
   
   const units = ref<Unit[]>([])
@@ -50,24 +50,67 @@ export const useAccountingStore = defineStore('accounting', () => {
     return getBookingTotalLocal(booking) - Number(booking.amountPaid || 0)
   }
   
-  const addBooking = (booking: Booking) => {
-    bookings.value.push(booking)
+  const addBooking = async (booking: Omit<Booking, 'id' | 'createdAt'>) => {
+    const newBooking = await createBooking({
+      guestName: booking.guestName,
+      date: booking.date,
+      baseAmount: booking.amount,
+      addons: booking.addons,
+      unitId: booking.unitId,
+      partnerId: booking.partner,
+      paymentStatus: booking.paymentStatus,
+      bookingStatus: booking.bookingStatus,
+      amountPaid: booking.amountPaid,
+      paymentMethod: booking.paymentMethod,
+      paymentReceivedBy: 'partner',
+      bookingSourceId: '1',
+      notes: ''
+    })
     
-    // Update partner earnings with total amount including add-ons
-    if (!partnerEarnings.value[booking.partner]) {
-      partnerEarnings.value[booking.partner] = 0
+    const transformedBooking = {
+      id: newBooking.id,
+      guestName: newBooking.guestName,
+      date: newBooking.date,
+      amount: newBooking.baseAmount,
+      paymentMethod: newBooking.paymentMethod,
+      partner: newBooking.partnerId,
+      unitId: newBooking.unitId,
+      addons: newBooking.addons,
+      bookingStatus: newBooking.bookingStatus,
+      paymentStatus: newBooking.paymentStatus,
+      amountPaid: newBooking.amountPaid,
+      createdAt: newBooking.createdAt
     }
-    partnerEarnings.value[booking.partner] += getBookingTotalLocal(booking)
     
-    persistData()
+    bookings.value.push(transformedBooking)
+    
+    if (!partnerEarnings.value[transformedBooking.partner]) {
+      partnerEarnings.value[transformedBooking.partner] = 0
+    }
+    partnerEarnings.value[transformedBooking.partner] += getBookingTotalLocal(transformedBooking)
   }
   
-  const updateBooking = (id: string, updatedBooking: Booking) => {
+  const updateBooking = async (id: string, updatedBooking: Booking) => {
     const index = bookings.value.findIndex(b => b.id === id)
     if (index !== -1) {
       const oldBooking = bookings.value[index]
       
-      // Update partner earnings with total amounts including add-ons
+      await apiUpdateBooking(id, {
+        guestName: updatedBooking.guestName,
+        date: updatedBooking.date,
+        baseAmount: updatedBooking.amount,
+        addons: updatedBooking.addons,
+        unitId: updatedBooking.unitId,
+        partnerId: updatedBooking.partner,
+        paymentStatus: updatedBooking.paymentStatus,
+        bookingStatus: updatedBooking.bookingStatus,
+        amountPaid: updatedBooking.amountPaid,
+        paymentMethod: updatedBooking.paymentMethod,
+        paymentReceivedBy: 'partner',
+        bookingSourceId: '1',
+        notes: ''
+      })
+      
       if (partnerEarnings.value[oldBooking.partner]) {
         partnerEarnings.value[oldBooking.partner] -= getBookingTotalLocal(oldBooking)
       }
@@ -77,34 +120,28 @@ export const useAccountingStore = defineStore('accounting', () => {
       partnerEarnings.value[updatedBooking.partner] += getBookingTotalLocal(updatedBooking)
       
       bookings.value[index] = updatedBooking
-      persistData()
     }
   }
   
-  const deleteBooking = (id: string) => {
+  const deleteBooking = async (id: string) => {
     const booking = bookings.value.find(b => b.id === id)
     if (booking) {
+      await apiDeleteBooking(id)
+      
       if (partnerEarnings.value[booking.partner]) {
         partnerEarnings.value[booking.partner] -= getBookingTotalLocal(booking)
       }
       
       bookings.value = bookings.value.filter(b => b.id !== id)
-      persistData()
     }
   }
   
-  const persistData = () => {
-    if (process.client) {
-      localStorage.setItem('metrobnb-bookings', JSON.stringify(bookings.value))
-      localStorage.setItem('metrobnb-partner-earnings', JSON.stringify(partnerEarnings.value))
-    }
-  }
+
   
   const loadFromStorage = async () => {
     try {
-      const mockBookings = await getBookings()
-      // Transform mock API data to accounting store format
-      bookings.value = mockBookings.map(booking => ({
+      const apiBookings = await getBookings()
+      bookings.value = apiBookings.map(booking => ({
         id: booking.id,
         guestName: booking.guestName,
         date: booking.date,
@@ -119,7 +156,6 @@ export const useAccountingStore = defineStore('accounting', () => {
         createdAt: booking.createdAt
       }))
       
-      // Calculate partner earnings from bookings
       const earnings: Record<string, number> = {}
       bookings.value.forEach(booking => {
         if (!earnings[booking.partner]) earnings[booking.partner] = 0
@@ -127,7 +163,7 @@ export const useAccountingStore = defineStore('accounting', () => {
       })
       partnerEarnings.value = earnings
     } catch (error) {
-      console.error('Failed to load from mock API:', error)
+      console.error('Failed to load bookings:', error)
       bookings.value = []
       partnerEarnings.value = {}
     }

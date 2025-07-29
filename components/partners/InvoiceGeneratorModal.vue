@@ -81,7 +81,7 @@ const isGenerating = ref(false)
 
 const { partners } = usePartnerStore()
 const { units } = useUnitStore()
-const { getBookings, getExpenses } = useMockApi()
+const { getBookings, getExpenses } = useApi()
 
 const partnerOptions = computed(() => 
   partners.map(p => ({ label: p.name, value: p.id }))

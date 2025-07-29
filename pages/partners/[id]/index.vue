@@ -136,8 +136,10 @@ const formatDate = (dateString: string) => {
 
 const loadData = async () => {
   isLoading.value = true
+  console.log('Loading partner and units data...')
   await loadPartners()
   await loadUnits()
+  console.log('Data loaded, partner:', partner.value, 'units:', units.value)
   isLoading.value = false
 }
 

@@ -189,7 +189,7 @@ const paymentMethods = [
 
 const { partners: storePartners } = usePartnerStore()
 const { units: storeUnits } = useUnitStore()
-const { getBookingSources } = useMockApi()
+const { getBookingSources } = useApi()
 
 const bookingSources = ref([])
 
