@@ -80,6 +80,7 @@ const navigation = [
   { name: 'Partners', href: '/partners', icon: 'i-heroicons-users' },
   { name: 'Expenses', href: '/expenses', icon: 'i-heroicons-minus-circle' },
   { name: 'Earnings', href: '/accounting/partners', icon: 'i-heroicons-chart-bar' },
+  { name: 'Services', href: '/admin/services', icon: 'i-heroicons-cog-6-tooth' },
   { name: 'Booking Sources', href: '/admin/booking-sources', icon: 'i-heroicons-link' },
   { name: 'Refresh Data', href: '/admin/refresh-data', icon: 'i-heroicons-arrow-path' },
 ]

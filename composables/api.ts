@@ -1,4 +1,4 @@
-import type { Partner, Unit, Booking, Expense, BookingSource, ApiFilters } from '~/types/api'
+import type { Partner, Unit, Booking, Expense, BookingSource, Service, ApiFilters } from '~/types/api'
 
 const getApiBaseUrl = () => {
   const config = useRuntimeConfig()
@@ -14,6 +14,36 @@ interface ApiResponse<T> {
     message: string
     details?: any
   }
+}
+
+// Transform snake_case to camelCase
+const toCamelCase = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(toCamelCase)
+  }
+  if (obj !== null && typeof obj === 'object') {
+    return Object.keys(obj).reduce((result, key) => {
+      const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+      result[camelKey] = toCamelCase(obj[key])
+      return result
+    }, {} as any)
+  }
+  return obj
+}
+
+// Transform camelCase to snake_case
+const toSnakeCase = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(toSnakeCase)
+  }
+  if (obj !== null && typeof obj === 'object') {
+    return Object.keys(obj).reduce((result, key) => {
+      const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
+      result[snakeKey] = toSnakeCase(obj[key])
+      return result
+    }, {} as any)
+  }
+  return obj
 }
 
 // API client with error handling
@@ -35,10 +65,33 @@ const apiClient = async <T>(endpoint: string, options: RequestInit = {}): Promis
     throw new Error(result.error?.message || 'API request failed')
   }
 
-  return result.data as T
+  return toCamelCase(result.data) as T
 }
 
 export const useApi = () => {
+  // Services API
+  const getServices = async (): Promise<Service[]> => {
+    return await apiClient<Service[]>('/api/services')
+  }
+
+  const createService = async (service: Omit<Service, 'id' | 'createdAt' | 'updatedAt'>): Promise<Service> => {
+    return await apiClient<Service>('/api/services', {
+      method: 'POST',
+      body: JSON.stringify(toSnakeCase(service))
+    })
+  }
+
+  const updateService = async (id: string, service: Partial<Service>): Promise<Service> => {
+    return await apiClient<Service>(`/api/services/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(toSnakeCase(service))
+    })
+  }
+
+  const deleteService = async (id: string): Promise<void> => {
+    await apiClient<void>(`/api/services/${id}`, { method: 'DELETE' })
+  }
+
   // Partners API
   const getPartners = async (): Promise<Partner[]> => {
     return await apiClient<Partner[]>('/api/partners')
@@ -48,27 +101,28 @@ export const useApi = () => {
     return await apiClient<Partner>(`/api/partners/${id}`)
   }
 
-  const createPartner = async (partner: Omit<Partner, 'id' | 'createdAt'>): Promise<Partner> => {
+  const createPartner = async (partner: Omit<Partner, 'id' | 'createdAt' | 'updatedAt'> & { serviceIds: string[] }): Promise<Partner> => {
     return await apiClient<Partner>('/api/partners', {
       method: 'POST',
       body: JSON.stringify({
         name: partner.name,
         email: partner.email,
         share_percentage: partner.sharePercentage,
-        services: partner.services
+        service_ids: partner.serviceIds
       })
     })
   }
 
-  const updatePartner = async (id: string, partner: Partial<Partner>): Promise<Partner> => {
+  const updatePartner = async (id: string, partner: Partial<Partner> & { serviceIds?: string[] }): Promise<Partner> => {
+    const payload: any = {}
+    if (partner.name) payload.name = partner.name
+    if (partner.email) payload.email = partner.email
+    if (partner.sharePercentage) payload.share_percentage = partner.sharePercentage
+    if (partner.serviceIds) payload.service_ids = partner.serviceIds
+    
     return await apiClient<Partner>(`/api/partners/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({
-        name: partner.name,
-        email: partner.email,
-        share_percentage: partner.sharePercentage,
-        services: partner.services
-      })
+      body: JSON.stringify(payload)
     })
   }
 
@@ -85,27 +139,17 @@ export const useApi = () => {
     return await apiClient<Unit[]>(`/api/partners/${partnerId}/units`)
   }
 
-  const createUnit = async (unit: Omit<Unit, 'id' | 'createdAt'>): Promise<Unit> => {
+  const createUnit = async (unit: Omit<Unit, 'id' | 'createdAt' | 'updatedAt'>): Promise<Unit> => {
     return await apiClient<Unit>('/api/units', {
       method: 'POST',
-      body: JSON.stringify({
-        name: unit.name,
-        partner_id: unit.partnerId,
-        location: unit.location,
-        notes: unit.notes
-      })
+      body: JSON.stringify(toSnakeCase(unit))
     })
   }
 
   const updateUnit = async (id: string, unit: Partial<Unit>): Promise<Unit> => {
     return await apiClient<Unit>(`/api/units/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({
-        name: unit.name,
-        partner_id: unit.partnerId,
-        location: unit.location,
-        notes: unit.notes
-      })
+      body: JSON.stringify(toSnakeCase(unit))
     })
   }
 
@@ -115,41 +159,21 @@ export const useApi = () => {
 
   // Booking Sources API
   const getBookingSources = async (): Promise<BookingSource[]> => {
-    const sources = await apiClient<BookingSource[]>('/api/booking-sources')
-    return sources.map(source => ({
-      ...source,
-      commissionRate: source.commissionRate ? source.commissionRate * 100 : 0
-    }))
+    return await apiClient<BookingSource[]>('/api/booking-sources')
   }
 
-  const createBookingSource = async (source: Omit<BookingSource, 'id' | 'createdAt'>): Promise<BookingSource> => {
-    const result = await apiClient<BookingSource>('/api/booking-sources', {
+  const createBookingSource = async (source: Omit<BookingSource, 'id' | 'createdAt' | 'updatedAt'>): Promise<BookingSource> => {
+    return await apiClient<BookingSource>('/api/booking-sources', {
       method: 'POST',
-      body: JSON.stringify({
-        name: source.name,
-        commission_rate: source.commissionRate ? source.commissionRate / 100 : 0,
-        is_active: source.isActive
-      })
+      body: JSON.stringify(toSnakeCase(source))
     })
-    return {
-      ...result,
-      commissionRate: result.commissionRate ? result.commissionRate * 100 : 0
-    }
   }
 
   const updateBookingSource = async (id: string, source: Partial<BookingSource>): Promise<BookingSource> => {
-    const result = await apiClient<BookingSource>(`/api/booking-sources/${id}`, {
+    return await apiClient<BookingSource>(`/api/booking-sources/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({
-        name: source.name,
-        commission_rate: source.commissionRate ? source.commissionRate / 100 : undefined,
-        is_active: source.isActive
-      })
+      body: JSON.stringify(toSnakeCase(source))
     })
-    return {
-      ...result,
-      commissionRate: result.commissionRate ? result.commissionRate * 100 : 0
-    }
   }
 
   const deleteBookingSource = async (id: string): Promise<void> => {
@@ -167,45 +191,17 @@ export const useApi = () => {
     return await apiClient<Booking[]>(`/api/bookings${query ? `?${query}` : ''}`)
   }
 
-  const createBooking = async (booking: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking> => {
+  const createBooking = async (booking: Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>): Promise<Booking> => {
     return await apiClient<Booking>('/api/bookings', {
       method: 'POST',
-      body: JSON.stringify({
-        guest_name: booking.guestName,
-        date: booking.date,
-        base_amount: booking.baseAmount,
-        addons: booking.addons,
-        unit_id: booking.unitId,
-        partner_id: booking.partnerId,
-        payment_status: booking.paymentStatus,
-        booking_status: booking.bookingStatus,
-        amount_paid: booking.amountPaid,
-        payment_method: booking.paymentMethod,
-        payment_received_by: booking.paymentReceivedBy,
-        booking_source_id: booking.bookingSourceId,
-        notes: booking.notes
-      })
+      body: JSON.stringify(toSnakeCase(booking))
     })
   }
 
   const updateBooking = async (id: string, booking: Partial<Booking>): Promise<Booking> => {
     return await apiClient<Booking>(`/api/bookings/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({
-        guest_name: booking.guestName,
-        date: booking.date,
-        base_amount: booking.baseAmount,
-        addons: booking.addons,
-        unit_id: booking.unitId,
-        partner_id: booking.partnerId,
-        payment_status: booking.paymentStatus,
-        booking_status: booking.bookingStatus,
-        amount_paid: booking.amountPaid,
-        payment_method: booking.paymentMethod,
-        payment_received_by: booking.paymentReceivedBy,
-        booking_source_id: booking.bookingSourceId,
-        notes: booking.notes
-      })
+      body: JSON.stringify(toSnakeCase(booking))
     })
   }
 
@@ -224,31 +220,17 @@ export const useApi = () => {
     return await apiClient<Expense[]>(`/api/expenses${query ? `?${query}` : ''}`)
   }
 
-  const createExpense = async (expense: Omit<Expense, 'id' | 'createdAt'>): Promise<Expense> => {
+  const createExpense = async (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>): Promise<Expense> => {
     return await apiClient<Expense>('/api/expenses', {
       method: 'POST',
-      body: JSON.stringify({
-        partner_id: expense.partnerId,
-        unit_id: expense.unitId,
-        date: expense.date,
-        type: expense.type,
-        amount: expense.amount,
-        notes: expense.notes
-      })
+      body: JSON.stringify(toSnakeCase(expense))
     })
   }
 
   const updateExpense = async (id: string, expense: Partial<Expense>): Promise<Expense> => {
     return await apiClient<Expense>(`/api/expenses/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({
-        partner_id: expense.partnerId,
-        unit_id: expense.unitId,
-        date: expense.date,
-        type: expense.type,
-        amount: expense.amount,
-        notes: expense.notes
-      })
+      body: JSON.stringify(toSnakeCase(expense))
     })
   }
 
@@ -308,6 +290,12 @@ export const useApi = () => {
   }
 
   return {
+    // Services
+    getServices,
+    createService,
+    updateService,
+    deleteService,
+    
     // Partners
     getPartners,
     getPartnerById,

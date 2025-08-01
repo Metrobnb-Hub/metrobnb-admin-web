@@ -1,10 +1,19 @@
+export interface Service {
+  id: string
+  name: string
+  description: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Partner {
   id: string
   name: string
   sharePercentage: number
-  services?: string[]
+  services: Service[]
   email?: string
   createdAt: string
+  updatedAt: string
 }
 
 export interface Unit {
@@ -14,6 +23,7 @@ export interface Unit {
   location?: string
   notes?: string
   createdAt: string
+  updatedAt: string
 }
 
 export interface AddOn {
@@ -27,6 +37,7 @@ export interface BookingSource {
   commissionRate?: number
   isActive: boolean
   createdAt: string
+  updatedAt: string
 }
 
 export interface Booking {
@@ -45,6 +56,7 @@ export interface Booking {
   bookingSourceId: string
   notes?: string
   createdAt: string
+  updatedAt: string
 }
 
 export interface Expense {
@@ -54,8 +66,10 @@ export interface Expense {
   date: string
   type: 'cleaning' | 'laundry' | 'utilities' | 'repair' | 'misc'
   amount: number
+  billable: boolean
   notes?: string
   createdAt: string
+  updatedAt: string
 }
 
 export interface ApiFilters {

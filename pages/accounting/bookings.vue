@@ -64,8 +64,14 @@ const handleUpdated = () => {
 }
 
 onMounted(async () => {
-  await loadFromStorage()
-  await loadPartners()
-  await loadUnits()
+  try {
+    await Promise.all([
+      loadFromStorage(),
+      loadPartners(),
+      loadUnits()
+    ])
+  } catch (error) {
+    console.error('Failed to load data:', error)
+  }
 })
 </script>

@@ -1,107 +1,97 @@
 <template>
-  <div class="max-w-2xl mx-auto">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Add New Partner</h1>
-      <p class="text-gray-600 dark:text-gray-400">Create a new partner profile</p>
-    </div>
-
+  <div class="space-y-6">
+    <!-- Partner Form -->
     <UCard>
-      <UForm :schema="schema" :state="state" @submit="onSubmit">
-        <div class="space-y-4">
-          <UFormGroup label="Partner Name" name="name" required>
-            <UInput v-model="state.name" placeholder="Enter partner name" />
-          </UFormGroup>
-          
-          <UFormGroup label="Email/Contact" name="email">
-            <UInput v-model="state.email" type="email" placeholder="partner@example.com" />
-          </UFormGroup>
-          
-          <UFormGroup label="MetroBNB Share Percentage" name="sharePercentage" required>
-            <UInput v-model="state.sharePercentage" type="number" min="0" max="100" step="0.1" />
-          </UFormGroup>
-          
-          <UFormGroup label="Services Availed" name="services">
-            <div class="space-y-2">
-              <div v-for="service in availableServices" :key="service" class="flex items-center space-x-2">
-                <UCheckbox 
-                  :model-value="state.services.includes(service)"
-                  @update:model-value="toggleService(service)"
-                />
-                <span class="text-sm">{{ service }}</span>
-              </div>
-            </div>
-          </UFormGroup>
-        </div>
+      <template #header>
+        <h3 class="text-lg font-semibold">Add Partner</h3>
+      </template>
+      <UForm :state="form" @submit="handleSubmit" class="space-y-4">
+        <UFormGroup label="Partner Name" name="name">
+          <UInput v-model="form.name" placeholder="e.g., Casa Aurea Properties" />
+        </UFormGroup>
         
-        <div class="flex justify-end space-x-3 mt-6">
-          <UButton color="gray" variant="ghost" @click="$router.push('/partners')">Cancel</UButton>
-          <UButton type="submit" color="primary">Create Partner</UButton>
-        </div>
+        <UFormGroup label="Email" name="email">
+          <UInput v-model="form.email" type="email" placeholder="contact@partner.com" />
+        </UFormGroup>
+        
+        <UFormGroup label="Share Percentage" name="sharePercentage">
+          <UInput v-model="form.sharePercentage" type="number" min="0" max="100" placeholder="15" />
+        </UFormGroup>
+        
+        <UFormGroup label="Services" name="services">
+          <div class="space-y-2">
+            <div v-for="service in services" :key="service.id" class="flex items-center">
+              <UCheckbox 
+                :id="service.id"
+                v-model="selectedServices" 
+                :value="service.id"
+                :label="service.name"
+              />
+              <span class="ml-2 text-sm text-gray-600">{{ service.description }}</span>
+            </div>
+          </div>
+        </UFormGroup>
+        
+        <UButton type="submit" :loading="loading">Add Partner</UButton>
       </UForm>
     </UCard>
   </div>
 </template>
 
 <script setup lang="ts">
-import { z } from 'zod'
+const { services, addPartner, loadFromStorage } = usePartnerStore()
+const router = useRouter()
+const toast = useToast()
 
-const schema = z.object({
-  name: z.string().min(1, 'Partner name is required'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
-  sharePercentage: z.coerce.number().min(0, 'Must be 0 or greater').max(100, 'Must be 100 or less'),
-  services: z.array(z.string()).optional()
-})
-
-const state = reactive({
+const loading = ref(false)
+const selectedServices = ref<string[]>([])
+const form = ref({
   name: '',
   email: '',
-  sharePercentage: 0,
-  services: [] as string[]
+  sharePercentage: 0
 })
 
-const availableServices = [
-  'Cleaning',
-  'Full Management',
-  'Maintenance',
-  'Guest Communication',
-  'Marketing'
-]
-
-const { addPartner } = usePartnerStore()
-
-const toggleService = (service: string) => {
-  const index = state.services.indexOf(service)
-  if (index >= 0) {
-    state.services.splice(index, 1)
-  } else {
-    state.services.push(service)
-  }
-}
-
-const onSubmit = async () => {
-  try {
-    const partnerId = addPartner({
-      name: state.name,
-      email: state.email || undefined,
-      sharePercentage: state.sharePercentage,
-      services: state.services
-    })
-    
-    const toast = useToast()
-    toast.add({
-      title: 'Partner created',
-      description: `${state.name} has been added successfully`,
-      color: 'green'
-    })
-    
-    await navigateTo(`/partners/${partnerId}/add-unit`)
-  } catch (error) {
-    const toast = useToast()
+const handleSubmit = async () => {
+  if (!form.value.name || !form.value.sharePercentage || selectedServices.value.length === 0) {
     toast.add({
       title: 'Error',
-      description: 'Failed to create partner',
+      description: 'Please fill in all required fields and select at least one service',
       color: 'red'
     })
+    return
+  }
+
+  loading.value = true
+  try {
+    await addPartner({
+      name: form.value.name,
+      email: form.value.email,
+      sharePercentage: form.value.sharePercentage,
+      serviceIds: selectedServices.value
+    })
+    
+    toast.add({
+      title: 'Success',
+      description: 'Partner added successfully'
+    })
+    
+    router.push('/partners')
+  } catch (error) {
+    toast.add({
+      title: 'Error',
+      description: 'Failed to add partner',
+      color: 'red'
+    })
+  } finally {
+    loading.value = false
   }
 }
+
+onMounted(async () => {
+  try {
+    await loadFromStorage()
+  } catch (error) {
+    console.error('Failed to load data:', error)
+  }
+})
 </script>

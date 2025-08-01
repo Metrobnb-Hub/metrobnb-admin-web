@@ -147,28 +147,36 @@
 <script setup lang="ts">
 const { partners, loadFromStorage: loadPartners } = usePartnerStore()
 const { units, loadFromStorage: loadUnits } = useUnitStore()
-const { getBookings, getExpenses, getBookingTotal, getPartnerEarnings, getUnits } = useMockApi()
+const { getBookings, getExpenses, getBookingTotal, getDashboardMetrics } = useApi()
 
 // Reactive data from mock API
 const bookings = ref([])
 const expenses = ref([])
 
 const totalEarnings = computed(() => {
-  if (!Array.isArray(bookings.value)) return 0
-  return bookings.value.reduce((sum, booking) => sum + getBookingTotal(booking), 0)
+  if (!Array.isArray(bookings.value) || bookings.value.length === 0) return 0
+  return bookings.value.reduce((sum, booking) => {
+    const total = getBookingTotal(booking)
+    return sum + (typeof total === 'number' ? total : 0)
+  }, 0)
 })
 
 const totalAddonRevenue = computed(() => {
-  if (!Array.isArray(bookings.value)) return 0
+  if (!Array.isArray(bookings.value) || bookings.value.length === 0) return 0
   return bookings.value.reduce((sum, booking) => {
-    const addonsTotal = booking.addons?.reduce((addonSum, addon) => addonSum + addon.amount, 0) || 0
+    if (!booking || !Array.isArray(booking.addons)) return sum
+    const addonsTotal = booking.addons.reduce((addonSum, addon) => {
+      return addonSum + (typeof addon?.amount === 'number' ? addon.amount : 0)
+    }, 0)
     return sum + addonsTotal
   }, 0)
 })
 
 const totalExpenses = computed(() => {
-  if (!Array.isArray(expenses.value)) return 0
-  return expenses.value.reduce((sum, expense) => sum + expense.amount, 0)
+  if (!Array.isArray(expenses.value) || expenses.value.length === 0) return 0
+  return expenses.value.reduce((sum, expense) => {
+    return sum + (typeof expense?.amount === 'number' ? expense.amount : 0)
+  }, 0)
 })
 
 const netProfit = computed(() => totalEarnings.value - (totalExpenses.value || 0))
@@ -183,15 +191,18 @@ const recentBookings = computed(() => {
 
 const topPartners = computed(() => {
   if (!Array.isArray(partners) || partners.length === 0) return []
-  if (!Array.isArray(bookings.value)) return []
+  if (!Array.isArray(bookings.value) || bookings.value.length === 0) return []
   return [...partners]
     .filter(partner => partner && partner.id)
     .map(partner => {
       const partnerBookings = bookings.value.filter(b => b && b.partnerId === partner.id)
-      const earnings = partnerBookings.reduce((sum, booking) => sum + getBookingTotal(booking), 0)
+      const earnings = partnerBookings.reduce((sum, booking) => {
+        const total = getBookingTotal(booking)
+        return sum + (typeof total === 'number' ? total : 0)
+      }, 0)
       return {
         ...partner,
-        earnings
+        earnings: earnings || 0
       }
     })
     .sort((a, b) => (b.earnings || 0) - (a.earnings || 0))
@@ -210,12 +221,12 @@ const getUnitName = (unitId: string) => {
 
 const loadData = async () => {
   try {
-    const [mockBookings, mockExpenses] = await Promise.all([
+    const [apiBookings, apiExpenses] = await Promise.all([
       getBookings(),
       getExpenses()
     ])
-    bookings.value = Array.isArray(mockBookings) ? mockBookings : []
-    expenses.value = Array.isArray(mockExpenses) ? mockExpenses : []
+    bookings.value = Array.isArray(apiBookings) ? apiBookings : []
+    expenses.value = Array.isArray(apiExpenses) ? apiExpenses : []
   } catch (error) {
     console.error('Failed to load dashboard data:', error)
     bookings.value = []
@@ -224,8 +235,14 @@ const loadData = async () => {
 }
 
 onMounted(async () => {
-  await loadPartners()
-  await loadUnits()
-  await loadData()
+  try {
+    await Promise.all([
+      loadPartners(),
+      loadUnits(),
+      loadData()
+    ])
+  } catch (error) {
+    console.error('Failed to load data:', error)
+  }
 })
 </script>

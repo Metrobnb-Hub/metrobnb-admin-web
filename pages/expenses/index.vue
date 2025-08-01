@@ -81,6 +81,12 @@
               >
                 {{ getExpenseTypeLabel(expense.type) }}
               </span>
+              <span 
+                class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+                :class="expense.billable ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'"
+              >
+                {{ expense.billable ? 'Billable' : 'Non-billable' }}
+              </span>
               <span class="text-sm text-gray-500 dark:text-gray-400">
                 {{ formatDate(expense.date) }}
               </span>
@@ -126,24 +132,35 @@ const sortedExpenses = computed(() =>
 )
 
 const thisMonthExpenses = computed(() => {
+  if (!Array.isArray(expenses) || expenses.length === 0) return 0
+  
   const now = new Date()
   const currentMonth = now.getMonth()
   const currentYear = now.getFullYear()
   
   return expenses
     .filter(expense => {
-      const expenseDate = new Date(expense.date)
-      return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear
+      if (!expense || !expense.date) return false
+      try {
+        const expenseDate = new Date(expense.date)
+        return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear
+      } catch {
+        return false
+      }
     })
-    .reduce((sum, expense) => sum + expense.amount, 0)
+    .reduce((sum, expense) => sum + (typeof expense?.amount === 'number' ? expense.amount : 0), 0)
 })
 
 const getPartnerName = (partnerId: string) => {
-  return partners.find(p => p.id === partnerId)?.name || 'Unknown Partner'
+  if (!partnerId || !Array.isArray(partners)) return 'Unknown Partner'
+  const partner = partners.find(p => p && p.id === partnerId)
+  return partner?.name || 'Unknown Partner'
 }
 
 const getUnitName = (unitId: string) => {
-  return units.find(u => u.id === unitId)?.name || 'Unknown Unit'
+  if (!unitId || !Array.isArray(units)) return 'Unknown Unit'
+  const unit = units.find(u => u && u.id === unitId)
+  return unit?.name || 'Unknown Unit'
 }
 
 const getExpenseTypeLabel = (type: string) => {
@@ -206,8 +223,14 @@ const handleUpdated = () => {
 }
 
 onMounted(async () => {
-  await loadPartners()
-  await loadUnits()
-  await loadExpenses()
+  try {
+    await Promise.all([
+      loadPartners(),
+      loadUnits(),
+      loadExpenses()
+    ])
+  } catch (error) {
+    console.error('Failed to load data:', error)
+  }
 })
 </script>

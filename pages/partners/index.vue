@@ -36,10 +36,10 @@
           <div v-if="partner.services && partner.services.length" class="flex flex-wrap gap-1">
             <span 
               v-for="service in partner.services.slice(0, 2)" 
-              :key="service"
+              :key="service.id"
               class="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded"
             >
-              {{ service }}
+              {{ service.name }}
             </span>
             <span 
               v-if="partner.services.length > 2"
@@ -72,13 +72,13 @@
 
 <script setup lang="ts">
 const { partners, loadFromStorage: loadPartners } = usePartnerStore()
-const { getUnitsByPartnerId, loadFromStorage: loadUnits } = useUnitStore()
+const { getUnitsByPartnerSync, loadFromStorage: loadUnits } = useUnitStore()
 
 const showInvoiceModal = ref(false)
 
 const getUnitCount = (partnerId: string) => {
   if (!partnerId) return 0
-  const units = getUnitsByPartnerId(partnerId)
+  const units = getUnitsByPartnerSync(partnerId)
   return units ? units.length : 0
 }
 
@@ -92,7 +92,13 @@ const formatDate = (dateString: string) => {
 }
 
 onMounted(async () => {
-  await loadPartners()
-  await loadUnits()
+  try {
+    await Promise.all([
+      loadPartners(),
+      loadUnits()
+    ])
+  } catch (error) {
+    console.error('Failed to load data:', error)
+  }
 })
 </script>

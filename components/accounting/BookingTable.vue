@@ -8,9 +8,9 @@
       </template>
       <template #amount-data="{ row }">
         <div>
-          <div class="font-medium">₱{{ getBookingTotal(row).toFixed(2) }}</div>
+          <div class="font-medium">₱{{ (getBookingTotal(row) || 0).toFixed(2) }}</div>
           <div v-if="row.addons?.length" class="text-xs text-gray-500 dark:text-gray-400">
-            Base: ₱{{ row.amount.toFixed(2) }} + Add-ons: ₱{{ getAddonsTotal(row).toFixed(2) }}
+            Base: ₱{{ (row.amount || 0).toFixed(2) }} + Add-ons: ₱{{ (getAddonsTotal(row) || 0).toFixed(2) }}
           </div>
         </div>
       </template>
@@ -99,11 +99,17 @@ const columns = [
 ]
 
 const getAddonsTotal = (booking: Booking) => {
-  return booking.addons?.reduce((sum, addon) => sum + addon.amount, 0) || 0
+  if (!booking || !Array.isArray(booking.addons)) return 0
+  return booking.addons.reduce((sum, addon) => {
+    return sum + (typeof addon?.amount === 'number' ? addon.amount : 0)
+  }, 0)
 }
 
 const getBookingTotal = (booking: Booking) => {
-  return booking.amount + getAddonsTotal(booking)
+  if (!booking) return 0
+  const baseAmount = typeof booking.amount === 'number' ? booking.amount : 0
+  const addonsTotal = getAddonsTotal(booking)
+  return baseAmount + addonsTotal
 }
 
 const getAddonLabel = (type: string) => {

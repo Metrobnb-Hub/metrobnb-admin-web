@@ -8,14 +8,20 @@
       <UForm :schema="schema" :state="state" @submit="onSubmit">
         <div class="space-y-4">
           <UFormGroup label="Partner" name="partnerId" required>
-            <USelect v-model="state.partnerId" :options="partnerOptions" />
+            <USelect 
+              v-model="state.partnerId" 
+              :options="partnerOptions" 
+              :loading="isLoading"
+              placeholder="Select partner"
+            />
           </UFormGroup>
           
           <UFormGroup label="Unit" name="unitId">
             <USelect 
               v-model="state.unitId" 
               :options="availableUnits" 
-              :disabled="!state.partnerId"
+              :disabled="!state.partnerId || isLoading"
+              :loading="isLoading"
               placeholder="All units (optional)"
             />
           </UFormGroup>
@@ -79,24 +85,44 @@ const state = reactive({
 
 const isGenerating = ref(false)
 
-const { partners } = usePartnerStore()
-const { units } = useUnitStore()
+const { partners, loadFromStorage: loadPartners } = usePartnerStore()
+const { units, loadFromStorage: loadUnits } = useUnitStore()
 const { getBookings, getExpenses } = useApi()
 
-const partnerOptions = computed(() => 
-  partners.map(p => ({ label: p.name, value: p.id }))
-)
+const isLoading = ref(false)
+
+const partnerOptions = computed(() => {
+  if (!Array.isArray(partners) || partners.length === 0) return []
+  return partners.map(p => ({ label: p.name, value: p.id }))
+})
 
 const availableUnits = computed(() => {
-  if (!state.partnerId) return []
+  if (!state.partnerId || !Array.isArray(units)) return []
   return units
-    .filter(unit => unit.partnerId === state.partnerId)
+    .filter(unit => unit && unit.partnerId === state.partnerId)
     .map(unit => ({ label: unit.name, value: unit.id }))
 })
 
 watch(() => state.partnerId, () => {
   state.unitId = ''
 })
+
+// Load data when modal opens
+watch(() => props.modelValue, async (isOpen) => {
+  if (isOpen && !isLoading.value) {
+    isLoading.value = true
+    try {
+      await Promise.all([
+        loadPartners(),
+        loadUnits()
+      ])
+    } catch (error) {
+      console.error('Failed to load data:', error)
+    } finally {
+      isLoading.value = false
+    }
+  }
+}, { immediate: true })
 
 watch(() => props.preselectedPartnerId, (partnerId) => {
   if (partnerId) {

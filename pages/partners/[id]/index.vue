@@ -43,15 +43,15 @@
             <p class="text-gray-900 dark:text-white">{{ partner.sharePercentage }}%</p>
           </div>
           
-          <div v-if="partner.services.length">
+          <div v-if="partner.services && partner.services.length">
             <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Services</label>
             <div class="flex flex-wrap gap-2 mt-1">
               <span 
                 v-for="service in partner.services" 
-                :key="service"
+                :key="service.id || service"
                 class="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded"
               >
-                {{ service }}
+                {{ typeof service === 'string' ? service : service.name }}
               </span>
             </div>
           </div>
@@ -117,30 +117,40 @@ const route = useRoute()
 const partnerId = route.params.id as string
 
 const { getPartnerByIdSync, loadFromStorage: loadPartners } = usePartnerStore()
-const { getUnitsByPartnerId, loadFromStorage: loadUnits } = useUnitStore()
+const { getUnitsByPartnerSync, loadFromStorage: loadUnits } = useUnitStore()
 
 const isLoading = ref(true)
 const showInvoiceModal = ref(false)
 const partner = computed(() => {
-  if (isLoading.value) return null
-  return getPartnerByIdSync(partnerId)
+  if (isLoading.value || !partnerId) return null
+  return getPartnerByIdSync(partnerId) || null
 })
 const units = computed(() => {
-  if (isLoading.value) return []
-  return getUnitsByPartnerId(partnerId)
+  if (isLoading.value || !partnerId) return []
+  return getUnitsByPartnerSync(partnerId) || []
 })
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString()
+  if (!dateString) return 'N/A'
+  try {
+    return new Date(dateString).toLocaleDateString()
+  } catch {
+    return 'Invalid Date'
+  }
 }
 
 const loadData = async () => {
   isLoading.value = true
-  console.log('Loading partner and units data...')
-  await loadPartners()
-  await loadUnits()
-  console.log('Data loaded, partner:', partner.value, 'units:', units.value)
-  isLoading.value = false
+  try {
+    await Promise.all([
+      loadPartners(),
+      loadUnits()
+    ])
+  } catch (error) {
+    console.error('Failed to load data:', error)
+  } finally {
+    isLoading.value = false
+  }
 }
 
 onMounted(() => {

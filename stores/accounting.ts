@@ -1,12 +1,7 @@
-interface AddOn {
-  type: 'early_checkin' | 'late_checkout' | 'parking'
-  amount: number
-}
+import type { Booking, Partner, Unit } from '~/types/api'
 
-type BookingStatus = 'confirmed' | 'canceled' | 'refunded'
-type PaymentStatus = 'unpaid' | 'partial' | 'fully_paid'
-
-interface Booking {
+// Internal store interface for compatibility
+interface StoreBooking {
   id: string
   guestName: string
   date: string
@@ -14,43 +9,37 @@ interface Booking {
   paymentMethod: string
   partner: string
   unitId: string
-  addons: AddOn[]
-  bookingStatus: BookingStatus
-  paymentStatus: PaymentStatus
+  addons: { type: string; amount: number }[]
+  bookingStatus: string
+  paymentStatus: string
   amountPaid: number
   createdAt: string
 }
 
-interface Partner {
-  id: string
-  name: string
-  earnings: number
-}
-
-interface Unit {
-  id: string
-  name: string
-  partnerId: string
-}
-
 export const useAccountingStore = defineStore('accounting', () => {
-  const bookings = ref<Booking[]>([])
+  const bookings = ref<StoreBooking[]>([])
   const { getBookings, createBooking, updateBooking: apiUpdateBooking, deleteBooking: apiDeleteBooking, getBookingTotal } = useApi()
   const partnerEarnings = ref<Record<string, number>>({})
   
   const units = ref<Unit[]>([])
   
-  const getBookingTotalLocal = (booking: Booking) => {
+  const getBookingTotalLocal = (booking: StoreBooking) => {
     if (!booking) return 0
-    const addonsTotal = booking.addons?.reduce((sum, addon) => sum + (addon?.amount || 0), 0) || 0
-    return Number(booking.amount || 0) + addonsTotal
+    const baseAmount = typeof booking.amount === 'number' ? booking.amount : 0
+    const addonsTotal = Array.isArray(booking.addons) 
+      ? booking.addons.reduce((sum, addon) => sum + (typeof addon?.amount === 'number' ? addon.amount : 0), 0)
+      : 0
+    return baseAmount + addonsTotal
   }
   
-  const getRemainingBalance = (booking: Booking) => {
-    return getBookingTotalLocal(booking) - Number(booking.amountPaid || 0)
+  const getRemainingBalance = (booking: StoreBooking) => {
+    if (!booking) return 0
+    const total = getBookingTotalLocal(booking)
+    const paid = typeof booking.amountPaid === 'number' ? booking.amountPaid : 0
+    return total - paid
   }
   
-  const addBooking = async (booking: Omit<Booking, 'id' | 'createdAt'>) => {
+  const addBooking = async (booking: Omit<StoreBooking, 'id' | 'createdAt'>) => {
     const newBooking = await createBooking({
       guestName: booking.guestName,
       date: booking.date,
@@ -58,8 +47,8 @@ export const useAccountingStore = defineStore('accounting', () => {
       addons: booking.addons,
       unitId: booking.unitId,
       partnerId: booking.partner,
-      paymentStatus: booking.paymentStatus,
-      bookingStatus: booking.bookingStatus,
+      paymentStatus: booking.paymentStatus as any,
+      bookingStatus: booking.bookingStatus as any,
       amountPaid: booking.amountPaid,
       paymentMethod: booking.paymentMethod,
       paymentReceivedBy: 'partner',
@@ -67,7 +56,7 @@ export const useAccountingStore = defineStore('accounting', () => {
       notes: ''
     })
     
-    const transformedBooking = {
+    const transformedBooking: StoreBooking = {
       id: newBooking.id,
       guestName: newBooking.guestName,
       date: newBooking.date,
@@ -90,7 +79,7 @@ export const useAccountingStore = defineStore('accounting', () => {
     partnerEarnings.value[transformedBooking.partner] += getBookingTotalLocal(transformedBooking)
   }
   
-  const updateBooking = async (id: string, updatedBooking: Booking) => {
+  const updateBooking = async (id: string, updatedBooking: StoreBooking) => {
     const index = bookings.value.findIndex(b => b.id === id)
     if (index !== -1) {
       const oldBooking = bookings.value[index]
@@ -102,8 +91,8 @@ export const useAccountingStore = defineStore('accounting', () => {
         addons: updatedBooking.addons,
         unitId: updatedBooking.unitId,
         partnerId: updatedBooking.partner,
-        paymentStatus: updatedBooking.paymentStatus,
-        bookingStatus: updatedBooking.bookingStatus,
+        paymentStatus: updatedBooking.paymentStatus as any,
+        bookingStatus: updatedBooking.bookingStatus as any,
         amountPaid: updatedBooking.amountPaid,
         paymentMethod: updatedBooking.paymentMethod,
         paymentReceivedBy: 'partner',
@@ -169,25 +158,33 @@ export const useAccountingStore = defineStore('accounting', () => {
     }
   }
   
-  const totalEarnings = computed(() => 
-    bookings.value.reduce((sum, booking) => sum + getBookingTotalLocal(booking), 0)
-  )
+  const totalEarnings = computed(() => {
+    if (!Array.isArray(bookings.value)) return 0
+    return bookings.value.reduce((sum, booking) => {
+      const total = getBookingTotalLocal(booking)
+      return sum + (typeof total === 'number' ? total : 0)
+    }, 0)
+  })
   
-  const totalAddonRevenue = computed(() => 
-    bookings.value.reduce((sum, booking) => {
-      const addonsTotal = booking.addons?.reduce((addonSum, addon) => addonSum + addon.amount, 0) || 0
+  const totalAddonRevenue = computed(() => {
+    if (!Array.isArray(bookings.value)) return 0
+    return bookings.value.reduce((sum, booking) => {
+      if (!booking || !Array.isArray(booking.addons)) return sum
+      const addonsTotal = booking.addons.reduce((addonSum, addon) => {
+        return addonSum + (typeof addon?.amount === 'number' ? addon.amount : 0)
+      }, 0)
       return sum + addonsTotal
     }, 0)
-  )
+  })
   
   const getPartnerEarnings = (partnerId: string) => {
     return partnerEarnings.value[partnerId] || 0
   }
   
   return {
-    bookings: readonly(bookings),
-    units: readonly(units),
-    partnerEarnings: readonly(partnerEarnings),
+    bookings,
+    units,
+    partnerEarnings,
     addBooking,
     updateBooking,
     deleteBooking,

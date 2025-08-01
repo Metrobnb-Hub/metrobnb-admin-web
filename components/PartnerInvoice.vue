@@ -37,7 +37,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="booking in partnerBookings" :key="booking.date + booking.guestName">
+              <tr v-for="booking in paginatedPartnerBookings" :key="booking.date + booking.guestName">
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ formatDate(booking.date) }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.guestName }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.unitName }}</td>
@@ -56,6 +56,16 @@
               </tr>
             </tfoot>
           </table>
+        </div>
+        
+        <!-- Partner Bookings Pagination -->
+        <div v-if="partnerTotalPages > 1" class="flex justify-center mt-4 print:hidden">
+          <UPagination 
+            v-model="currentPartnerPage" 
+            :page-count="itemsPerPage" 
+            :total="partnerBookings.length" 
+            size="sm"
+          />
         </div>
       </div>
       
@@ -77,7 +87,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="booking in metrobnbBookings" :key="booking.date + booking.guestName">
+              <tr v-for="booking in paginatedMetroBNBBookings" :key="booking.date + booking.guestName">
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ formatDate(booking.date) }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.guestName }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.unitName }}</td>
@@ -97,6 +107,16 @@
             </tfoot>
           </table>
         </div>
+        
+        <!-- MetroBNB Bookings Pagination -->
+        <div v-if="metrobnbTotalPages > 1" class="flex justify-center mt-4 print:hidden">
+          <UPagination 
+            v-model="currentMetroBNBPage" 
+            :page-count="itemsPerPage" 
+            :total="metrobnbBookings.value.length" 
+            size="sm"
+          />
+        </div>
       </div>
     </div>
 
@@ -115,7 +135,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="expense in invoice.expenses" :key="expense.date + expense.type">
+            <tr v-for="expense in paginatedExpenses" :key="expense.date + expense.type">
               <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ formatDate(expense.date) }}</td>
               <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ expense.unitName }}</td>
               <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm capitalize text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ expense.type }}</td>
@@ -130,6 +150,16 @@
             </tr>
           </tfoot>
         </table>
+      </div>
+      
+      <!-- Expenses Pagination -->
+      <div v-if="expensesTotalPages > 1" class="flex justify-center mt-4 print:hidden">
+        <UPagination 
+          v-model="currentExpensePage" 
+          :page-count="itemsPerPage" 
+          :total="invoice.expenses.length" 
+          size="sm"
+        />
       </div>
     </div>
 
@@ -168,10 +198,15 @@
 
     <!-- Print Button -->
     <div class="mt-8 text-center print:hidden">
-      <UButton @click="printInvoice" color="primary" size="lg">
-        <UIcon name="i-heroicons-printer" class="mr-2" />
-        Print Invoice
-      </UButton>
+      <div class="space-y-2">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          {{ partnerBookings.length + metrobnbBookings.value.length }} bookings, {{ invoice.expenses.length }} expenses
+        </p>
+        <UButton @click="printInvoice" color="primary" size="lg">
+          <UIcon name="i-heroicons-printer" class="mr-2" />
+          Print Invoice
+        </UButton>
+      </div>
     </div>
   </div>
 </template>
@@ -316,6 +351,34 @@ const formatDate = (dateString: string) => {
     day: 'numeric'
   })
 }
+
+// Pagination for large datasets
+const itemsPerPage = 15
+const currentPartnerPage = ref(1)
+const currentMetroBNBPage = ref(1)
+const currentExpensePage = ref(1)
+
+const paginatedPartnerBookings = computed(() => {
+  const start = (currentPartnerPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return partnerBookings.value.slice(start, end)
+})
+
+const paginatedMetroBNBBookings = computed(() => {
+  const start = (currentMetroBNBPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return metrobnbBookings.value.slice(start, end)
+})
+
+const paginatedExpenses = computed(() => {
+  const start = (currentExpensePage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return invoice.expenses.slice(start, end)
+})
+
+const partnerTotalPages = computed(() => Math.ceil(partnerBookings.value.length / itemsPerPage))
+const metrobnbTotalPages = computed(() => Math.ceil(metrobnbBookings.value.length / itemsPerPage))
+const expensesTotalPages = computed(() => Math.ceil(invoice.expenses.length / itemsPerPage))
 
 const printInvoice = () => {
   window.print()

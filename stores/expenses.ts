@@ -1,30 +1,22 @@
-interface Expense {
-  id: string
-  partnerId: string
-  unitId: string
-  date: string
-  type: 'cleaning' | 'laundry' | 'utilities' | 'repair' | 'misc'
-  amount: number
-  notes?: string
-  createdAt: string
-}
+import type { Expense } from '~/types/api'
 
 export const useExpenseStore = defineStore('expenses', () => {
   const expenses = ref<Expense[]>([])
   const { getExpenses, createExpense, updateExpense: apiUpdateExpense, deleteExpense: apiDeleteExpense } = useApi()
   
-  const addExpense = async (expense: Omit<Expense, 'id' | 'createdAt'>) => {
+  const addExpense = async (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newExpense = await createExpense(expense)
     expenses.value.push(newExpense)
     return newExpense.id
   }
   
-  const updateExpense = async (id: string, updatedExpense: Expense) => {
+  const updateExpenseStore = async (id: string, updatedExpense: Partial<Expense>) => {
+    const updated = await apiUpdateExpense(id, updatedExpense)
     const index = expenses.value.findIndex(e => e.id === id)
     if (index !== -1) {
-      await apiUpdateExpense(id, updatedExpense)
-      expenses.value[index] = updatedExpense
+      expenses.value[index] = updated
     }
+    return updated
   }
   
   const deleteExpense = async (id: string) => {
@@ -44,16 +36,18 @@ export const useExpenseStore = defineStore('expenses', () => {
   
   const loadFromStorage = async () => {
     try {
-      expenses.value = await getExpenses()
+      const expensesData = await getExpenses()
+      expenses.value = Array.isArray(expensesData) ? expensesData : []
     } catch (error) {
       console.error('Failed to load expenses:', error)
+      expenses.value = []
     }
   }
   
   return {
-    expenses: readonly(expenses),
+    expenses,
     addExpense,
-    updateExpense,
+    updateExpense: updateExpenseStore,
     deleteExpense,
     getExpensesByPartner,
     totalExpenses,
