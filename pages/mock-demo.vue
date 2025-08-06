@@ -1,8 +1,14 @@
 <template>
   <div class="max-w-6xl mx-auto space-y-6">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Mock API Demo</h1>
-      <p class="text-gray-600 dark:text-gray-400">Testing mock data and API functions</p>
+    <div class="flex justify-between items-start">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Mock API Demo</h1>
+        <p class="text-gray-600 dark:text-gray-400">Testing mock data and API functions</p>
+      </div>
+      <UButton @click="showQuickInvoice = true" color="primary">
+        <UIcon name="i-heroicons-document-text" class="mr-2" />
+        Quick Invoice
+      </UButton>
     </div>
 
     <!-- Filters -->
@@ -160,6 +166,9 @@
         </div>
       </UCard>
     </div>
+
+    <!-- Quick Invoice Modal -->
+    <PartnersQuickInvoiceModal v-model="showQuickInvoice" />
   </div>
 </template>
 
@@ -255,6 +264,8 @@ watch(() => selectedPartnerId.value, async () => {
     units.value = await getUnits()
   }
 })
+
+const showQuickInvoice = ref(false)
 
 onMounted(async () => {
   partners.value = await getPartners()

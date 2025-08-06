@@ -29,7 +29,7 @@
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Records</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ expenses.length }}</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ expenses?.length || 0 }}</p>
           </div>
         </div>
       </UCard>
@@ -50,12 +50,34 @@
     <!-- Expenses List -->
     <UCard>
       <template #header>
-        <h3 class="text-lg font-semibold">All Expenses</h3>
+        <div class="flex justify-between items-center">
+          <h3 class="text-lg font-semibold">All Expenses ({{ filteredExpenses.length }})</h3>
+        </div>
       </template>
       
-      <div v-if="expenses.length" class="space-y-3">
+      <!-- Search and Sort -->
+      <div class="mb-4 flex gap-4">
+        <UInput 
+          v-model="searchQuery" 
+          placeholder="Search expenses..."
+          icon="i-heroicons-magnifying-glass"
+          class="flex-1"
+        />
+        <USelect 
+          v-model="sortBy" 
+          :options="sortOptions"
+          class="w-48"
+        />
+        <USelect 
+          v-model="filterType" 
+          :options="typeFilterOptions"
+          class="w-40"
+        />
+      </div>
+      
+      <div v-if="filteredExpenses.length" class="space-y-3">
         <div 
-          v-for="expense in sortedExpenses" 
+          v-for="expense in filteredExpenses" 
           :key="expense.id"
           class="relative flex justify-between items-start p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
         >
@@ -67,11 +89,11 @@
           <div class="flex-1">
             <div class="flex items-center space-x-3">
               <span class="font-medium text-gray-900 dark:text-white">
-                {{ getPartnerName(expense.partnerId) }}
+                {{ getPartnerName(expense.partner_id) }}
               </span>
               <span class="text-sm text-gray-500 dark:text-gray-400">•</span>
               <span class="text-sm text-gray-600 dark:text-gray-400">
-                {{ getUnitName(expense.unitId) }}
+                {{ getUnitName(expense.unit_id) }}
               </span>
             </div>
             <div class="flex items-center space-x-4 mt-1">
@@ -97,7 +119,7 @@
           </div>
           <div class="text-right pr-8">
             <span class="font-semibold text-red-600 dark:text-red-400">
-              ₱{{ expense.amount.toFixed(2) }}
+              ₱{{ parseFloat(expense.amount).toFixed(2) }}
             </span>
           </div>
         </div>
@@ -120,25 +142,98 @@
 </template>
 
 <script setup lang="ts">
-const { partners, loadFromStorage: loadPartners } = usePartnerStore()
-const { units, loadFromStorage: loadUnits } = useUnitStore()
-const { expenses, totalExpenses, deleteExpense, loadFromStorage: loadExpenses } = useExpenseStore()
+const { partners, units, expenses, loadPartners, loadUnits, loadExpenses } = useDataManager()
+const { deleteExpense } = useExpenseStore()
 
 const showEditModal = ref(false)
 const selectedExpense = ref(null)
+const searchQuery = ref('')
+const sortBy = ref('date_desc')
+const filterType = ref('all')
 
-const sortedExpenses = computed(() => 
-  [...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-)
+const sortOptions = [
+  { label: 'Date Newest', value: 'date_desc' },
+  { label: 'Date Oldest', value: 'date_asc' },
+  { label: 'Amount High-Low', value: 'amount_desc' },
+  { label: 'Amount Low-High', value: 'amount_asc' },
+  { label: 'Partner A-Z', value: 'partner_asc' },
+  { label: 'Partner Z-A', value: 'partner_desc' }
+]
+
+const typeFilterOptions = [
+  { label: 'All Types', value: 'all' },
+  { label: 'Cleaning', value: 'cleaning' },
+  { label: 'Laundry', value: 'laundry' },
+  { label: 'Utilities', value: 'utilities' },
+  { label: 'Repair', value: 'repair' },
+  { label: 'Miscellaneous', value: 'misc' }
+]
+
+const filteredExpenses = computed(() => {
+  if (!Array.isArray(expenses.value)) return []
+  
+  let filtered = expenses.value.filter(expense => {
+    if (!expense) return false
+    
+    // Search filter
+    const searchLower = searchQuery.value.toLowerCase()
+    const partnerName = getPartnerName(expense.partner_id).toLowerCase()
+    const unitName = getUnitName(expense.unit_id).toLowerCase()
+    const notes = expense.notes?.toLowerCase() || ''
+    const type = getExpenseTypeLabel(expense.type).toLowerCase()
+    
+    const matchesSearch = partnerName.includes(searchLower) || 
+                         unitName.includes(searchLower) || 
+                         notes.includes(searchLower) ||
+                         type.includes(searchLower)
+    
+    // Type filter
+    const matchesType = filterType.value === 'all' || expense.type === filterType.value
+    
+    return matchesSearch && matchesType
+  })
+  
+  // Sort
+  const [field, order] = sortBy.value.split('_')
+  filtered.sort((a, b) => {
+    let aVal, bVal
+    
+    switch (field) {
+      case 'date':
+        aVal = new Date(a.date)
+        bVal = new Date(b.date)
+        break
+      case 'amount':
+        aVal = parseFloat(a.amount) || 0
+        bVal = parseFloat(b.amount) || 0
+        break
+      case 'partner':
+        aVal = getPartnerName(a.partner_id)
+        bVal = getPartnerName(b.partner_id)
+        break
+      default:
+        return 0
+    }
+    
+    if (field === 'date' || field === 'amount') {
+      return order === 'asc' ? aVal - bVal : bVal - aVal
+    }
+    
+    const comparison = aVal.localeCompare(bVal)
+    return order === 'asc' ? comparison : -comparison
+  })
+  
+  return filtered
+})
 
 const thisMonthExpenses = computed(() => {
-  if (!Array.isArray(expenses) || expenses.length === 0) return 0
+  if (!Array.isArray(expenses.value) || expenses.value.length === 0) return 0
   
   const now = new Date()
   const currentMonth = now.getMonth()
   const currentYear = now.getFullYear()
   
-  return expenses
+  return expenses.value
     .filter(expense => {
       if (!expense || !expense.date) return false
       try {
@@ -148,18 +243,21 @@ const thisMonthExpenses = computed(() => {
         return false
       }
     })
-    .reduce((sum, expense) => sum + (typeof expense?.amount === 'number' ? expense.amount : 0), 0)
+    .reduce((sum, expense) => {
+      const amount = parseFloat(expense.amount)
+      return sum + amount
+    }, 0)
 })
 
 const getPartnerName = (partnerId: string) => {
-  if (!partnerId || !Array.isArray(partners)) return 'Unknown Partner'
-  const partner = partners.find(p => p && p.id === partnerId)
+  if (!partnerId || !Array.isArray(partners.value)) return 'Unknown Partner'
+  const partner = partners.value.find(p => p && p.id === partnerId)
   return partner?.name || 'Unknown Partner'
 }
 
 const getUnitName = (unitId: string) => {
-  if (!unitId || !Array.isArray(units)) return 'Unknown Unit'
-  const unit = units.find(u => u && u.id === unitId)
+  if (!unitId || !Array.isArray(units.value)) return 'Unknown Unit'
+  const unit = units.value.find(u => u && u.id === unitId)
   return unit?.name || 'Unknown Unit'
 }
 
@@ -222,15 +320,19 @@ const handleUpdated = () => {
   selectedExpense.value = null
 }
 
+const totalExpenses = computed(() => {
+  if (!Array.isArray(expenses.value) || expenses.value.length === 0) return 0
+  return expenses.value.reduce((sum, expense) => {
+    const amount = parseFloat(expense.amount)
+    return sum + amount
+  }, 0)
+})
+
 onMounted(async () => {
-  try {
-    await Promise.all([
-      loadPartners(),
-      loadUnits(),
-      loadExpenses()
-    ])
-  } catch (error) {
-    console.error('Failed to load data:', error)
-  }
+  await Promise.all([
+    loadPartners(),
+    loadUnits(),
+    loadExpenses()
+  ])
 })
 </script>

@@ -86,6 +86,14 @@
                   Added {{ formatDate(unit.createdAt) }}
                 </p>
               </div>
+              <div class="flex space-x-2">
+                <UButton @click="editUnit(unit)" size="sm" color="gray" variant="ghost">
+                  <UIcon name="i-heroicons-pencil-square" />
+                </UButton>
+                <UButton @click="deleteUnitConfirm(unit)" size="sm" color="red" variant="ghost">
+                  <UIcon name="i-heroicons-trash" />
+                </UButton>
+              </div>
             </div>
           </div>
         </div>
@@ -109,6 +117,36 @@
       v-model="showInvoiceModal" 
       :preselected-partner-id="partnerId"
     />
+    
+    <!-- Edit Unit Modal -->
+    <UModal v-model="showEditModal">
+      <UCard>
+        <template #header>
+          <h3 class="text-lg font-semibold">Edit Unit</h3>
+        </template>
+        
+        <UForm :state="editForm" @submit="updateUnit">
+          <div class="space-y-4">
+            <UFormGroup label="Unit Name" required>
+              <UInput v-model="editForm.name" placeholder="Enter unit name" />
+            </UFormGroup>
+            
+            <UFormGroup label="Location">
+              <UTextarea v-model="editForm.location" placeholder="Enter unit location" />
+            </UFormGroup>
+            
+            <UFormGroup label="Notes">
+              <UTextarea v-model="editForm.notes" placeholder="Additional notes" />
+            </UFormGroup>
+          </div>
+          
+          <div class="flex justify-end space-x-3 mt-6">
+            <UButton color="gray" variant="ghost" @click="showEditModal = false">Cancel</UButton>
+            <UButton type="submit" color="primary" :loading="isUpdating">Update Unit</UButton>
+          </div>
+        </UForm>
+      </UCard>
+    </UModal>
   </div>
 </template>
 
@@ -118,9 +156,18 @@ const partnerId = route.params.id as string
 
 const { getPartnerByIdSync, loadFromStorage: loadPartners } = usePartnerStore()
 const { getUnitsByPartnerSync, loadFromStorage: loadUnits } = useUnitStore()
+const { updateUnit: apiUpdateUnit, deleteUnit: apiDeleteUnit } = useApi()
 
 const isLoading = ref(true)
 const showInvoiceModal = ref(false)
+const showEditModal = ref(false)
+const isUpdating = ref(false)
+const editingUnit = ref(null)
+const editForm = reactive({
+  name: '',
+  location: '',
+  notes: ''
+})
 const partner = computed(() => {
   if (isLoading.value || !partnerId) return null
   return getPartnerByIdSync(partnerId) || null
@@ -150,6 +197,60 @@ const loadData = async () => {
     console.error('Failed to load data:', error)
   } finally {
     isLoading.value = false
+  }
+}
+
+const editUnit = (unit: any) => {
+  editingUnit.value = unit
+  editForm.name = unit.name
+  editForm.location = unit.location || ''
+  editForm.notes = unit.notes || ''
+  showEditModal.value = true
+}
+
+const updateUnit = async () => {
+  if (!editingUnit.value) return
+  
+  try {
+    isUpdating.value = true
+    await apiUpdateUnit(editingUnit.value.id, editForm)
+    await loadUnits()
+    showEditModal.value = false
+    
+    useToast().add({
+      title: 'Unit updated',
+      description: `${editForm.name} has been updated successfully`,
+      color: 'green'
+    })
+  } catch (error) {
+    useToast().add({
+      title: 'Error',
+      description: 'Failed to update unit',
+      color: 'red'
+    })
+  } finally {
+    isUpdating.value = false
+  }
+}
+
+const deleteUnitConfirm = async (unit: any) => {
+  if (confirm(`Are you sure you want to delete "${unit.name}"?`)) {
+    try {
+      await apiDeleteUnit(unit.id)
+      await loadUnits()
+      
+      useToast().add({
+        title: 'Unit deleted',
+        description: `${unit.name} has been deleted`,
+        color: 'orange'
+      })
+    } catch (error) {
+      useToast().add({
+        title: 'Error',
+        description: 'Failed to delete unit',
+        color: 'red'
+      })
+    }
   }
 }
 

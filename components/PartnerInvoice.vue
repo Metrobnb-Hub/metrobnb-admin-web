@@ -113,7 +113,7 @@
           <UPagination 
             v-model="currentMetroBNBPage" 
             :page-count="itemsPerPage" 
-            :total="metrobnbBookings.value.length" 
+            :total="metrobnbBookings.length" 
             size="sm"
           />
         </div>
@@ -200,7 +200,7 @@
     <div class="mt-8 text-center print:hidden">
       <div class="space-y-2">
         <p class="text-sm text-gray-600 dark:text-gray-400">
-          {{ partnerBookings.length + metrobnbBookings.value.length }} bookings, {{ invoice.expenses.length }} expenses
+          {{ (partnerBookings?.length || 0) + (metrobnbBookings?.length || 0) }} bookings, {{ invoice?.expenses?.length || 0 }} expenses
         </p>
         <UButton @click="printInvoice" color="primary" size="lg">
           <UIcon name="i-heroicons-printer" class="mr-2" />
@@ -313,15 +313,15 @@ const invoice: PartnerInvoice = props.invoice || {
 
 // Computed values
 const partnerBookings = computed(() => 
-  invoice.bookings.filter(booking => booking.paymentReceivedBy === 'partner')
+  invoice?.bookings?.filter(booking => booking.paymentReceivedBy === 'partner') || []
 )
 
 const metrobnbBookings = computed(() => 
-  invoice.bookings.filter(booking => booking.paymentReceivedBy === 'metrobnb')
+  invoice?.bookings?.filter(booking => booking.paymentReceivedBy === 'metrobnb') || []
 )
 
 const totalGrossEarnings = computed(() => 
-  invoice.bookings.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
+  invoice?.bookings?.reduce((sum, booking) => sum + booking.actualAmountReceived, 0) || 0
 )
 
 const partnerPaymentsTotal = computed(() => 
@@ -333,7 +333,7 @@ const totalReceivedByMetroBNB = computed(() =>
 )
 
 const totalExpenses = computed(() => 
-  invoice.expenses.reduce((sum, expense) => sum + expense.amount, 0)
+  invoice?.expenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0
 )
 
 const metroBNBShare = computed(() => 
@@ -387,23 +387,75 @@ const printInvoice = () => {
 
 <style>
 @media print {
-  body * {
-    visibility: hidden;
+  * {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
   
-  .print\\:p-6, .print\\:p-6 * {
-    visibility: visible;
+  body {
+    margin: 0;
+    padding: 0;
   }
   
   .print\\:hidden {
     display: none !important;
   }
   
-  .print\\:p-6 {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+  .print\\:bg-white {
+    background-color: white !important;
+  }
+  
+  .print\\:text-gray-900 {
+    color: #111827 !important;
+  }
+  
+  .print\\:border-gray-300 {
+    border-color: #d1d5db !important;
+  }
+  
+  .print\\:bg-green-50 {
+    background-color: #f0fdf4 !important;
+  }
+  
+  .print\\:bg-blue-50 {
+    background-color: #eff6ff !important;
+  }
+  
+  .print\\:bg-gray-50 {
+    background-color: #f9fafb !important;
+  }
+  
+  .print\\:text-green-700 {
+    color: #15803d !important;
+  }
+  
+  .print\\:text-blue-700 {
+    color: #1d4ed8 !important;
+  }
+  
+  /* Ensure tables print properly */
+  table {
+    page-break-inside: auto;
+  }
+  
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  
+  /* Page margins and hide headers/footers */
+  @page {
+    margin: 0.5in;
+    size: A4;
+  }
+  
+  /* Hide browser headers and footers */
+  html {
+    -webkit-print-color-adjust: exact;
+  }
+  
+  body {
+    -webkit-print-color-adjust: exact;
   }
 }
 </style>

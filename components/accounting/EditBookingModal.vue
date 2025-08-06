@@ -120,7 +120,18 @@ const isOpen = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const { partners: storePartners, units: storeUnits, updateBooking } = useAccountingStore()
+const { partners: storePartners } = usePartnerStore()
+const { units: storeUnits } = useUnitStore()
+const { updateBooking } = useAccountingStore()
+
+// Load stores when modal opens
+watch(() => props.modelValue, async (isOpen) => {
+  if (isOpen) {
+    const { loadFromStorage: loadPartners } = usePartnerStore()
+    const { loadFromStorage: loadUnits } = useUnitStore()
+    await Promise.all([loadPartners(), loadUnits()])
+  }
+})
 
 const availableAddons: AddOnConfig[] = [
   { type: 'early_checkin', label: 'Early Check-In', amount: 300 },
@@ -172,14 +183,15 @@ const paymentMethods = [
   { label: 'PayPal', value: 'paypal' }
 ]
 
-const partners = computed(() => 
-  storePartners.map(p => ({ label: p.name, value: p.id }))
-)
+const partners = computed(() => {
+  if (!Array.isArray(storePartners) || storePartners.length === 0) return []
+  return storePartners.map(p => ({ label: p.name, value: p.id }))
+})
 
 const availableUnits = computed(() => {
-  if (!state.partner) return []
+  if (!state.partner || !Array.isArray(storeUnits)) return []
   return storeUnits
-    .filter(unit => unit.partnerId === state.partner)
+    .filter(unit => unit && unit.partnerId === state.partner)
     .map(unit => ({ label: unit.name, value: unit.id }))
 })
 
@@ -231,16 +243,16 @@ watch(() => state.partner, () => {
 watch(() => props.booking, (booking) => {
   if (booking) {
     Object.assign(state, {
-      guestName: booking.guestName,
-      date: booking.date,
-      amount: booking.amount,
-      paymentMethod: booking.paymentMethod,
-      partner: booking.partner,
+      guestName: booking.guestName || '',
+      date: booking.bookingDate || booking.date || '',
+      amount: parseFloat(booking.baseAmount) || 0,
+      paymentMethod: booking.paymentMethod?.id || booking.paymentMethodId || '',
+      partner: booking.partnerId || '',
       unitId: booking.unitId || '',
-      addons: booking.addons || [],
+      addons: Array.isArray(booking.addons) ? booking.addons : [],
       bookingStatus: booking.bookingStatus || 'confirmed',
       paymentStatus: booking.paymentStatus || 'unpaid',
-      amountPaid: booking.amountPaid || 0
+      amountPaid: parseFloat(booking.amountPaid) || 0
     })
   }
 }, { immediate: true })

@@ -89,7 +89,7 @@
             <div>
               <p class="font-medium text-gray-900 dark:text-white">{{ booking.guestName }}</p>
               <p class="text-sm text-gray-500 dark:text-gray-400">{{ getUnitName(booking.unitId) }}</p>
-              <p class="text-xs text-gray-400">{{ formatDate(booking.date) }}</p>
+              <p class="text-xs text-gray-400">{{ formatDate(booking.bookingDate) }}</p>
             </div>
             <div class="text-right">
               <span class="font-semibold text-green-600 dark:text-green-400">
@@ -175,7 +175,8 @@ const totalAddonRevenue = computed(() => {
 const totalExpenses = computed(() => {
   if (!Array.isArray(expenses.value) || expenses.value.length === 0) return 0
   return expenses.value.reduce((sum, expense) => {
-    return sum + (typeof expense?.amount === 'number' ? expense.amount : 0)
+    const amount = parseFloat(expense?.amount) || 0
+    return sum + amount
   }, 0)
 })
 
@@ -222,11 +223,21 @@ const getUnitName = (unitId: string) => {
 const loadData = async () => {
   try {
     const [apiBookings, apiExpenses] = await Promise.all([
-      getBookings(),
+      getBookings({ page: 1, limit: 5, sortBy: 'created_at', sortOrder: 'desc' }),
       getExpenses()
     ])
-    bookings.value = Array.isArray(apiBookings) ? apiBookings : []
+    
+    // Handle paginated response for recent bookings
+    if (apiBookings && typeof apiBookings === 'object' && 'data' in apiBookings) {
+      bookings.value = Array.isArray(apiBookings.data) ? apiBookings.data : []
+    } else {
+      bookings.value = Array.isArray(apiBookings) ? apiBookings : []
+    }
+    
     expenses.value = Array.isArray(apiExpenses) ? apiExpenses : []
+    
+    console.log('Dashboard loaded bookings:', bookings.value)
+    console.log('First booking structure:', bookings.value[0])
   } catch (error) {
     console.error('Failed to load dashboard data:', error)
     bookings.value = []

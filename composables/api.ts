@@ -1,4 +1,4 @@
-import type { Partner, Unit, Booking, Expense, BookingSource, Service, ApiFilters } from '~/types/api'
+import type { Partner, Unit, Booking, Expense, BookingSource, Service, ApiFilters, PaginatedResponse } from '~/types/api'
 
 const getApiBaseUrl = () => {
   const config = useRuntimeConfig()
@@ -181,14 +181,38 @@ export const useApi = () => {
   }
 
   // Bookings API
-  const getBookings = async (filters: ApiFilters = {}): Promise<Booking[]> => {
+  const getBookings = async (filters: ApiFilters = {}): Promise<Booking[] | PaginatedResponse<Booking>> => {
     const params = new URLSearchParams()
     if (filters.partnerId) params.append('partner_id', filters.partnerId)
     if (filters.unitId) params.append('unit_id', filters.unitId)
     if (filters.month) params.append('month', filters.month)
+    if (filters.page) params.append('page', filters.page.toString())
+    if (filters.limit) params.append('limit', filters.limit.toString())
+    if (filters.search) params.append('search', filters.search)
+    if (filters.sortBy) params.append('sort_by', filters.sortBy)
+    if (filters.sortOrder) params.append('sort_order', filters.sortOrder)
     
     const query = params.toString()
-    return await apiClient<Booking[]>(`/api/bookings${query ? `?${query}` : ''}`)
+    const result = await apiClient<any>(`/api/bookings${query ? `?${query}` : ''}`)
+    
+    // If pagination params are provided, return paginated response
+    if (filters.page || filters.limit) {
+      // The result is already transformed by toCamelCase in apiClient
+      return {
+        data: result.items || result,
+        pagination: result.pagination || {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: Array.isArray(result) ? result.length : 0,
+          perPage: filters.limit || 10,
+          hasNext: false,
+          hasPrev: false
+        }
+      } as PaginatedResponse<Booking>
+    }
+    
+    // Otherwise return simple array for backward compatibility
+    return Array.isArray(result) ? result : result.items || result || []
   }
 
   const createBooking = async (booking: Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>): Promise<Booking> => {
@@ -285,8 +309,10 @@ export const useApi = () => {
 
   // Helper function for booking total (client-side calculation)
   const getBookingTotal = (booking: Booking): number => {
-    const addonsTotal = booking.addons.reduce((sum, addon) => sum + addon.amount, 0)
-    return booking.baseAmount + addonsTotal
+    if (!booking) return 0
+    const baseAmount = parseFloat(booking.baseAmount) || 0
+    const addonsTotal = booking.addons?.reduce((sum, addon) => sum + (addon.amount || 0), 0) || 0
+    return baseAmount + addonsTotal
   }
 
   return {

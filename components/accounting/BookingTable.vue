@@ -9,8 +9,8 @@
       <template #amount-data="{ row }">
         <div>
           <div class="font-medium">₱{{ (getBookingTotal(row) || 0).toFixed(2) }}</div>
-          <div v-if="row.addons?.length" class="text-xs text-gray-500 dark:text-gray-400">
-            Base: ₱{{ (row.amount || 0).toFixed(2) }} + Add-ons: ₱{{ (getAddonsTotal(row) || 0).toFixed(2) }}
+          <div v-if="(row.addons || []).length" class="text-xs text-gray-500 dark:text-gray-400">
+            Base: ₱{{ (parseFloat(getFieldValue(row, 'baseAmount', 'base_amount')) || 0).toFixed(2) }} + Add-ons: ₱{{ (getAddonsTotal(row) || 0).toFixed(2) }}
           </div>
         </div>
       </template>
@@ -44,7 +44,27 @@
       </template>
       <template #unitId-data="{ row }">
         <span class="text-sm text-gray-900 dark:text-white">
-          {{ getUnitName(row.unitId) }}
+          {{ getUnitName(row.unitId || row.unit_id) }}
+        </span>
+      </template>
+      <template #paymentMethod-data="{ row }">
+        <span class="text-sm text-gray-900 dark:text-white">
+          {{ (row.paymentMethod || row.payment_method)?.name || 'N/A' }}
+        </span>
+      </template>
+      <template #partnerId-data="{ row }">
+        <span class="text-sm text-gray-900 dark:text-white">
+          {{ getPartnerName(row.partnerId || row.partner_id) }}
+        </span>
+      </template>
+      <template #guestName-data="{ row }">
+        <span class="text-sm text-gray-900 dark:text-white">
+          {{ row.guestName || row.guest_name }}
+        </span>
+      </template>
+      <template #bookingDate-data="{ row }">
+        <span class="text-sm text-gray-900 dark:text-white">
+          {{ row.bookingDate || row.booking_date }}
         </span>
       </template>
     </UTable>
@@ -63,22 +83,38 @@ type PaymentStatus = 'unpaid' | 'partial' | 'fully_paid'
 interface Booking {
   id: string
   guestName: string
-  date: string
-  amount: number
-  paymentMethod: string
-  partner: string
+  bookingDate: string
+  baseAmount: string  // API returns as string
+  paymentMethod: any
+  partnerId: string
   unitId?: string
   addons?: AddOn[]
   bookingStatus?: BookingStatus
   paymentStatus?: PaymentStatus
-  amountPaid?: number
+  amountPaid?: string  // API returns as string
 }
 
-defineProps<{
+const props = defineProps<{
   bookings: Booking[]
+  partners?: any[]
+  units?: any[]
 }>()
 
-const { units } = useUnitStore()
+// Use props if provided, otherwise fallback to stores
+const { units: storeUnits } = useUnitStore()
+const { partners: storePartners } = usePartnerStore()
+
+const units = computed(() => props.units || storeUnits || [])
+const partners = computed(() => props.partners || storePartners || [])
+
+// Debug first booking to see field names
+watch(() => props.bookings, (bookings) => {
+  if (bookings && bookings.length > 0) {
+    console.log('First booking structure:', bookings[0])
+    console.log('Partner ID from booking:', bookings[0].partnerId || bookings[0].partner_id)
+    console.log('Unit ID from booking:', bookings[0].unitId || bookings[0].unit_id)
+  }
+}, { immediate: true })
 
 const emit = defineEmits<{
   edit: [booking: Booking]
@@ -87,14 +123,14 @@ const emit = defineEmits<{
 
 const columns = [
   { key: 'guestName', label: 'Guest' },
-  { key: 'date', label: 'Date' },
+  { key: 'bookingDate', label: 'Date' },
   { key: 'amount', label: 'Total Amount' },
   { key: 'unitId', label: 'Unit' },
   { key: 'addons', label: 'Add-ons' },
   { key: 'bookingStatus', label: 'Booking Status' },
   { key: 'paymentStatus', label: 'Payment Status' },
   { key: 'paymentMethod', label: 'Payment' },
-  { key: 'partner', label: 'Partner' },
+  { key: 'partnerId', label: 'Partner' },
   { key: 'actions', label: '' }
 ]
 
@@ -105,9 +141,9 @@ const getAddonsTotal = (booking: Booking) => {
   }, 0)
 }
 
-const getBookingTotal = (booking: Booking) => {
+const getBookingTotal = (booking: any) => {
   if (!booking) return 0
-  const baseAmount = typeof booking.amount === 'number' ? booking.amount : 0
+  const baseAmount = parseFloat(getFieldValue(booking, 'baseAmount', 'base_amount')) || 0
   const addonsTotal = getAddonsTotal(booking)
   return baseAmount + addonsTotal
 }
@@ -158,9 +194,20 @@ const getPaymentStatusClass = (status?: string) => {
 }
 
 const getUnitName = (unitId?: string) => {
-  if (!unitId || !Array.isArray(units)) return 'N/A'
-  const unit = units.find(u => u && u.id === unitId)
+  if (!unitId || !Array.isArray(units.value)) return 'N/A'
+  const unit = units.value.find(u => u && u.id === unitId)
   return unit?.name || 'Unknown Unit'
+}
+
+const getPartnerName = (partnerId?: string) => {
+  if (!partnerId || !Array.isArray(partners.value)) return 'N/A'
+  const partner = partners.value.find(p => p && p.id === partnerId)
+  return partner?.name || 'Unknown Partner'
+}
+
+// Helper to get field value with fallback for snake_case/camelCase
+const getFieldValue = (row: any, camelField: string, snakeField: string) => {
+  return row[camelField] || row[snakeField]
 }
 
 const getActions = (row: Booking) => [

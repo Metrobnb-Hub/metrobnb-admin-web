@@ -14,9 +14,26 @@
       </div>
     </div>
 
-    <div v-if="partners.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Search and Sort -->
+    <UCard v-if="partners.length">
+      <div class="flex gap-4 mb-6">
+        <UInput 
+          v-model="searchQuery" 
+          placeholder="Search partners..."
+          icon="i-heroicons-magnifying-glass"
+          class="flex-1"
+        />
+        <USelect 
+          v-model="sortBy" 
+          :options="sortOptions"
+          class="w-48"
+        />
+      </div>
+    </UCard>
+
+    <div v-if="filteredPartners.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <UCard 
-        v-for="partner in partners" 
+        v-for="partner in filteredPartners" 
         :key="partner.id"
         class="hover:shadow-lg transition-shadow cursor-pointer"
         @click="$router.push(`/partners/${partner.id}`)"
@@ -57,7 +74,7 @@
       </UCard>
     </div>
     
-    <UCard v-else>
+    <UCard v-else-if="!partners.length">
       <div class="text-center py-12">
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No partners yet</h3>
         <p class="text-gray-600 dark:text-gray-400 mb-6">Get started by adding your first partner</p>
@@ -71,10 +88,20 @@
 </template>
 
 <script setup lang="ts">
-const { partners, loadFromStorage: loadPartners } = usePartnerStore()
-const { getUnitsByPartnerSync, loadFromStorage: loadUnits } = useUnitStore()
+const { partners, units, loadPartners, loadUnits } = useDataManager()
 
 const showInvoiceModal = ref(false)
+const searchQuery = ref('')
+const sortBy = ref('name_asc')
+
+const sortOptions = [
+  { label: 'Name A-Z', value: 'name_asc' },
+  { label: 'Name Z-A', value: 'name_desc' },
+  { label: 'Share % High-Low', value: 'share_desc' },
+  { label: 'Share % Low-High', value: 'share_asc' },
+  { label: 'Newest First', value: 'created_desc' },
+  { label: 'Oldest First', value: 'created_asc' }
+]
 
 const getUnitCount = (partnerId: string) => {
   if (!partnerId) return 0
@@ -91,14 +118,62 @@ const formatDate = (dateString: string) => {
   }
 }
 
+const filteredPartners = computed(() => {
+  if (!Array.isArray(partners.value)) return []
+  
+  let filtered = partners.value.filter(partner => {
+    const searchLower = searchQuery.value.toLowerCase()
+    const name = partner.name?.toLowerCase() || ''
+    const email = partner.email?.toLowerCase() || ''
+    const services = partner.services?.map(s => s.name?.toLowerCase()).join(' ') || ''
+    
+    return name.includes(searchLower) || 
+           email.includes(searchLower) || 
+           services.includes(searchLower)
+  })
+  
+  // Sort
+  const [field, order] = sortBy.value.split('_')
+  filtered.sort((a, b) => {
+    let aVal, bVal
+    
+    switch (field) {
+      case 'name':
+        aVal = a.name || ''
+        bVal = b.name || ''
+        break
+      case 'share':
+        aVal = a.sharePercentage || 0
+        bVal = b.sharePercentage || 0
+        break
+      case 'created':
+        aVal = new Date(a.createdAt || 0)
+        bVal = new Date(b.createdAt || 0)
+        break
+      default:
+        return 0
+    }
+    
+    if (field === 'share' || field === 'created') {
+      return order === 'asc' ? aVal - bVal : bVal - aVal
+    }
+    
+    const comparison = aVal.localeCompare(bVal)
+    return order === 'asc' ? comparison : -comparison
+  })
+  
+  return filtered
+})
+
+const getUnitsByPartnerSync = (partnerId: string) => {
+  if (!Array.isArray(units.value)) return []
+  return units.value.filter(unit => (unit.partnerId || unit.partner_id) === partnerId)
+}
+
 onMounted(async () => {
-  try {
-    await Promise.all([
-      loadPartners(),
-      loadUnits()
-    ])
-  } catch (error) {
-    console.error('Failed to load data:', error)
-  }
+  await Promise.all([
+    loadPartners(),
+    loadUnits()
+  ])
 })
 </script>

@@ -78,10 +78,12 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: 'i-heroicons-home' },
   { name: 'Bookings', href: '/accounting/bookings', icon: 'i-heroicons-document-text' },
   { name: 'Partners', href: '/partners', icon: 'i-heroicons-users' },
+  { name: 'Units', href: '/admin/units', icon: 'i-heroicons-building-office' },
   { name: 'Expenses', href: '/expenses', icon: 'i-heroicons-minus-circle' },
   { name: 'Earnings', href: '/accounting/partners', icon: 'i-heroicons-chart-bar' },
   { name: 'Services', href: '/admin/services', icon: 'i-heroicons-cog-6-tooth' },
   { name: 'Booking Sources', href: '/admin/booking-sources', icon: 'i-heroicons-link' },
+  { name: 'Mock Demo', href: '/mock-demo', icon: 'i-heroicons-beaker' },
   { name: 'Refresh Data', href: '/admin/refresh-data', icon: 'i-heroicons-arrow-path' },
 ]
 
@@ -91,6 +93,7 @@ const pageTitle = computed(() => {
   if (path.includes('/accounting/bookings')) return 'Booking Payments'
   if (path.includes('/accounting/partners')) return 'Partners & Earnings'
   if (path.includes('/partners')) return 'Partners Management'
+  if (path.includes('/admin/units')) return 'Units Management'
   if (path.includes('/expenses')) return 'Expense Management'
   return 'MetroBNB'
 })

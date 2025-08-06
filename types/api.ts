@@ -40,18 +40,29 @@ export interface BookingSource {
   updatedAt: string
 }
 
+export interface PaymentMethod {
+  id: string
+  name: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Booking {
   id: string
   guestName: string
-  date: string
-  baseAmount: number
+  bookingDate: string
+  startDate: string
+  endDate: string
+  baseAmount: string  // API returns as string "1200.00"
   addons: AddOn[]
   unitId: string
   partnerId: string
   paymentStatus: 'unpaid' | 'partial' | 'fully_paid'
   bookingStatus: 'confirmed' | 'canceled' | 'refunded'
-  amountPaid: number
-  paymentMethod: string
+  amountPaid: string  // API returns as string "1500.00"
+  paymentMethod: PaymentMethod
+  paymentMethodId: string
   paymentReceivedBy: 'partner' | 'metrobnb'
   bookingSourceId: string
   notes?: string
@@ -65,7 +76,7 @@ export interface Expense {
   unitId: string
   date: string
   type: 'cleaning' | 'laundry' | 'utilities' | 'repair' | 'misc'
-  amount: number
+  amount: string  // API returns as string "150.00"
   billable: boolean
   notes?: string
   createdAt: string
@@ -76,4 +87,23 @@ export interface ApiFilters {
   partnerId?: string
   unitId?: string
   month?: string
+  page?: number
+  limit?: number
+  search?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+}
+
+export interface PaginationMeta {
+  currentPage: number
+  totalPages: number
+  totalItems: number
+  perPage: number
+  hasNext: boolean
+  hasPrev: boolean
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  pagination: PaginationMeta
 }

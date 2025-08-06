@@ -85,21 +85,20 @@ const state = reactive({
 
 const isGenerating = ref(false)
 
-const { partners, loadFromStorage: loadPartners } = usePartnerStore()
-const { units, loadFromStorage: loadUnits } = useUnitStore()
+const { partners, units, loadPartners, loadUnits, isLoading: dataLoading } = useDataManager()
 const { getBookings, getExpenses } = useApi()
 
-const isLoading = ref(false)
+const isLoading = computed(() => dataLoading.partners || dataLoading.units)
 
 const partnerOptions = computed(() => {
-  if (!Array.isArray(partners) || partners.length === 0) return []
-  return partners.map(p => ({ label: p.name, value: p.id }))
+  if (!Array.isArray(partners.value)) return []
+  return partners.value.map(p => ({ label: p.name, value: p.id }))
 })
 
 const availableUnits = computed(() => {
-  if (!state.partnerId || !Array.isArray(units)) return []
-  return units
-    .filter(unit => unit && unit.partnerId === state.partnerId)
+  if (!state.partnerId || !Array.isArray(units.value)) return []
+  return units.value
+    .filter(unit => unit && (unit.partnerId || unit.partner_id) === state.partnerId)
     .map(unit => ({ label: unit.name, value: unit.id }))
 })
 
@@ -109,18 +108,11 @@ watch(() => state.partnerId, () => {
 
 // Load data when modal opens
 watch(() => props.modelValue, async (isOpen) => {
-  if (isOpen && !isLoading.value) {
-    isLoading.value = true
-    try {
-      await Promise.all([
-        loadPartners(),
-        loadUnits()
-      ])
-    } catch (error) {
-      console.error('Failed to load data:', error)
-    } finally {
-      isLoading.value = false
-    }
+  if (isOpen) {
+    await Promise.all([
+      loadPartners(),
+      loadUnits()
+    ])
   }
 }, { immediate: true })
 
@@ -134,25 +126,62 @@ const onSubmit = async () => {
   try {
     isGenerating.value = true
     
-    const partner = partners.find(p => p.id === state.partnerId)
+    const partner = partners.value.find(p => p.id === state.partnerId)
     if (!partner) throw new Error('Partner not found')
     
     const filters = {
-      partnerId: state.partnerId,
-      unitId: state.unitId || undefined
+      partner_id: state.partnerId,
+      unit_id: state.unitId || undefined
     }
     
-    const allBookings = await getBookings(filters)
-    const allExpenses = await getExpenses(filters)
+    const bookingsResponse = await getBookings(filters)
+    const expensesResponse = await getExpenses(filters)
+    
+    // Extract data from API response wrapper
+    const allBookings = Array.isArray(bookingsResponse) ? bookingsResponse : 
+                       (bookingsResponse?.data?.items || bookingsResponse?.data || [])
+    const allExpenses = Array.isArray(expensesResponse) ? expensesResponse : 
+                       (expensesResponse?.data?.items || expensesResponse?.data || [])
+    
+
     
     const bookings = allBookings.filter(booking => {
-      const bookingDate = new Date(booking.date)
-      return bookingDate >= new Date(state.startDate) && bookingDate <= new Date(state.endDate)
+      // Filter by partner
+      const matchesPartner = booking.partnerId === state.partnerId
+      
+      // Filter by unit (if specified)
+      const matchesUnit = !state.unitId || booking.unitId === state.unitId
+      
+      // Filter by date range
+      const bookingDate = new Date(booking.startDate)
+      const startDate = new Date(state.startDate)
+      const endDate = new Date(state.endDate)
+      const matchesDate = bookingDate >= startDate && bookingDate <= endDate
+      
+
+      
+      return matchesPartner && matchesUnit && matchesDate
     })
     
     const expenses = allExpenses.filter(expense => {
+      // Filter by partner
+      const matchesPartner = expense.partnerId === state.partnerId
+      
+      // Filter by unit (if specified)
+      const matchesUnit = !state.unitId || expense.unitId === state.unitId
+      
+      // Filter by date range
       const expenseDate = new Date(expense.date)
-      return expenseDate >= new Date(state.startDate) && expenseDate <= new Date(state.endDate)
+      const startDate = new Date(state.startDate)
+      const endDate = new Date(state.endDate)
+      const matchesDate = expenseDate >= startDate && expenseDate <= endDate
+      
+      // Only include billable expenses
+      const isBillable = expense.billable === true
+      
+
+      
+      return matchesPartner && matchesUnit && matchesDate && isBillable
     })
     
     const startMonth = new Date(state.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -162,26 +191,35 @@ const onSubmit = async () => {
     const invoiceData = {
       partnerName: partner.name,
       period,
-      sharePercentage: partner.sharePercentage,
-      bookings: bookings.map(booking => ({
-        date: booking.date,
-        guestName: booking.guestName,
-        unitName: units.find(u => u.id === booking.unitId)?.name || 'Unknown Unit',
-        source: 'Direct',
-        baseAmount: booking.baseAmount,
-        addons: booking.addons.reduce((sum, addon) => sum + addon.amount, 0),
-        total: booking.baseAmount + booking.addons.reduce((sum, addon) => sum + addon.amount, 0),
-        paymentReceivedBy: 'metrobnb' as const,
-        actualAmountReceived: booking.amountPaid
-      })),
+      sharePercentage: partner.sharePercentage || partner.share_percentage || 20,
+      bookings: bookings.map(booking => {
+        const baseAmount = parseFloat(booking.baseAmount)
+        const addonsTotal = Array.isArray(booking.addons) 
+          ? booking.addons.reduce((sum, addon) => sum + addon.amount, 0)
+          : 0
+        
+        return {
+          date: booking.startDate,
+          guestName: booking.guestName,
+          unitName: units.value.find(u => u.id === booking.unitId)?.name || 'Unknown Unit',
+          source: 'Direct',
+          baseAmount,
+          addons: addonsTotal,
+          total: baseAmount + addonsTotal,
+          paymentReceivedBy: booking.paymentReceivedBy,
+          actualAmountReceived: parseFloat(booking.amountPaid)
+        }
+      }),
       expenses: expenses.map(expense => ({
         date: expense.date,
-        unitName: units.find(u => u.id === expense.unitId)?.name || 'Unknown Unit',
+        unitName: units.value.find(u => u.id === expense.unitId)?.name || 'Unknown Unit',
         type: expense.type,
-        notes: expense.notes,
-        amount: expense.amount
+        notes: expense.notes || '',
+        amount: parseFloat(expense.amount)
       }))
     }
+    
+
     
     localStorage.setItem('current-invoice', JSON.stringify(invoiceData))
     await navigateTo('/invoice')
