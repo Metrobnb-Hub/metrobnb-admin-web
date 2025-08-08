@@ -51,33 +51,70 @@
     <UCard>
       <template #header>
         <div class="flex justify-between items-center">
-          <h3 class="text-lg font-semibold">All Expenses ({{ filteredExpenses.length }})</h3>
+          <h3 class="text-lg font-semibold">
+            All Expenses 
+            <span v-if="pagination">({{ pagination.totalItems }} total)</span>
+            <span v-else>({{ expenses.length }})</span>
+          </h3>
         </div>
       </template>
       
-      <!-- Search and Sort -->
-      <div class="mb-4 flex gap-4">
-        <UInput 
-          v-model="searchQuery" 
-          placeholder="Search expenses..."
-          icon="i-heroicons-magnifying-glass"
-          class="flex-1"
-        />
-        <USelect 
-          v-model="sortBy" 
-          :options="sortOptions"
-          class="w-48"
-        />
-        <USelect 
-          v-model="filterType" 
-          :options="typeFilterOptions"
-          class="w-40"
-        />
+      <!-- Search and Filters -->
+      <div class="mb-4 space-y-4">
+        <div class="flex gap-4">
+          <UInput 
+            v-model="searchQuery" 
+            placeholder="Search expenses..."
+            icon="i-heroicons-magnifying-glass"
+            class="flex-1"
+          />
+          <USelect 
+            v-model="sortBy" 
+            :options="sortOptions"
+            class="w-48"
+          />
+          <USelect 
+            v-model="filterType" 
+            :options="typeFilterOptions"
+            class="w-40"
+          />
+        </div>
+        
+        <!-- Date Filters -->
+        <div class="flex gap-4 items-center">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Date Range:</span>
+          <UInput 
+            v-model="startDate" 
+            type="date" 
+            placeholder="Start date"
+            class="w-40"
+          />
+          <span class="text-gray-400">to</span>
+          <UInput 
+            v-model="endDate" 
+            type="date" 
+            placeholder="End date"
+            class="w-40"
+          />
+          <UButton 
+            v-if="startDate || endDate" 
+            @click="clearDateFilters"
+            color="gray" 
+            variant="outline" 
+            size="sm"
+          >
+            Clear Dates
+          </UButton>
+        </div>
       </div>
       
-      <div v-if="filteredExpenses.length" class="space-y-3">
+      <div v-if="isLoading" class="flex justify-center py-8">
+        <div class="text-gray-500">Loading expenses...</div>
+      </div>
+      
+      <div v-else-if="expenses.length" class="space-y-3">
         <div 
-          v-for="expense in filteredExpenses" 
+          v-for="expense in expenses" 
           :key="expense.id"
           class="relative flex justify-between items-start p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
         >
@@ -89,11 +126,11 @@
           <div class="flex-1">
             <div class="flex items-center space-x-3">
               <span class="font-medium text-gray-900 dark:text-white">
-                {{ getPartnerName(expense.partner_id) }}
+                {{ getPartnerName(expense.partnerId || expense.partner_id) }}
               </span>
               <span class="text-sm text-gray-500 dark:text-gray-400">•</span>
               <span class="text-sm text-gray-600 dark:text-gray-400">
-                {{ getUnitName(expense.unit_id) }}
+                {{ getUnitName(expense.unitId || expense.unit_id) }}
               </span>
             </div>
             <div class="flex items-center space-x-4 mt-1">
@@ -101,7 +138,7 @@
                 class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
                 :class="getExpenseTypeClass(expense.type)"
               >
-                {{ getExpenseTypeLabel(expense.type) }}
+                {{ expense.type }}
               </span>
               <span 
                 class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
@@ -125,10 +162,56 @@
         </div>
       </div>
       
-      <div v-else class="text-center py-12">
+      <div v-else-if="!isLoading" class="text-center py-12">
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No expenses yet</h3>
         <p class="text-gray-600 dark:text-gray-400 mb-6">Start by recording your first expense</p>
         <UButton to="/expenses/create" color="primary">Add Expense</UButton>
+      </div>
+      
+      <!-- Pagination -->
+      <div v-if="pagination && pagination.totalPages > 1" class="flex justify-between items-center mt-6 pt-4 border-t">
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+          Showing {{ ((pagination.currentPage - 1) * pagination.perPage) + 1 }} to 
+          {{ Math.min(pagination.currentPage * pagination.perPage, pagination.totalItems) }} of 
+          {{ pagination.totalItems }} results
+        </div>
+        <div class="flex items-center space-x-2">
+          <UButton 
+            :disabled="!pagination.hasPrev" 
+            @click="goToPage(currentPage - 1)"
+            color="gray" 
+            variant="outline" 
+            size="sm"
+          >
+            Previous
+          </UButton>
+          
+          <div class="flex items-center space-x-1">
+            <template v-for="page in getVisiblePages()" :key="page">
+              <UButton 
+                v-if="page !== '...'"
+                :color="page === currentPage ? 'primary' : 'gray'"
+                :variant="page === currentPage ? 'solid' : 'outline'"
+                @click="goToPage(page)"
+                size="sm"
+                class="min-w-[2rem]"
+              >
+                {{ page }}
+              </UButton>
+              <span v-else class="px-2 text-gray-400">...</span>
+            </template>
+          </div>
+          
+          <UButton 
+            :disabled="!pagination.hasNext" 
+            @click="goToPage(currentPage + 1)"
+            color="gray" 
+            variant="outline" 
+            size="sm"
+          >
+            Next
+          </UButton>
+        </div>
       </div>
     </UCard>
 
@@ -142,89 +225,90 @@
 </template>
 
 <script setup lang="ts">
-const { partners, units, expenses, loadPartners, loadUnits, loadExpenses } = useDataManager()
-const { deleteExpense } = useExpenseStore()
+const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { getExpenses, deleteExpense } = useApi()
 
 const showEditModal = ref(false)
 const selectedExpense = ref(null)
 const searchQuery = ref('')
 const sortBy = ref('date_desc')
 const filterType = ref('all')
+const startDate = ref('')
+const endDate = ref('')
+const expenses = ref([])
+const pagination = ref(null)
+const currentPage = ref(1)
+const isLoading = ref(false)
 
 const sortOptions = [
   { label: 'Date Newest', value: 'date_desc' },
   { label: 'Date Oldest', value: 'date_asc' },
   { label: 'Amount High-Low', value: 'amount_desc' },
   { label: 'Amount Low-High', value: 'amount_asc' },
-  { label: 'Partner A-Z', value: 'partner_asc' },
-  { label: 'Partner Z-A', value: 'partner_desc' }
+  { label: 'Type A-Z', value: 'type_asc' },
+  { label: 'Type Z-A', value: 'type_desc' }
 ]
 
 const typeFilterOptions = [
   { label: 'All Types', value: 'all' },
-  { label: 'Cleaning', value: 'cleaning' },
-  { label: 'Laundry', value: 'laundry' },
-  { label: 'Utilities', value: 'utilities' },
-  { label: 'Repair', value: 'repair' },
-  { label: 'Miscellaneous', value: 'misc' }
+  { label: 'Cleaning', value: 'Cleaning' },
+  { label: 'Laundry', value: 'Laundry' },
+  { label: 'Supplies', value: 'Supplies' },
+  { label: 'Wifi', value: 'Wifi' },
+  { label: 'Electricity', value: 'Electricity' },
+  { label: 'Repair', value: 'Repair' },
+  { label: 'Repairs', value: 'Repairs' },
+  { label: 'Miscellaneous', value: 'Miscellaneous' },
+  { label: 'Misc', value: 'Misc' }
 ]
 
-const filteredExpenses = computed(() => {
-  if (!Array.isArray(expenses.value)) return []
-  
-  let filtered = expenses.value.filter(expense => {
-    if (!expense) return false
+const loadExpensesData = async () => {
+  try {
+    isLoading.value = true
+    const [field, order] = sortBy.value.split('_')
     
-    // Search filter
-    const searchLower = searchQuery.value.toLowerCase()
-    const partnerName = getPartnerName(expense.partner_id).toLowerCase()
-    const unitName = getUnitName(expense.unit_id).toLowerCase()
-    const notes = expense.notes?.toLowerCase() || ''
-    const type = getExpenseTypeLabel(expense.type).toLowerCase()
-    
-    const matchesSearch = partnerName.includes(searchLower) || 
-                         unitName.includes(searchLower) || 
-                         notes.includes(searchLower) ||
-                         type.includes(searchLower)
-    
-    // Type filter
-    const matchesType = filterType.value === 'all' || expense.type === filterType.value
-    
-    return matchesSearch && matchesType
-  })
-  
-  // Sort
-  const [field, order] = sortBy.value.split('_')
-  filtered.sort((a, b) => {
-    let aVal, bVal
-    
-    switch (field) {
-      case 'date':
-        aVal = new Date(a.date)
-        bVal = new Date(b.date)
-        break
-      case 'amount':
-        aVal = parseFloat(a.amount) || 0
-        bVal = parseFloat(b.amount) || 0
-        break
-      case 'partner':
-        aVal = getPartnerName(a.partner_id)
-        bVal = getPartnerName(b.partner_id)
-        break
-      default:
-        return 0
+    const filters: any = {
+      sort_by: field,
+      sort_order: order,
+      page: currentPage.value,
+      limit: 20
     }
     
-    if (field === 'date' || field === 'amount') {
-      return order === 'asc' ? aVal - bVal : bVal - aVal
+    if (searchQuery.value && searchQuery.value.trim()) {
+      filters.search = searchQuery.value.trim()
     }
     
-    const comparison = aVal.localeCompare(bVal)
-    return order === 'asc' ? comparison : -comparison
-  })
-  
-  return filtered
-})
+    if (filterType.value && filterType.value !== 'all') {
+      filters.type = filterType.value
+    }
+    
+    if (startDate.value) {
+      filters.start_date = startDate.value
+    }
+    
+    if (endDate.value) {
+      filters.end_date = endDate.value
+    }
+    
+    const result = await getExpenses(filters)
+    
+    if (result.data && result.pagination) {
+      // Paginated response
+      expenses.value = result.data
+      pagination.value = result.pagination
+    } else {
+      // Non-paginated response (fallback)
+      expenses.value = Array.isArray(result) ? result : result.data || []
+      pagination.value = null
+    }
+  } catch (error) {
+    console.error('Failed to load expenses:', error)
+    expenses.value = []
+    pagination.value = null
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const thisMonthExpenses = computed(() => {
   if (!Array.isArray(expenses.value) || expenses.value.length === 0) return 0
@@ -249,6 +333,14 @@ const thisMonthExpenses = computed(() => {
     }, 0)
 })
 
+const totalExpenses = computed(() => {
+  if (!Array.isArray(expenses.value) || expenses.value.length === 0) return 0
+  return expenses.value.reduce((sum, expense) => {
+    const amount = parseFloat(expense.amount)
+    return sum + amount
+  }, 0)
+})
+
 const getPartnerName = (partnerId: string) => {
   if (!partnerId || !Array.isArray(partners.value)) return 'Unknown Partner'
   const partner = partners.value.find(p => p && p.id === partnerId)
@@ -261,26 +353,19 @@ const getUnitName = (unitId: string) => {
   return unit?.name || 'Unknown Unit'
 }
 
-const getExpenseTypeLabel = (type: string) => {
-  const labels = {
-    cleaning: 'Cleaning',
-    laundry: 'Laundry',
-    utilities: 'Utilities',
-    repair: 'Repair',
-    misc: 'Miscellaneous'
-  }
-  return labels[type as keyof typeof labels] || type
-}
-
 const getExpenseTypeClass = (type: string) => {
   const classes = {
-    cleaning: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    laundry: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-    utilities: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    repair: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    misc: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+    'Cleaning': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'Laundry': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    'Supplies': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    'Wifi': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+    'Electricity': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'Repair': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    'Repairs': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    'Miscellaneous': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+    'Misc': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
   }
-  return classes[type as keyof typeof classes] || classes.misc
+  return classes[type as keyof typeof classes] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
 }
 
 const formatDate = (dateString: string) => {
@@ -305,34 +390,106 @@ const handleEdit = (expense: any) => {
   showEditModal.value = true
 }
 
-const handleDelete = (id: string) => {
-  deleteExpense(id)
-  
-  const toast = useToast()
-  toast.add({
-    title: 'Expense deleted',
-    description: 'Expense has been removed',
-    color: 'orange'
-  })
+const handleDelete = async (id: string) => {
+  try {
+    await deleteExpense(id)
+    await loadExpensesData()
+    
+    const toast = useToast()
+    toast.add({
+      title: 'Expense deleted',
+      description: 'Expense has been removed',
+      color: 'orange'
+    })
+  } catch (error) {
+    const toast = useToast()
+    toast.add({
+      title: 'Error',
+      description: 'Failed to delete expense',
+      color: 'red'
+    })
+  }
 }
 
 const handleUpdated = () => {
   selectedExpense.value = null
+  loadExpensesData()
 }
 
-const totalExpenses = computed(() => {
-  if (!Array.isArray(expenses.value) || expenses.value.length === 0) return 0
-  return expenses.value.reduce((sum, expense) => {
-    const amount = parseFloat(expense.amount)
-    return sum + amount
-  }, 0)
+// Pagination functions
+const goToPage = (page: number) => {
+  currentPage.value = page
+  loadExpensesData()
+}
+
+const getVisiblePages = () => {
+  if (!pagination.value) return []
+  
+  const total = pagination.value.totalPages
+  const current = currentPage.value
+  const pages = []
+  
+  if (total <= 7) {
+    // Show all pages if 7 or fewer
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
+    }
+  } else {
+    // Show first page, current page area, and last page with ellipsis
+    pages.push(1)
+    
+    if (current > 3) {
+      pages.push('...')
+    }
+    
+    const start = Math.max(2, current - 1)
+    const end = Math.min(total - 1, current + 1)
+    
+    for (let i = start; i <= end; i++) {
+      if (i !== 1 && i !== total) {
+        pages.push(i)
+      }
+    }
+    
+    if (current < total - 2) {
+      pages.push('...')
+    }
+    
+    if (total > 1) {
+      pages.push(total)
+    }
+  }
+  
+  return pages
+}
+
+// Clear date filters function
+const clearDateFilters = () => {
+  startDate.value = ''
+  endDate.value = ''
+}
+
+// Watch for filter changes
+watch([sortBy, filterType, startDate, endDate], () => {
+  currentPage.value = 1 // Reset to first page
+  loadExpensesData()
+})
+
+// Watch search with debounce
+let searchTimeout: NodeJS.Timeout
+watch(searchQuery, () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    currentPage.value = 1 // Reset to first page
+    loadExpensesData()
+  }, 300)
 })
 
 onMounted(async () => {
   await Promise.all([
     loadPartners(),
     loadUnits(),
-    loadExpenses()
+    loadExpensesData()
   ])
 })
 </script>

@@ -183,9 +183,11 @@ export const useApi = () => {
   // Bookings API
   const getBookings = async (filters: ApiFilters = {}): Promise<Booking[] | PaginatedResponse<Booking>> => {
     const params = new URLSearchParams()
-    if (filters.partnerId) params.append('partner_id', filters.partnerId)
-    if (filters.unitId) params.append('unit_id', filters.unitId)
+    if (filters.partnerId || filters.partner_id) params.append('partner_id', filters.partnerId || filters.partner_id)
+    if (filters.unitId || filters.unit_id) params.append('unit_id', filters.unitId || filters.unit_id)
     if (filters.month) params.append('month', filters.month)
+    if (filters.start_date) params.append('start_date', filters.start_date)
+    if (filters.end_date) params.append('end_date', filters.end_date)
     if (filters.page) params.append('page', filters.page.toString())
     if (filters.limit) params.append('limit', filters.limit.toString())
     if (filters.search) params.append('search', filters.search)
@@ -234,14 +236,41 @@ export const useApi = () => {
   }
 
   // Expenses API
-  const getExpenses = async (filters: ApiFilters = {}): Promise<Expense[]> => {
+  const getExpenses = async (filters: ApiFilters = {}): Promise<Expense[] | PaginatedResponse<Expense>> => {
     const params = new URLSearchParams()
-    if (filters.partnerId) params.append('partner_id', filters.partnerId)
-    if (filters.unitId) params.append('unit_id', filters.unitId)
+    if (filters.partnerId || filters.partner_id) params.append('partner_id', filters.partnerId || filters.partner_id)
+    if (filters.unitId || filters.unit_id) params.append('unit_id', filters.unitId || filters.unit_id)
     if (filters.month) params.append('month', filters.month)
+    if (filters.start_date) params.append('start_date', filters.start_date)
+    if (filters.end_date) params.append('end_date', filters.end_date)
+    if (filters.type) params.append('type', filters.type)
+    if (filters.billable !== undefined) params.append('billable', filters.billable.toString())
+    if (filters.page) params.append('page', filters.page.toString())
+    if (filters.limit) params.append('limit', filters.limit.toString())
+    if (filters.search) params.append('search', filters.search)
+    if (filters.sortBy || filters.sort_by) params.append('sort_by', filters.sortBy || filters.sort_by)
+    if (filters.sortOrder || filters.sort_order) params.append('sort_order', filters.sortOrder || filters.sort_order)
     
     const query = params.toString()
-    return await apiClient<Expense[]>(`/api/expenses${query ? `?${query}` : ''}`)
+    const result = await apiClient<any>(`/api/expenses${query ? `?${query}` : ''}`)
+    
+    // If pagination params are provided, return paginated response
+    if (filters.page || filters.limit) {
+      return {
+        data: result.items || result,
+        pagination: result.pagination || {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: Array.isArray(result) ? result.length : 0,
+          perPage: filters.limit || 10,
+          hasNext: false,
+          hasPrev: false
+        }
+      } as PaginatedResponse<Expense>
+    }
+    
+    // Otherwise return simple array for backward compatibility
+    return Array.isArray(result) ? result : result.items || result || []
   }
 
   const createExpense = async (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>): Promise<Expense> => {

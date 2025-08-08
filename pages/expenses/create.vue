@@ -71,11 +71,15 @@ const unitOptions = computed(() =>
 )
 
 const expenseTypes = [
-  { label: 'Cleaning', value: 'cleaning' },
-  { label: 'Laundry', value: 'laundry' },
-  { label: 'Utilities', value: 'utilities' },
-  { label: 'Repair', value: 'repair' },
-  { label: 'Miscellaneous', value: 'misc' }
+  { label: 'Cleaning', value: 'Cleaning' },
+  { label: 'Laundry', value: 'Laundry' },
+  { label: 'Supplies', value: 'Supplies' },
+  { label: 'Wifi', value: 'Wifi' },
+  { label: 'Electricity', value: 'Electricity' },
+  { label: 'Repair', value: 'Repair' },
+  { label: 'Repairs', value: 'Repairs' },
+  { label: 'Miscellaneous', value: 'Miscellaneous' },
+  { label: 'Misc', value: 'Misc' }
 ]
 
 const handleSubmit = async () => {

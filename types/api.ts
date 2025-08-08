@@ -64,6 +64,7 @@ export interface Booking {
   paymentMethod: PaymentMethod
   paymentMethodId: string
   paymentReceivedBy: 'partner' | 'metrobnb'
+  bookingSource?: BookingSource  // Full booking source object if included
   bookingSourceId: string
   notes?: string
   createdAt: string
@@ -86,12 +87,20 @@ export interface Expense {
 export interface ApiFilters {
   partnerId?: string
   unitId?: string
+  partner_id?: string  // Support both camelCase and snake_case
+  unit_id?: string     // Support both camelCase and snake_case
   month?: string
+  start_date?: string  // YYYY-MM-DD format
+  end_date?: string    // YYYY-MM-DD format
+  type?: string        // For expense type filtering
+  billable?: boolean   // For expense filtering
   page?: number
   limit?: number
   search?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
+  sort_by?: string     // Support both camelCase and snake_case
+  sort_order?: 'asc' | 'desc'  // Support both camelCase and snake_case
 }
 
 export interface PaginationMeta {

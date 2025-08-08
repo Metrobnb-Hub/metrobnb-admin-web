@@ -8,23 +8,23 @@
       <UForm :schema="schema" :state="state" @submit="onSubmit">
         <div class="space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
           <UFormGroup label="Guest Name" name="guestName">
-            <UInput v-model="state.guestName" />
+            <UInput v-model="state.guestName" name="guestName" />
           </UFormGroup>
           
           <UFormGroup label="Date" name="date">
-            <UInput v-model="state.date" type="date" />
+            <UInput v-model="state.date" type="date" name="date" />
           </UFormGroup>
           
           <UFormGroup label="Base Amount" name="amount">
-            <UInput v-model="state.amount" type="number" step="0.01" />
+            <UInput v-model="state.amount" type="number" step="0.01" name="amount" />
           </UFormGroup>
           
           <UFormGroup label="Payment Method" name="paymentMethod">
-            <USelect v-model="state.paymentMethod" :options="paymentMethods" />
+            <USelect v-model="state.paymentMethod" :options="paymentMethodOptions" name="paymentMethod" />
           </UFormGroup>
           
           <UFormGroup label="Partner" name="partner">
-            <USelect v-model="state.partner" :options="partners" />
+            <USelect v-model="state.partner" :options="partnerOptions" name="partner" />
           </UFormGroup>
           
           <UFormGroup label="Unit" name="unitId">
@@ -33,19 +33,20 @@
               :options="availableUnits" 
               :disabled="!state.partner"
               placeholder="Select a partner first"
+              name="unitId"
             />
           </UFormGroup>
           
           <UFormGroup label="Booking Status" name="bookingStatus">
-            <USelect v-model="state.bookingStatus" :options="bookingStatusOptions" />
+            <USelect v-model="state.bookingStatus" :options="bookingStatusOptions" name="bookingStatus" />
           </UFormGroup>
           
           <UFormGroup label="Payment Status" name="paymentStatus">
-            <USelect v-model="state.paymentStatus" :options="paymentStatusOptions" />
+            <USelect v-model="state.paymentStatus" :options="paymentStatusOptions" name="paymentStatus" />
           </UFormGroup>
           
           <UFormGroup label="Amount Paid" name="amountPaid">
-            <UInput v-model="state.amountPaid" type="number" step="0.01" />
+            <UInput v-model="state.amountPaid" type="number" step="0.01" name="amountPaid" />
           </UFormGroup>
         </div>
         
@@ -120,16 +121,19 @@ const isOpen = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const { partners: storePartners } = usePartnerStore()
-const { units: storeUnits } = useUnitStore()
+const { partners, units, loadPartners, loadUnits } = useDataManager()
 const { updateBooking } = useAccountingStore()
+const { getBookingSources } = useApi()
 
-// Load stores when modal opens
+const paymentMethods = ref([])
+
+// Load data when modal opens
 watch(() => props.modelValue, async (isOpen) => {
   if (isOpen) {
-    const { loadFromStorage: loadPartners } = usePartnerStore()
-    const { loadFromStorage: loadUnits } = useUnitStore()
-    await Promise.all([loadPartners(), loadUnits()])
+    await Promise.all([
+      loadPartners(),
+      loadUnits()
+    ])
   }
 })
 
@@ -176,21 +180,23 @@ const paymentStatusOptions = [
   { label: 'Fully Paid', value: 'fully_paid' }
 ]
 
-const paymentMethods = [
-  { label: 'Cash', value: 'cash' },
-  { label: 'Credit Card', value: 'credit' },
-  { label: 'Bank Transfer', value: 'transfer' },
-  { label: 'PayPal', value: 'paypal' }
+const paymentMethodOptions = [
+  { label: 'Cash', value: 'Cash' },
+  { label: 'Credit Card', value: 'Credit Card' },
+  { label: 'Bank Transfer', value: 'Bank Transfer' },
+  { label: 'PayPal', value: 'PayPal' },
+  { label: 'GCash', value: 'GCash' },
+  { label: 'Maya', value: 'Maya' }
 ]
 
-const partners = computed(() => {
-  if (!Array.isArray(storePartners) || storePartners.length === 0) return []
-  return storePartners.map(p => ({ label: p.name, value: p.id }))
+const partnerOptions = computed(() => {
+  if (!Array.isArray(partners.value)) return []
+  return partners.value.map(p => ({ label: p.name, value: p.id }))
 })
 
 const availableUnits = computed(() => {
-  if (!state.partner || !Array.isArray(storeUnits)) return []
-  return storeUnits
+  if (!state.partner || !Array.isArray(units.value)) return []
+  return units.value
     .filter(unit => unit && unit.partnerId === state.partner)
     .map(unit => ({ label: unit.name, value: unit.id }))
 })
@@ -235,18 +241,26 @@ const onSubmit = () => {
   isOpen.value = false
 }
 
-// Reset unit selection when partner changes
-watch(() => state.partner, () => {
-  state.unitId = ''
+// Reset unit selection when partner changes (but not during initialization)
+const isInitializing = ref(false)
+
+watch(() => state.partner, (newPartnerId, oldPartnerId) => {
+  // Only reset unitId if this is a user change, not initialization
+  if (oldPartnerId && !isInitializing.value) {
+    state.unitId = ''
+  }
 })
 
 watch(() => props.booking, (booking) => {
   if (booking) {
+    console.log('Booking data:', booking) // Debug log
+    isInitializing.value = true
+    
     Object.assign(state, {
       guestName: booking.guestName || '',
-      date: booking.bookingDate || booking.date || '',
+      date: booking.bookingDate || booking.startDate || booking.date || '',
       amount: parseFloat(booking.baseAmount) || 0,
-      paymentMethod: booking.paymentMethod?.id || booking.paymentMethodId || '',
+      paymentMethod: booking.paymentMethod?.name || booking.paymentMethodId || '',
       partner: booking.partnerId || '',
       unitId: booking.unitId || '',
       addons: Array.isArray(booking.addons) ? booking.addons : [],
@@ -254,6 +268,13 @@ watch(() => props.booking, (booking) => {
       paymentStatus: booking.paymentStatus || 'unpaid',
       amountPaid: parseFloat(booking.amountPaid) || 0
     })
+    
+    // Allow partner/unit relationship to settle
+    nextTick(() => {
+      isInitializing.value = false
+    })
+    
+    console.log('State after assignment:', state) // Debug log
   }
 }, { immediate: true })
 </script>

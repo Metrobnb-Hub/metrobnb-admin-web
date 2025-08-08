@@ -86,7 +86,9 @@ const state = reactive({
 const isGenerating = ref(false)
 
 const { partners, units, loadPartners, loadUnits, isLoading: dataLoading } = useDataManager()
-const { getBookings, getExpenses } = useApi()
+const { getBookings, getExpenses, getBookingSources } = useApi()
+
+const bookingSources = ref([])
 
 const isLoading = computed(() => dataLoading.partners || dataLoading.units)
 
@@ -109,10 +111,12 @@ watch(() => state.partnerId, () => {
 // Load data when modal opens
 watch(() => props.modelValue, async (isOpen) => {
   if (isOpen) {
-    await Promise.all([
+    const [, , sources] = await Promise.all([
       loadPartners(),
-      loadUnits()
+      loadUnits(),
+      getBookingSources()
     ])
+    bookingSources.value = sources
   }
 }, { immediate: true })
 
@@ -129,59 +133,76 @@ const onSubmit = async () => {
     const partner = partners.value.find(p => p.id === state.partnerId)
     if (!partner) throw new Error('Partner not found')
     
-    const filters = {
+    // Build query parameters for API filtering
+    const bookingFilters = {
       partner_id: state.partnerId,
-      unit_id: state.unitId || undefined
+      ...(state.unitId && { unit_id: state.unitId }),
+      start_date: state.startDate,
+      end_date: state.endDate,
+      limit: 100 // API maximum
     }
     
-    const bookingsResponse = await getBookings(filters)
-    const expensesResponse = await getExpenses(filters)
+    const expenseFilters = {
+      partner_id: state.partnerId,
+      ...(state.unitId && { unit_id: state.unitId }),
+      start_date: state.startDate,
+      end_date: state.endDate,
+      billable: true, // Only billable expenses for invoices
+      limit: 100 // API maximum
+    }
     
-    // Extract data from API response wrapper
-    const allBookings = Array.isArray(bookingsResponse) ? bookingsResponse : 
-                       (bookingsResponse?.data?.items || bookingsResponse?.data || [])
-    const allExpenses = Array.isArray(expensesResponse) ? expensesResponse : 
-                       (expensesResponse?.data?.items || expensesResponse?.data || [])
+    // Fetch all pages of data
+    const fetchAllBookings = async () => {
+      let allBookings = []
+      let page = 1
+      let hasMore = true
+      
+      while (hasMore) {
+        const response = await getBookings({ ...bookingFilters, page })
+        const data = Array.isArray(response) ? response : response.data
+        const pagination = response.pagination
+        
+        allBookings = [...allBookings, ...data]
+        hasMore = pagination?.hasNext || false
+        page++
+      }
+      
+      return allBookings
+    }
     
-
+    const fetchAllExpenses = async () => {
+      let allExpenses = []
+      let page = 1
+      let hasMore = true
+      
+      while (hasMore) {
+        const response = await getExpenses({ ...expenseFilters, page })
+        const data = Array.isArray(response) ? response : response.data
+        const pagination = response.pagination
+        
+        allExpenses = [...allExpenses, ...data]
+        hasMore = pagination?.hasNext || false
+        page++
+      }
+      
+      return allExpenses
+    }
     
-    const bookings = allBookings.filter(booking => {
-      // Filter by partner
-      const matchesPartner = booking.partnerId === state.partnerId
-      
-      // Filter by unit (if specified)
-      const matchesUnit = !state.unitId || booking.unitId === state.unitId
-      
-      // Filter by date range
-      const bookingDate = new Date(booking.startDate)
-      const startDate = new Date(state.startDate)
-      const endDate = new Date(state.endDate)
-      const matchesDate = bookingDate >= startDate && bookingDate <= endDate
-      
-
-      
-      return matchesPartner && matchesUnit && matchesDate
-    })
+    const [bookings, expenses] = await Promise.all([
+      fetchAllBookings(),
+      fetchAllExpenses()
+    ])
     
-    const expenses = allExpenses.filter(expense => {
-      // Filter by partner
-      const matchesPartner = expense.partnerId === state.partnerId
-      
-      // Filter by unit (if specified)
-      const matchesUnit = !state.unitId || expense.unitId === state.unitId
-      
-      // Filter by date range
-      const expenseDate = new Date(expense.date)
-      const startDate = new Date(state.startDate)
-      const endDate = new Date(state.endDate)
-      const matchesDate = expenseDate >= startDate && expenseDate <= endDate
-      
-      // Only include billable expenses
-      const isBillable = expense.billable === true
-      
-
-      
-      return matchesPartner && matchesUnit && matchesDate && isBillable
+    // Debug logging
+    console.log('Invoice Generation Debug:', {
+      partnerId: state.partnerId,
+      unitId: state.unitId,
+      dateRange: `${state.startDate} to ${state.endDate}`,
+      bookingsFound: bookings.length,
+      expensesFound: expenses.length,
+      sampleBooking: bookings[0] || null,
+      bookingFilters,
+      expenseFilters
     })
     
     const startMonth = new Date(state.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -191,32 +212,59 @@ const onSubmit = async () => {
     const invoiceData = {
       partnerName: partner.name,
       period,
-      sharePercentage: partner.sharePercentage || partner.share_percentage || 20,
-      bookings: bookings.map(booking => {
-        const baseAmount = parseFloat(booking.baseAmount)
+      sharePercentage: partner.sharePercentage || 20,
+      bookings: bookings.filter(booking => {
+        // Additional client-side date validation
+        const bookingDate = new Date(booking.startDate)
+        const startDate = new Date(state.startDate)
+        const endDate = new Date(state.endDate)
+        return bookingDate >= startDate && bookingDate <= endDate
+      }).map(booking => {
+        // Handle both string and number formats for amounts
+        const baseAmount = typeof booking.baseAmount === 'string' 
+          ? parseFloat(booking.baseAmount) 
+          : (booking.baseAmount || 0)
+        
         const addonsTotal = Array.isArray(booking.addons) 
-          ? booking.addons.reduce((sum, addon) => sum + addon.amount, 0)
+          ? booking.addons.reduce((sum, addon) => sum + (addon.amount || 0), 0)
           : 0
+        
+        const amountPaid = typeof booking.amountPaid === 'string'
+          ? parseFloat(booking.amountPaid)
+          : (booking.amountPaid || 0)
         
         return {
           date: booking.startDate,
+          endDate: booking.endDate,
           guestName: booking.guestName,
           unitName: units.value.find(u => u.id === booking.unitId)?.name || 'Unknown Unit',
-          source: 'Direct',
+          source: booking.bookingSource?.name || bookingSources.value.find(s => s.id === booking.bookingSourceId)?.name || 'Direct',
           baseAmount,
           addons: addonsTotal,
           total: baseAmount + addonsTotal,
           paymentReceivedBy: booking.paymentReceivedBy,
-          actualAmountReceived: parseFloat(booking.amountPaid)
+          actualAmountReceived: amountPaid
         }
       }),
-      expenses: expenses.map(expense => ({
-        date: expense.date,
-        unitName: units.value.find(u => u.id === expense.unitId)?.name || 'Unknown Unit',
-        type: expense.type,
-        notes: expense.notes || '',
-        amount: parseFloat(expense.amount)
-      }))
+      expenses: expenses.filter(expense => {
+        // Additional client-side date validation
+        const expenseDate = new Date(expense.date)
+        const startDate = new Date(state.startDate)
+        const endDate = new Date(state.endDate)
+        return expenseDate >= startDate && expenseDate <= endDate
+      }).map(expense => {
+        const amount = typeof expense.amount === 'string'
+          ? parseFloat(expense.amount)
+          : (expense.amount || 0)
+        
+        return {
+          date: expense.date,
+          unitName: units.value.find(u => u.id === expense.unitId)?.name || 'Unknown Unit',
+          type: expense.type,
+          notes: expense.notes || '',
+          amount
+        }
+      })
     }
     
 

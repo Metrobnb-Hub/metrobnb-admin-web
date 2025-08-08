@@ -57,3 +57,74 @@ Progress : Successfully added realistic booking and expense data for Metro Condo
 Tools Used :
 
 fsReplace : Enhanced mock data in QuickInvoiceModal.vue by adding 4 bookings (Jennifer Lee, Michael Chen, Sarah Martinez, David Kim) with various payment methods and add-ons, plus 4 expenses including 3 repairs (plumbing ₱2,500, AC ₱1,800, electrical ₱950) and 1 WiFi/utilities expense (₱1,200) as specifically requested by the user. All data is within the December 2024 date range for proper filtering.
+
+
+Conversation Summary
+MetroBNB Invoice Generation : Successfully implemented complete partner invoice generation system with API integration, proper filtering, and print functionality
+
+Data Manager Integration : Fixed array access errors and null safety issues across components using centralized data manager
+
+API Field Mapping : Resolved field name mismatches between frontend camelCase and backend API responses
+
+Print Functionality : Fixed print CSS issues to properly display invoice content when printing
+
+UI Modernization : Transformed units page from basic table layout to modern mobile-first responsive design
+
+Expense Page Issues : Fixed partner/unit name display, sorting/filtering, and data inconsistency problems
+
+API Pagination : Updated invoice generation and expenses to use proper API pagination with 100-record limit
+
+Data Integrity Issue : Identified and reported backend data corruption where Kate's expenses incorrectly pointed to Casa Aurea unit
+
+Expense Enhancements : Added pagination, date filtering, and improved UI to expenses page
+
+Booking Page Separation : Separated booking data entry from booking list into dedicated pages
+
+Files and Code Summary
+components/partners/InvoiceGeneratorModal.vue : Complete invoice generator with partner/unit/date filtering, API integration, proper field mapping (camelCase), and billable expense filtering with pagination support
+
+components/PartnerInvoice.vue : Print-ready invoice display component with pagination, fixed print CSS, and proper data structure handling
+
+pages/expenses/index.vue : Completely rewritten with API-based filtering, pagination (20 items/page), date range filtering, proper partner/unit name display, and clean card-based layout
+
+pages/admin/units.vue : Modernized with mobile-first design, card-based mobile view, desktop table view, enhanced search/filtering, and responsive layout
+
+composables/api.ts : Updated getBookings() and getExpenses() to support start_date, end_date, billable, and type query parameters with pagination
+
+types/api.ts : Enhanced ApiFilters interface with date range, billable, and type filtering parameters
+
+components/expenses/EditExpenseModal.vue : Fixed to use data manager, handle field name compatibility, and support new capitalized expense types
+
+pages/expenses/create.vue : Updated expense type options to match API's capitalized enum values
+
+pages/bookings/create.vue : New dedicated booking entry page with form and navigation
+
+pages/accounting/bookings.vue : Updated to remove form section and add navigation to create page
+
+Key Insights
+API Structure : Backend returns data in camelCase format (guestName, startDate, baseAmount, etc.) not snake_case as initially expected
+
+Invoice Filtering Logic : Bookings filtered by partner ID, unit ID (optional), and date range using startDate; expenses filtered same way plus billable=true only
+
+Mobile-First Design Pattern : User prefers modern responsive designs with card layouts for mobile and table layouts for desktop
+
+Print CSS Requirements : Browser print functionality requires specific CSS rules to hide headers/footers and preserve colors
+
+Data Manager Usage : All components should use centralized data manager with .value access for reactive refs and proper array safety checks
+
+API Pagination Limits : API has maximum limit of 100 records per request, requiring pagination handling for large datasets
+
+Expense Type Enum : API expects capitalized expense types ('Cleaning', 'Laundry', 'Supplies', 'Wifi', 'Electricity', 'Repair', 'Repairs', 'Miscellaneous', 'Misc')
+
+Data Integrity Issue : Kate's expense records have incorrect unit_id values pointing to Casa Aurea instead of Espasyo By Kate - this is a backend database issue requiring SQL fixes
+
+Most Recent Topic
+Topic : Separating booking data entry from booking list into dedicated pages
+Progress : Successfully created separate pages for booking creation and listing, removing the form from the main bookings page
+Tools Used :
+
+executeBash : Created /pages/bookings directory structure
+
+fsWrite : Created new /pages/bookings/create.vue with dedicated booking form page including navigation and success handling
+
+fsReplace : Updated /pages/accounting/bookings.vue to remove form section, add page header with title/description, and include "Add Booking" button for navigation to create page

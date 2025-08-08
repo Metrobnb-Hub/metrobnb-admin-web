@@ -68,7 +68,7 @@ const schema = z.object({
   partnerId: z.string().min(1, 'Partner is required'),
   unitId: z.string().min(1, 'Unit is required'),
   date: z.string().min(1, 'Date is required'),
-  type: z.enum(['cleaning', 'laundry', 'utilities', 'repair', 'misc']),
+  type: z.enum(['Cleaning', 'Laundry', 'Supplies', 'Wifi', 'Electricity', 'Repair', 'Repairs', 'Miscellaneous', 'Misc']),
   amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   notes: z.string().optional()
 })
@@ -77,67 +77,107 @@ const state = reactive({
   partnerId: '',
   unitId: '',
   date: '',
-  type: '' as 'cleaning' | 'laundry' | 'utilities' | 'repair' | 'misc' | '',
+  type: '' as 'Cleaning' | 'Laundry' | 'Supplies' | 'Wifi' | 'Electricity' | 'Repair' | 'Repairs' | 'Miscellaneous' | 'Misc' | '',
   amount: 0,
   notes: ''
 })
 
 const expenseTypes = [
-  { label: 'Cleaning', value: 'cleaning' },
-  { label: 'Laundry', value: 'laundry' },
-  { label: 'Utilities', value: 'utilities' },
-  { label: 'Repair', value: 'repair' },
-  { label: 'Miscellaneous', value: 'misc' }
+  { label: 'Cleaning', value: 'Cleaning' },
+  { label: 'Laundry', value: 'Laundry' },
+  { label: 'Supplies', value: 'Supplies' },
+  { label: 'Wifi', value: 'Wifi' },
+  { label: 'Electricity', value: 'Electricity' },
+  { label: 'Repair', value: 'Repair' },
+  { label: 'Repairs', value: 'Repairs' },
+  { label: 'Miscellaneous', value: 'Miscellaneous' },
+  { label: 'Misc', value: 'Misc' }
 ]
 
-const { partners } = usePartnerStore()
-const { units } = useUnitStore()
-const { updateExpense } = useExpenseStore()
+const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { updateExpense } = useApi()
 
-const partnerOptions = computed(() => 
-  partners.map(p => ({ label: p.name, value: p.id }))
-)
+const partnerOptions = computed(() => {
+  if (!Array.isArray(partners.value)) return []
+  return partners.value.map(p => ({ label: p.name, value: p.id }))
+})
 
 const availableUnits = computed(() => {
-  if (!state.partnerId) return []
-  return units
-    .filter(unit => unit.partnerId === state.partnerId)
-    .map(unit => ({ label: unit.name, value: unit.id }))
-})
-
-watch(() => state.partnerId, () => {
-  state.unitId = ''
-})
-
-const onSubmit = () => {
-  const updatedExpense = {
-    ...props.expense,
-    ...state
+  if (!state.partnerId || !Array.isArray(units.value)) {
+    console.log('No partnerId or units not loaded:', { partnerId: state.partnerId, unitsLoaded: Array.isArray(units.value) })
+    return []
   }
   
-  updateExpense(props.expense.id, updatedExpense)
-  
-  const toast = useToast()
-  toast.add({
-    title: 'Expense updated',
-    description: 'Expense has been updated successfully',
-    color: 'green'
+  const filtered = units.value.filter(unit => {
+    const unitPartnerId = unit.partnerId || unit.partner_id
+    const matches = unitPartnerId === state.partnerId
+    console.log('Unit filter check:', { unitName: unit.name, unitPartnerId, selectedPartnerId: state.partnerId, matches })
+    return matches
   })
   
-  emit('updated')
-  isOpen.value = false
+  console.log('Available units for partner:', filtered)
+  return filtered.map(unit => ({ label: unit.name, value: unit.id }))
+})
+
+watch(() => state.partnerId, (newPartnerId, oldPartnerId) => {
+  // Only clear unit if partner is manually changed, not during initial load
+  if (oldPartnerId && newPartnerId !== oldPartnerId) {
+    console.log('Partner changed manually, clearing unit')
+    state.unitId = ''
+  }
+})
+
+const onSubmit = async () => {
+  try {
+    await updateExpense(props.expense.id, state)
+    
+    const toast = useToast()
+    toast.add({
+      title: 'Expense updated',
+      description: 'Expense has been updated successfully',
+      color: 'green'
+    })
+    
+    emit('updated')
+    isOpen.value = false
+  } catch (error) {
+    const toast = useToast()
+    toast.add({
+      title: 'Error',
+      description: 'Failed to update expense',
+      color: 'red'
+    })
+  }
 }
 
 watch(() => props.expense, (expense) => {
   if (expense) {
+    console.log('Loading expense data:', expense)
+    const partnerId = expense.partnerId || expense.partner_id
+    const unitId = expense.unitId || expense.unit_id
+    
+    console.log('Extracted IDs:', { partnerId, unitId })
+    
     Object.assign(state, {
-      partnerId: expense.partnerId,
-      unitId: expense.unitId,
+      partnerId,
+      unitId,
       date: expense.date,
       type: expense.type,
-      amount: expense.amount,
+      amount: parseFloat(expense.amount) || 0,
       notes: expense.notes || ''
     })
+    
+    console.log('State after assignment:', state)
   }
 }, { immediate: true })
+
+// Load data when modal opens
+watch(() => props.modelValue, async (isOpen) => {
+  if (isOpen) {
+    await Promise.all([
+      loadPartners(),
+      loadUnits()
+    ])
+  }
+})
 </script>

@@ -26,47 +26,36 @@
           <table class="w-full border-collapse border border-gray-300 dark:border-gray-600 print:border-gray-300">
             <thead>
               <tr class="bg-green-50 dark:bg-green-900 print:bg-green-50">
-                <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Date</th>
+                <th class="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900 w-32">Dates</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Guest</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Unit</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Source</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Base</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Add-ons</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Total</th>
-                <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Notes</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="booking in paginatedPartnerBookings" :key="booking.date + booking.guestName">
-                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ formatDate(booking.date) }}</td>
+              <tr v-for="booking in sortedPartnerBookings" :key="booking.date + booking.guestName">
+                <td class="border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900 w-32">{{ formatDateRange(booking.date, booking.endDate) }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.guestName }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.unitName }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.source }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">₱{{ booking.baseAmount.toLocaleString() }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">₱{{ booking.addons.toLocaleString() }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-right font-medium text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">₱{{ booking.total.toLocaleString() }}</td>
-                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.notes || '-' }}</td>
               </tr>
             </tbody>
             <tfoot class="bg-green-50 dark:bg-green-900 print:bg-green-50">
               <tr>
                 <td colspan="6" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Partner Payments Total:</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-green-700 dark:text-green-400 print:border-gray-300 print:text-green-700">₱{{ partnerPaymentsTotal.toLocaleString() }}</td>
-                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm print:border-gray-300"></td>
               </tr>
             </tfoot>
           </table>
         </div>
         
-        <!-- Partner Bookings Pagination -->
-        <div v-if="partnerTotalPages > 1" class="flex justify-center mt-4 print:hidden">
-          <UPagination 
-            v-model="currentPartnerPage" 
-            :page-count="itemsPerPage" 
-            :total="partnerBookings.length" 
-            size="sm"
-          />
-        </div>
+
       </div>
       
       <!-- Payments Received by MetroBNB -->
@@ -76,47 +65,36 @@
           <table class="w-full border-collapse border border-gray-300 dark:border-gray-600 print:border-gray-300">
             <thead>
               <tr class="bg-blue-50 dark:bg-blue-900 print:bg-blue-50">
-                <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Date</th>
+                <th class="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900 w-32">Dates</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Guest</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Unit</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Source</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Base</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Add-ons</th>
                 <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Total</th>
-                <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Notes</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="booking in paginatedMetroBNBBookings" :key="booking.date + booking.guestName">
-                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ formatDate(booking.date) }}</td>
+              <tr v-for="booking in sortedMetroBNBBookings" :key="booking.date + booking.guestName">
+                <td class="border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900 w-32">{{ formatDateRange(booking.date, booking.endDate) }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.guestName }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.unitName }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.source }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">₱{{ booking.baseAmount.toLocaleString() }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">₱{{ booking.addons.toLocaleString() }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-right font-medium text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">₱{{ booking.total.toLocaleString() }}</td>
-                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.notes || '-' }}</td>
               </tr>
             </tbody>
             <tfoot class="bg-blue-50 dark:bg-blue-900 print:bg-blue-50">
               <tr>
                 <td colspan="6" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">MetroBNB Payments Total:</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-blue-700 dark:text-blue-400 print:border-gray-300 print:text-blue-700">₱{{ totalReceivedByMetroBNB.toLocaleString() }}</td>
-                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm print:border-gray-300"></td>
               </tr>
             </tfoot>
           </table>
         </div>
         
-        <!-- MetroBNB Bookings Pagination -->
-        <div v-if="metrobnbTotalPages > 1" class="flex justify-center mt-4 print:hidden">
-          <UPagination 
-            v-model="currentMetroBNBPage" 
-            :page-count="itemsPerPage" 
-            :total="metrobnbBookings.length" 
-            size="sm"
-          />
-        </div>
+
       </div>
     </div>
 
@@ -135,7 +113,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="expense in paginatedExpenses" :key="expense.date + expense.type">
+            <tr v-for="expense in sortedExpenses" :key="expense.date + expense.type">
               <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ formatDate(expense.date) }}</td>
               <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ expense.unitName }}</td>
               <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm capitalize text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ expense.type }}</td>
@@ -152,15 +130,7 @@
         </table>
       </div>
       
-      <!-- Expenses Pagination -->
-      <div v-if="expensesTotalPages > 1" class="flex justify-center mt-4 print:hidden">
-        <UPagination 
-          v-model="currentExpensePage" 
-          :page-count="itemsPerPage" 
-          :total="invoice.expenses.length" 
-          size="sm"
-        />
-      </div>
+
     </div>
 
     <!-- Computation Summary -->
@@ -214,6 +184,7 @@
 <script setup lang="ts">
 interface Booking {
   date: string
+  endDate?: string
   guestName: string
   unitName: string
   source: string
@@ -352,33 +323,25 @@ const formatDate = (dateString: string) => {
   })
 }
 
-// Pagination for large datasets
-const itemsPerPage = 15
-const currentPartnerPage = ref(1)
-const currentMetroBNBPage = ref(1)
-const currentExpensePage = ref(1)
+const formatDateRange = (startDate: string, endDate?: string) => {
+  const start = formatDate(startDate)
+  if (!endDate) return start
+  const end = formatDate(endDate)
+  return start === end ? start : `${start} - ${end}`
+}
 
-const paginatedPartnerBookings = computed(() => {
-  const start = (currentPartnerPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return partnerBookings.value.slice(start, end)
-})
+// Sorted data for print-friendly display (ascending by date)
+const sortedPartnerBookings = computed(() => 
+  [...partnerBookings.value].sort((a, b) => new Date(a.date) - new Date(b.date))
+)
 
-const paginatedMetroBNBBookings = computed(() => {
-  const start = (currentMetroBNBPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return metrobnbBookings.value.slice(start, end)
-})
+const sortedMetroBNBBookings = computed(() => 
+  [...metrobnbBookings.value].sort((a, b) => new Date(a.date) - new Date(b.date))
+)
 
-const paginatedExpenses = computed(() => {
-  const start = (currentExpensePage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return invoice.expenses.slice(start, end)
-})
-
-const partnerTotalPages = computed(() => Math.ceil(partnerBookings.value.length / itemsPerPage))
-const metrobnbTotalPages = computed(() => Math.ceil(metrobnbBookings.value.length / itemsPerPage))
-const expensesTotalPages = computed(() => Math.ceil(invoice.expenses.length / itemsPerPage))
+const sortedExpenses = computed(() => 
+  [...(invoice?.expenses || [])].sort((a, b) => new Date(a.date) - new Date(b.date))
+)
 
 const printInvoice = () => {
   window.print()
