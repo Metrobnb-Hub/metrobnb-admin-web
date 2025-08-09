@@ -31,6 +31,18 @@
             <UInput v-model="state.amount" type="number" step="0.01" min="0" />
           </UFormGroup>
           
+          <UFormGroup label="Billable" name="billable">
+            <USelect v-model="state.billable" :options="billableOptions" />
+          </UFormGroup>
+          
+          <UFormGroup label="Payment Status" name="paid">
+            <USelect v-model="state.paid" :options="paidOptions" />
+          </UFormGroup>
+          
+          <UFormGroup label="Payment Date" name="paidDate" v-if="state.paid === 'true'">
+            <UInput v-model="state.paidDate" type="date" />
+          </UFormGroup>
+          
           <UFormGroup label="Notes" name="notes" class="md:col-span-2">
             <UTextarea v-model="state.notes" placeholder="Additional details (optional)" />
           </UFormGroup>
@@ -68,7 +80,7 @@ const schema = z.object({
   partnerId: z.string().min(1, 'Partner is required'),
   unitId: z.string().min(1, 'Unit is required'),
   date: z.string().min(1, 'Date is required'),
-  type: z.enum(['Cleaning', 'Laundry', 'Supplies', 'Wifi', 'Electricity', 'Repair', 'Repairs', 'Miscellaneous', 'Misc']),
+  type: z.enum(['Cleaning', 'Laundry', 'Supplies', 'Wifi', 'Electricity', 'Repair', 'Repairs', 'Miscellaneous']),
   amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   notes: z.string().optional()
 })
@@ -77,8 +89,11 @@ const state = reactive({
   partnerId: '',
   unitId: '',
   date: '',
-  type: '' as 'Cleaning' | 'Laundry' | 'Supplies' | 'Wifi' | 'Electricity' | 'Repair' | 'Repairs' | 'Miscellaneous' | 'Misc' | '',
+  type: '' as 'Cleaning' | 'Laundry' | 'Supplies' | 'Wifi' | 'Electricity' | 'Repair' | 'Repairs' | 'Miscellaneous' | '',
   amount: 0,
+  billable: 'true',
+  paid: 'false',
+  paidDate: '',
   notes: ''
 })
 
@@ -90,8 +105,17 @@ const expenseTypes = [
   { label: 'Electricity', value: 'Electricity' },
   { label: 'Repair', value: 'Repair' },
   { label: 'Repairs', value: 'Repairs' },
-  { label: 'Miscellaneous', value: 'Miscellaneous' },
-  { label: 'Misc', value: 'Misc' }
+  { label: 'Miscellaneous', value: 'Miscellaneous' }
+]
+
+const billableOptions = [
+  { label: 'Billable', value: 'true' },
+  { label: 'Non-billable', value: 'false' }
+]
+
+const paidOptions = [
+  { label: 'Unpaid', value: 'false' },
+  { label: 'Paid', value: 'true' }
 ]
 
 const { partners, units, loadPartners, loadUnits } = useDataManager()
@@ -128,25 +152,36 @@ watch(() => state.partnerId, (newPartnerId, oldPartnerId) => {
 })
 
 const onSubmit = async () => {
+  const { notifySuccess, notifyError } = useNotify()
+  
   try {
-    await updateExpense(props.expense.id, state)
+    const updateData: any = {
+      partner_id: state.partnerId,
+      unit_id: state.unitId,
+      date: state.date,
+      type: state.type,
+      amount: state.amount,
+      billable: state.billable === 'true',
+      paid: state.paid === 'true',
+      notes: state.notes
+    }
     
-    const toast = useToast()
-    toast.add({
-      title: 'Expense updated',
-      description: 'Expense has been updated successfully',
-      color: 'green'
-    })
+    // Only include paidDate if marking as paid AND has a date
+    if (state.paid === 'true' && state.paidDate) {
+      updateData.paid_date = state.paidDate
+    } else if (state.paid === 'false') {
+      // Explicitly set to null when unpaid
+      updateData.paid_date = null
+    }
+    
+    await updateExpense(props.expense.id, updateData)
+    
+    notifySuccess('Expense updated successfully')
     
     emit('updated')
     isOpen.value = false
   } catch (error) {
-    const toast = useToast()
-    toast.add({
-      title: 'Error',
-      description: 'Failed to update expense',
-      color: 'red'
-    })
+    notifyError('Failed to update expense')
   }
 }
 
@@ -164,12 +199,22 @@ watch(() => props.expense, (expense) => {
       date: expense.date,
       type: expense.type,
       amount: parseFloat(expense.amount) || 0,
+      billable: expense.billable ? 'true' : 'false',
+      paid: expense.paid ? 'true' : 'false',
+      paidDate: expense.paidDate || '',
       notes: expense.notes || ''
     })
     
     console.log('State after assignment:', state)
   }
 }, { immediate: true })
+
+// Auto-set payment date when marking as paid
+watch(() => state.paid, (newValue) => {
+  if (newValue === 'true' && !state.paidDate) {
+    state.paidDate = new Date().toISOString().split('T')[0]
+  }
+})
 
 // Load data when modal opens
 watch(() => props.modelValue, async (isOpen) => {

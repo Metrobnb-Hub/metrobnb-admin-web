@@ -47,8 +47,16 @@
               </tr>
             </tbody>
             <tfoot class="bg-green-50 dark:bg-green-900 print:bg-green-50">
+              <tr v-for="(breakdown, source) in partnerBreakdownBySource" :key="source">
+                <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">{{ source }} Base:</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-semibold text-right text-gray-700 dark:text-gray-300 print:border-gray-300 print:text-gray-700">₱{{ breakdown.base.toLocaleString() }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-semibold text-right text-gray-700 dark:text-gray-300 print:border-gray-300 print:text-gray-700">₱{{ breakdown.addons.toLocaleString() }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-semibold text-right text-gray-700 dark:text-gray-300 print:border-gray-300 print:text-gray-700">₱{{ breakdown.total.toLocaleString() }}</td>
+              </tr>
               <tr>
-                <td colspan="6" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Partner Payments Total:</td>
+                <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Partner Total:</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-green-700 dark:text-green-400 print:border-gray-300 print:text-green-700">₱{{ partnerBaseTotal.toLocaleString() }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-green-700 dark:text-green-400 print:border-gray-300 print:text-green-700">₱{{ partnerAddonsTotal.toLocaleString() }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-green-700 dark:text-green-400 print:border-gray-300 print:text-green-700">₱{{ partnerPaymentsTotal.toLocaleString() }}</td>
               </tr>
             </tfoot>
@@ -86,8 +94,16 @@
               </tr>
             </tbody>
             <tfoot class="bg-blue-50 dark:bg-blue-900 print:bg-blue-50">
+              <tr v-for="(breakdown, source) in metrobnbBreakdownBySource" :key="source">
+                <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">{{ source }} Base:</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-semibold text-right text-gray-700 dark:text-gray-300 print:border-gray-300 print:text-gray-700">₱{{ breakdown.base.toLocaleString() }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-semibold text-right text-gray-700 dark:text-gray-300 print:border-gray-300 print:text-gray-700">₱{{ breakdown.addons.toLocaleString() }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-semibold text-right text-gray-700 dark:text-gray-300 print:border-gray-300 print:text-gray-700">₱{{ breakdown.total.toLocaleString() }}</td>
+              </tr>
               <tr>
-                <td colspan="6" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">MetroBNB Payments Total:</td>
+                <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">MetroBNB Total:</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-blue-700 dark:text-blue-400 print:border-gray-300 print:text-blue-700">₱{{ metrobnbBaseTotal.toLocaleString() }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-blue-700 dark:text-blue-400 print:border-gray-300 print:text-blue-700">₱{{ metrobnbAddonsTotal.toLocaleString() }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-blue-700 dark:text-blue-400 print:border-gray-300 print:text-blue-700">₱{{ totalReceivedByMetroBNB.toLocaleString() }}</td>
               </tr>
             </tfoot>
@@ -166,16 +182,22 @@
       </table>
     </div>
 
-    <!-- Print Button -->
+    <!-- Print & Download Buttons -->
     <div class="mt-8 text-center print:hidden">
       <div class="space-y-2">
         <p class="text-sm text-gray-600 dark:text-gray-400">
           {{ (partnerBookings?.length || 0) + (metrobnbBookings?.length || 0) }} bookings, {{ invoice?.expenses?.length || 0 }} expenses
         </p>
-        <UButton @click="printInvoice" color="primary" size="lg">
-          <UIcon name="i-heroicons-printer" class="mr-2" />
-          Print Invoice
-        </UButton>
+        <div class="flex justify-center gap-4">
+          <UButton @click="printInvoice" color="primary" size="lg">
+            <UIcon name="i-heroicons-printer" class="mr-2" />
+            Print Invoice
+          </UButton>
+          <UButton @click="downloadInvoice" color="green" size="lg">
+            <UIcon name="i-heroicons-arrow-down-tray" class="mr-2" />
+            Download PDF
+          </UButton>
+        </div>
       </div>
     </div>
   </div>
@@ -343,8 +365,92 @@ const sortedExpenses = computed(() =>
   [...(invoice?.expenses || [])].sort((a, b) => new Date(a.date) - new Date(b.date))
 )
 
+// Breakdown by source with base/addons separation
+const partnerBreakdownBySource = computed(() => {
+  const breakdown: Record<string, {base: number, addons: number, total: number}> = {}
+  partnerBookings.value.forEach(booking => {
+    if (!breakdown[booking.source]) {
+      breakdown[booking.source] = { base: 0, addons: 0, total: 0 }
+    }
+    breakdown[booking.source].base += booking.baseAmount
+    breakdown[booking.source].addons += booking.addons
+    breakdown[booking.source].total += booking.actualAmountReceived
+  })
+  return breakdown
+})
+
+const metrobnbBreakdownBySource = computed(() => {
+  const breakdown: Record<string, {base: number, addons: number, total: number}> = {}
+  metrobnbBookings.value.forEach(booking => {
+    if (!breakdown[booking.source]) {
+      breakdown[booking.source] = { base: 0, addons: 0, total: 0 }
+    }
+    breakdown[booking.source].base += booking.baseAmount
+    breakdown[booking.source].addons += booking.addons
+    breakdown[booking.source].total += booking.actualAmountReceived
+  })
+  return breakdown
+})
+
+// Overall totals for base and addons
+const partnerBaseTotal = computed(() => 
+  partnerBookings.value.reduce((sum, booking) => sum + booking.baseAmount, 0)
+)
+
+const partnerAddonsTotal = computed(() => 
+  partnerBookings.value.reduce((sum, booking) => sum + booking.addons, 0)
+)
+
+const metrobnbBaseTotal = computed(() => 
+  metrobnbBookings.value.reduce((sum, booking) => sum + booking.baseAmount, 0)
+)
+
+const metrobnbAddonsTotal = computed(() => 
+  metrobnbBookings.value.reduce((sum, booking) => sum + booking.addons, 0)
+)
+
 const printInvoice = () => {
   window.print()
+}
+
+const downloadInvoice = () => {
+  // Get unique unit names from bookings
+  const allBookings = [...partnerBookings.value, ...metrobnbBookings.value];
+  const unitNames = [...new Set(allBookings.map(b => b.unitName))].filter(Boolean);
+  
+  // Create filename: partner_name-unit_name(s)-month
+  const partnerName = invoice.partnerName.replace(/\s+/g, '_');
+  const unitPart = unitNames.join('-').replace(/\s+/g, '_');
+  const monthPart = invoice.period.replace(/\s+/g, '_');
+  const filename = `${partnerName}-${unitPart}-${monthPart}.pdf`;
+  
+  // Use browser's print to PDF functionality
+  const printWindow = window.open('', '_blank')
+  if (printWindow) {
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${filename}</title>
+          <style>
+            ${document.querySelector('style')?.innerHTML || ''}
+            body { margin: 0; padding: 20px; font-family: system-ui, -apple-system, sans-serif; }
+            .print\\:hidden { display: none !important; }
+            @media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+          </style>
+        </head>
+        <body>
+          ${document.querySelector('.max-w-4xl')?.outerHTML || ''}
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.focus()
+    setTimeout(() => {
+      printWindow.print()
+      printWindow.close()
+    }, 250)
+  }
 }
 </script>
 
@@ -352,7 +458,7 @@ const printInvoice = () => {
 @media print {
   * {
     -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   
   body {

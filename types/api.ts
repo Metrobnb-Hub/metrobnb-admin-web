@@ -66,6 +66,8 @@ export interface Booking {
   paymentReceivedBy: 'partner' | 'metrobnb'
   bookingSource?: BookingSource  // Full booking source object if included
   bookingSourceId: string
+  invoiced: boolean  // Invoice status
+  invoiceDate: string | null  // Invoice generation date
   notes?: string
   createdAt: string
   updatedAt: string
@@ -79,6 +81,8 @@ export interface Expense {
   type: 'cleaning' | 'laundry' | 'utilities' | 'repair' | 'misc'
   amount: string  // API returns as string "150.00"
   billable: boolean
+  paid: boolean  // Payment status
+  paidDate: string | null  // Payment date
   notes?: string
   createdAt: string
   updatedAt: string
@@ -94,6 +98,8 @@ export interface ApiFilters {
   end_date?: string    // YYYY-MM-DD format
   type?: string        // For expense type filtering
   billable?: boolean   // For expense filtering
+  paid?: boolean       // For payment status filtering
+  invoiced?: boolean   // For invoice status filtering
   page?: number
   limit?: number
   search?: string

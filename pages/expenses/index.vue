@@ -78,6 +78,11 @@
             :options="typeFilterOptions"
             class="w-40"
           />
+          <USelect 
+            v-model="filterPaid" 
+            :options="paidFilterOptions"
+            class="w-40"
+          />
         </div>
         
         <!-- Date Filters -->
@@ -145,6 +150,12 @@
                 :class="expense.billable ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'"
               >
                 {{ expense.billable ? 'Billable' : 'Non-billable' }}
+              </span>
+              <span 
+                class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+                :class="expense.paid ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
+              >
+                {{ expense.paid ? 'Paid' : 'Unpaid' }}
               </span>
               <span class="text-sm text-gray-500 dark:text-gray-400">
                 {{ formatDate(expense.date) }}
@@ -233,6 +244,7 @@ const selectedExpense = ref(null)
 const searchQuery = ref('')
 const sortBy = ref('date_desc')
 const filterType = ref('all')
+const filterPaid = ref('all')
 const startDate = ref('')
 const endDate = ref('')
 const expenses = ref([])
@@ -258,8 +270,13 @@ const typeFilterOptions = [
   { label: 'Electricity', value: 'Electricity' },
   { label: 'Repair', value: 'Repair' },
   { label: 'Repairs', value: 'Repairs' },
-  { label: 'Miscellaneous', value: 'Miscellaneous' },
-  { label: 'Misc', value: 'Misc' }
+  { label: 'Miscellaneous', value: 'Miscellaneous' }
+]
+
+const paidFilterOptions = [
+  { label: 'All Status', value: 'all' },
+  { label: 'Paid', value: 'true' },
+  { label: 'Unpaid', value: 'false' }
 ]
 
 const loadExpensesData = async () => {
@@ -280,6 +297,10 @@ const loadExpensesData = async () => {
     
     if (filterType.value && filterType.value !== 'all') {
       filters.type = filterType.value
+    }
+    
+    if (filterPaid.value && filterPaid.value !== 'all') {
+      filters.paid = filterPaid.value === 'true'
     }
     
     if (startDate.value) {
@@ -305,6 +326,9 @@ const loadExpensesData = async () => {
     console.error('Failed to load expenses:', error)
     expenses.value = []
     pagination.value = null
+    
+    const { notifyError } = useNotify()
+    notifyError('Failed to load expenses')
   } finally {
     isLoading.value = false
   }
@@ -374,6 +398,11 @@ const formatDate = (dateString: string) => {
 
 const getExpenseActions = (expense: any) => [
   [{
+    label: expense.paid ? 'Mark Unpaid' : 'Mark Paid',
+    icon: expense.paid ? 'i-heroicons-x-circle' : 'i-heroicons-check-circle',
+    click: () => togglePayment(expense)
+  }],
+  [{
     label: 'Edit',
     icon: 'i-heroicons-pencil-square',
     click: () => handleEdit(expense)
@@ -391,23 +420,36 @@ const handleEdit = (expense: any) => {
 }
 
 const handleDelete = async (id: string) => {
+  const { notifySuccess, notifyError } = useNotify()
+  
   try {
     await deleteExpense(id)
     await loadExpensesData()
-    
-    const toast = useToast()
-    toast.add({
-      title: 'Expense deleted',
-      description: 'Expense has been removed',
-      color: 'orange'
-    })
+    notifySuccess('Expense deleted successfully')
   } catch (error) {
-    const toast = useToast()
-    toast.add({
-      title: 'Error',
-      description: 'Failed to delete expense',
-      color: 'red'
-    })
+    notifyError('Failed to delete expense')
+  }
+}
+
+const togglePayment = async (expense: any) => {
+  const { notifySuccess, notifyError } = useNotify()
+  const { updateExpense } = useApi()
+  
+  try {
+    const updateData = {
+      paid: !expense.paid,
+      paidDate: !expense.paid ? new Date().toISOString().split('T')[0] : null,
+      billable: expense.billable,
+      amount: expense.amount,
+      type: expense.type,
+      notes: expense.notes
+    }
+    
+    await updateExpense(expense.id, updateData)
+    await loadExpensesData()
+    notifySuccess(`Expense marked as ${!expense.paid ? 'paid' : 'unpaid'}`)
+  } catch (error) {
+    notifyError('Failed to update payment status')
   }
 }
 
@@ -470,7 +512,7 @@ const clearDateFilters = () => {
 }
 
 // Watch for filter changes
-watch([sortBy, filterType, startDate, endDate], () => {
+watch([sortBy, filterType, filterPaid, startDate, endDate], () => {
   currentPage.value = 1 // Reset to first page
   loadExpensesData()
 })

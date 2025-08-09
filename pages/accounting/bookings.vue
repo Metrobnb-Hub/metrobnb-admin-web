@@ -94,6 +94,14 @@
                 placeholder="To date"
               />
             </UFormGroup>
+            
+            <UFormGroup label="Invoice Status">
+              <USelect 
+                v-model="filters.invoiced" 
+                :options="invoicedOptions"
+                placeholder="Select status"
+              />
+            </UFormGroup>
           </div>
           
           <div class="flex justify-end gap-2 mt-4">
@@ -160,7 +168,8 @@ const filters = reactive({
   startDate: '',
   endDate: '',
   paymentStatus: '',
-  paymentReceivedBy: ''
+  paymentReceivedBy: '',
+  invoiced: ''
 })
 const pagination = ref({
   currentPage: 1,
@@ -210,27 +219,37 @@ const paymentReceivedByOptions = [
   { label: 'MetroBNB', value: 'metrobnb' }
 ]
 
+const invoicedOptions = [
+  { label: 'All Status', value: '' },
+  { label: 'Invoiced', value: 'true' },
+  { label: 'Not Invoiced', value: 'false' }
+]
+
 const handleEdit = (booking: any) => {
   selectedBooking.value = booking
   showEditModal.value = true
 }
 
-const handleDelete = (id: string) => {
-  deleteBooking(id)
+const handleDelete = async (id: string) => {
+  const { notifySuccess, notifyError } = useNotify()
   
-  const toast = useToast()
-  toast.add({
-    title: 'Booking deleted',
-    description: 'Payment record has been removed',
-    color: 'orange'
-  })
+  try {
+    await deleteBooking(id)
+    await loadBookings()
+    notifySuccess('Booking deleted successfully')
+  } catch (error) {
+    notifyError('Failed to delete booking')
+  }
 }
 
 const handleUpdated = () => {
   selectedBooking.value = null
+  loadBookings()
 }
 
 const loadBookings = async () => {
+  const { notifyError, notifyInfo } = useNotify()
+  
   try {
     // Parse sort field and order correctly
     const parts = sortBy.value.split('_')
@@ -249,22 +268,26 @@ const loadBookings = async () => {
       ...(filters.startDate && { start_date: filters.startDate }),
       ...(filters.endDate && { end_date: filters.endDate }),
       ...(filters.paymentStatus && { payment_status: filters.paymentStatus }),
-      ...(filters.paymentReceivedBy && { payment_received_by: filters.paymentReceivedBy })
+      ...(filters.paymentReceivedBy && { payment_received_by: filters.paymentReceivedBy }),
+      ...(filters.invoiced && { invoiced: filters.invoiced === 'true' })
     })
-    
-    console.log('Raw API result:', result)
     
     if (result && typeof result === 'object' && 'data' in result) {
       bookings.value = result.data
       pagination.value = result.pagination
-      console.log('Transformed bookings:', result.data[0])
+      if (result.data.length === 0 && currentPage.value === 1) {
+        notifyInfo('No bookings found')
+      }
     } else {
       bookings.value = Array.isArray(result) ? result : []
-      console.log('Non-paginated bookings:', result[0])
+      if (bookings.value.length === 0) {
+        notifyInfo('No bookings found')
+      }
     }
   } catch (error) {
     console.error('Failed to load bookings:', error)
     bookings.value = []
+    notifyError('Failed to load bookings')
   }
 }
 

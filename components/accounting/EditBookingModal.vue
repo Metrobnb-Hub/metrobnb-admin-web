@@ -48,6 +48,18 @@
           <UFormGroup label="Amount Paid" name="amountPaid">
             <UInput v-model="state.amountPaid" type="number" step="0.01" name="amountPaid" />
           </UFormGroup>
+          
+          <UFormGroup label="Payment Received By" name="paymentReceivedBy">
+            <USelect v-model="state.paymentReceivedBy" :options="paymentReceivedByOptions" name="paymentReceivedBy" />
+          </UFormGroup>
+          
+          <UFormGroup label="Invoice Status" name="invoiced">
+            <USelect v-model="state.invoiced" :options="invoiceStatusOptions" name="invoiced" />
+          </UFormGroup>
+          
+          <UFormGroup label="Invoice Date" name="invoiceDate" v-if="state.invoiced === 'true'">
+            <UInput v-model="state.invoiceDate" type="date" name="invoiceDate" />
+          </UFormGroup>
         </div>
         
         <!-- Add-ons Section -->
@@ -122,8 +134,7 @@ const isOpen = computed({
 })
 
 const { partners, units, loadPartners, loadUnits } = useDataManager()
-const { updateBooking } = useAccountingStore()
-const { getBookingSources } = useApi()
+const { updateBooking } = useApi()
 
 const paymentMethods = ref([])
 
@@ -165,7 +176,10 @@ const state = reactive({
   addons: [] as { type: string; amount: number }[],
   bookingStatus: 'confirmed',
   paymentStatus: 'unpaid',
-  amountPaid: 0
+  amountPaid: 0,
+  paymentReceivedBy: 'partner',
+  invoiced: 'false',
+  invoiceDate: ''
 })
 
 const bookingStatusOptions = [
@@ -187,6 +201,16 @@ const paymentMethodOptions = [
   { label: 'PayPal', value: 'PayPal' },
   { label: 'GCash', value: 'GCash' },
   { label: 'Maya', value: 'Maya' }
+]
+
+const paymentReceivedByOptions = [
+  { label: 'Partner', value: 'partner' },
+  { label: 'MetroBNB', value: 'metrobnb' }
+]
+
+const invoiceStatusOptions = [
+  { label: 'Not Invoiced', value: 'false' },
+  { label: 'Invoiced', value: 'true' }
 ]
 
 const partnerOptions = computed(() => {
@@ -222,24 +246,43 @@ const totalAmount = computed(() =>
   Number(state.amount || 0) + selectedAddonsTotal.value
 )
 
-const onSubmit = () => {
-  const updatedBooking = {
-    ...props.booking,
-    ...state
+const onSubmit = async () => {
+  const { notifySuccess, notifyError } = useNotify()
+  
+  try {
+    const updatedData = {
+      guestName: state.guestName,
+      bookingDate: state.date,
+      baseAmount: state.amount,
+      paymentMethod: state.paymentMethod,
+      partnerId: state.partner,
+      unitId: state.unitId,
+      addons: state.addons,
+      bookingStatus: state.bookingStatus,
+      paymentStatus: state.paymentStatus,
+      amountPaid: state.amountPaid,
+      paymentReceivedBy: state.paymentReceivedBy,
+      invoiced: state.invoiced === 'true',
+      invoiceDate: state.invoiced === 'true' ? (state.invoiceDate || new Date().toISOString().split('T')[0]) : null
+    }
+    
+    await updateBooking(props.booking.id, updatedData)
+    
+    notifySuccess(`Booking for ${state.guestName} has been updated`)
+    
+    emit('updated')
+    isOpen.value = false
+  } catch (error) {
+    notifyError('Failed to update booking')
   }
-  
-  updateBooking(props.booking.id, updatedBooking)
-  
-  const toast = useToast()
-  toast.add({
-    title: 'Booking updated',
-    description: `Payment for ${state.guestName} has been updated`,
-    color: 'green'
-  })
-  
-  emit('updated')
-  isOpen.value = false
 }
+
+// Auto-set invoice date when marking as invoiced
+watch(() => state.invoiced, (newValue) => {
+  if (newValue === 'true' && !state.invoiceDate) {
+    state.invoiceDate = new Date().toISOString().split('T')[0]
+  }
+})
 
 // Reset unit selection when partner changes (but not during initialization)
 const isInitializing = ref(false)
@@ -260,13 +303,16 @@ watch(() => props.booking, (booking) => {
       guestName: booking.guestName || '',
       date: booking.bookingDate || booking.startDate || booking.date || '',
       amount: parseFloat(booking.baseAmount) || 0,
-      paymentMethod: booking.paymentMethod?.name || booking.paymentMethodId || '',
+      paymentMethod: booking.paymentMethodId || booking.paymentMethod?.id || booking.paymentMethod?.name || '',
       partner: booking.partnerId || '',
       unitId: booking.unitId || '',
       addons: Array.isArray(booking.addons) ? booking.addons : [],
       bookingStatus: booking.bookingStatus || 'confirmed',
       paymentStatus: booking.paymentStatus || 'unpaid',
-      amountPaid: parseFloat(booking.amountPaid) || 0
+      amountPaid: parseFloat(booking.amountPaid) || 0,
+      paymentReceivedBy: booking.paymentReceivedBy || 'partner',
+      invoiced: booking.invoiced ? 'true' : 'false',
+      invoiceDate: booking.invoiceDate || ''
     })
     
     // Allow partner/unit relationship to settle

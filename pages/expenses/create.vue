@@ -11,7 +11,7 @@
             <USelect v-model="form.partnerId" :options="partnerOptions" placeholder="Select partner" />
           </UFormGroup>
           <UFormGroup label="Unit" name="unitId">
-            <USelect v-model="form.unitId" :options="unitOptions" placeholder="Select unit" />
+            <USelect v-model="form.unitId" :options="unitOptions" placeholder="Select unit" :disabled="!form.partnerId" />
           </UFormGroup>
         </div>
         
@@ -45,9 +45,8 @@
 </template>
 
 <script setup lang="ts">
-const { partners, loadFromStorage: loadPartners } = usePartnerStore()
-const { units, loadFromStorage: loadUnits } = useUnitStore()
-const { addExpense } = useExpenseStore()
+const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { createExpense } = useApi()
 const router = useRouter()
 const toast = useToast()
 
@@ -62,13 +61,17 @@ const form = ref({
   notes: ''
 })
 
-const partnerOptions = computed(() => 
-  partners.map(p => ({ label: p.name, value: p.id }))
-)
+const partnerOptions = computed(() => {
+  if (!Array.isArray(partners.value)) return []
+  return partners.value.map(p => ({ label: p.name, value: p.id }))
+})
 
-const unitOptions = computed(() => 
-  units.map(u => ({ label: u.name, value: u.id }))
-)
+const unitOptions = computed(() => {
+  if (!form.value.partnerId || !Array.isArray(units.value)) return []
+  return units.value
+    .filter(u => (u.partnerId || u.partner_id) === form.value.partnerId)
+    .map(u => ({ label: u.name, value: u.id }))
+})
 
 const expenseTypes = [
   { label: 'Cleaning', value: 'Cleaning' },
@@ -78,23 +81,20 @@ const expenseTypes = [
   { label: 'Electricity', value: 'Electricity' },
   { label: 'Repair', value: 'Repair' },
   { label: 'Repairs', value: 'Repairs' },
-  { label: 'Miscellaneous', value: 'Miscellaneous' },
-  { label: 'Misc', value: 'Misc' }
+  { label: 'Miscellaneous', value: 'Miscellaneous' }
 ]
 
 const handleSubmit = async () => {
+  const { notifySuccess, notifyError } = useNotify()
+  
   if (!form.value.partnerId || !form.value.unitId || !form.value.type || !form.value.amount) {
-    toast.add({
-      title: 'Error',
-      description: 'Please fill in all required fields',
-      color: 'red'
-    })
+    notifyError('Please fill in all required fields')
     return
   }
 
   loading.value = true
   try {
-    await addExpense({
+    await createExpense({
       partnerId: form.value.partnerId,
       unitId: form.value.unitId,
       date: form.value.date,
@@ -104,31 +104,26 @@ const handleSubmit = async () => {
       notes: form.value.notes
     })
     
-    toast.add({
-      title: 'Success',
-      description: 'Expense added successfully'
-    })
-    
+    notifySuccess('Expense added successfully')
     router.push('/expenses')
   } catch (error) {
-    toast.add({
-      title: 'Error',
-      description: 'Failed to add expense',
-      color: 'red'
-    })
+    notifyError('Failed to add expense')
   } finally {
     loading.value = false
   }
 }
 
-onMounted(async () => {
-  try {
-    await Promise.all([
-      loadPartners(),
-      loadUnits()
-    ])
-  } catch (error) {
-    console.error('Failed to load data:', error)
+// Clear unit when partner changes
+watch(() => form.value.partnerId, (newPartnerId, oldPartnerId) => {
+  if (oldPartnerId && newPartnerId !== oldPartnerId) {
+    form.value.unitId = ''
   }
+})
+
+onMounted(async () => {
+  await Promise.all([
+    loadPartners(),
+    loadUnits()
+  ])
 })
 </script>

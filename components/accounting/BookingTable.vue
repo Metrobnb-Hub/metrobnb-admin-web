@@ -26,47 +26,71 @@
         </div>
         <span v-else class="text-gray-400 text-sm">None</span>
       </template>
-      <template #bookingStatus-data="{ row }">
-        <span 
-          class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-          :class="getBookingStatusClass(row.bookingStatus)"
-        >
-          {{ getBookingStatusLabel(row.bookingStatus) }}
-        </span>
+
+      <template #status-data="{ row }">
+        <div class="space-y-1">
+          <div>
+            <span 
+              class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+              :class="getBookingStatusClass(row.bookingStatus)"
+            >
+              {{ getBookingStatusLabel(row.bookingStatus) }}
+            </span>
+          </div>
+          <div>
+            <span 
+              class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+              :class="row.invoiced ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'"
+            >
+              {{ row.invoiced ? 'Invoiced' : 'Not Invoiced' }}
+            </span>
+          </div>
+        </div>
       </template>
-      <template #paymentStatus-data="{ row }">
-        <span 
-          class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-          :class="getPaymentStatusClass(row.paymentStatus)"
-        >
-          {{ getPaymentStatusLabel(row.paymentStatus) }}
-        </span>
+      <template #payment-data="{ row }">
+        <div class="space-y-1">
+          <div>
+            <span 
+              class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+              :class="getPaymentStatusClass(row.paymentStatus)"
+            >
+              {{ getPaymentStatusLabel(row.paymentStatus) }}
+            </span>
+          </div>
+          <div>
+            <span 
+              class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+              :class="row.paymentReceivedBy === 'metrobnb' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'"
+            >
+              {{ row.paymentReceivedBy === 'metrobnb' ? 'MetroBNB' : 'Partner' }}
+            </span>
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {{ (row.paymentMethod || row.payment_method)?.name || 'N/A' }}
+          </div>
+        </div>
       </template>
-      <template #unitId-data="{ row }">
-        <span class="text-sm text-gray-900 dark:text-white">
-          {{ getUnitName(row.unitId || row.unit_id) }}
-        </span>
+      <template #guest-data="{ row }">
+        <div>
+          <div class="font-medium text-gray-900 dark:text-white">
+            {{ row.guestName || row.guest_name }}
+          </div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">
+            {{ row.bookingDate || row.booking_date }}
+          </div>
+        </div>
       </template>
-      <template #paymentMethod-data="{ row }">
-        <span class="text-sm text-gray-900 dark:text-white">
-          {{ (row.paymentMethod || row.payment_method)?.name || 'N/A' }}
-        </span>
+      <template #location-data="{ row }">
+        <div>
+          <div class="font-medium text-gray-900 dark:text-white">
+            {{ getPartnerName(row.partnerId || row.partner_id) }}
+          </div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">
+            {{ getUnitName(row.unitId || row.unit_id) }}
+          </div>
+        </div>
       </template>
-      <template #partnerId-data="{ row }">
-        <span class="text-sm text-gray-900 dark:text-white">
-          {{ getPartnerName(row.partnerId || row.partner_id) }}
-        </span>
-      </template>
-      <template #guestName-data="{ row }">
-        <span class="text-sm text-gray-900 dark:text-white">
-          {{ row.guestName || row.guest_name }}
-        </span>
-      </template>
-      <template #bookingDate-data="{ row }">
-        <span class="text-sm text-gray-900 dark:text-white">
-          {{ row.bookingDate || row.booking_date }}
-        </span>
-      </template>
+
     </UTable>
   </div>
 </template>
@@ -122,15 +146,11 @@ const emit = defineEmits<{
 }>()
 
 const columns = [
-  { key: 'guestName', label: 'Guest' },
-  { key: 'bookingDate', label: 'Date' },
+  { key: 'guest', label: 'Guest & Date' },
+  { key: 'location', label: 'Partner & Unit' },
   { key: 'amount', label: 'Total Amount' },
-  { key: 'unitId', label: 'Unit' },
-  { key: 'addons', label: 'Add-ons' },
-  { key: 'bookingStatus', label: 'Booking Status' },
-  { key: 'paymentStatus', label: 'Payment Status' },
-  { key: 'paymentMethod', label: 'Payment' },
-  { key: 'partnerId', label: 'Partner' },
+  { key: 'status', label: 'Status' },
+  { key: 'payment', label: 'Payment Info' },
   { key: 'actions', label: '' }
 ]
 

@@ -139,6 +139,7 @@ const onSubmit = async () => {
       ...(state.unitId && { unit_id: state.unitId }),
       start_date: state.startDate,
       end_date: state.endDate,
+      invoiced: false, // Only uninvoiced bookings for invoices
       limit: 100 // API maximum
     }
     
@@ -148,6 +149,7 @@ const onSubmit = async () => {
       start_date: state.startDate,
       end_date: state.endDate,
       billable: true, // Only billable expenses for invoices
+      paid: false, // Only unpaid expenses for invoices
       limit: 100 // API maximum
     }
     
@@ -194,12 +196,13 @@ const onSubmit = async () => {
     ])
     
     // Debug logging
-    console.log('Invoice Generation Debug:', {
+    console.log('Invoice Generation Debug (Check-out Date Filtering):', {
       partnerId: state.partnerId,
       unitId: state.unitId,
-      dateRange: `${state.startDate} to ${state.endDate}`,
+      invoicePeriod: `${state.startDate} to ${state.endDate}`,
       bookingsFound: bookings.length,
       expensesFound: expenses.length,
+      filteringBy: 'endDate (check-out)',
       sampleBooking: bookings[0] || null,
       bookingFilters,
       expenseFilters
@@ -214,11 +217,11 @@ const onSubmit = async () => {
       period,
       sharePercentage: partner.sharePercentage || 20,
       bookings: bookings.filter(booking => {
-        // Additional client-side date validation
-        const bookingDate = new Date(booking.startDate)
-        const startDate = new Date(state.startDate)
-        const endDate = new Date(state.endDate)
-        return bookingDate >= startDate && bookingDate <= endDate
+        // Filter by check-out date (Airbnb approach)
+        const checkOutDate = new Date(booking.endDate)
+        const invoiceStartDate = new Date(state.startDate)
+        const invoiceEndDate = new Date(state.endDate)
+        return checkOutDate >= invoiceStartDate && checkOutDate <= invoiceEndDate
       }).map(booking => {
         // Handle both string and number formats for amounts
         const baseAmount = typeof booking.baseAmount === 'string' 
@@ -274,12 +277,8 @@ const onSubmit = async () => {
     isOpen.value = false
     
   } catch (error) {
-    const toast = useToast()
-    toast.add({
-      title: 'Error',
-      description: 'Failed to generate invoice',
-      color: 'red'
-    })
+    const { notifyError } = useNotify()
+    notifyError('Failed to generate invoice')
   } finally {
     isGenerating.value = false
   }

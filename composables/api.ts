@@ -193,6 +193,7 @@ export const useApi = () => {
     if (filters.search) params.append('search', filters.search)
     if (filters.sortBy) params.append('sort_by', filters.sortBy)
     if (filters.sortOrder) params.append('sort_order', filters.sortOrder)
+    if (filters.invoiced !== undefined) params.append('invoiced', filters.invoiced.toString())
     
     const query = params.toString()
     const result = await apiClient<any>(`/api/bookings${query ? `?${query}` : ''}`)
@@ -245,6 +246,7 @@ export const useApi = () => {
     if (filters.end_date) params.append('end_date', filters.end_date)
     if (filters.type) params.append('type', filters.type)
     if (filters.billable !== undefined) params.append('billable', filters.billable.toString())
+    if (filters.paid !== undefined) params.append('paid', filters.paid.toString())
     if (filters.page) params.append('page', filters.page.toString())
     if (filters.limit) params.append('limit', filters.limit.toString())
     if (filters.search) params.append('search', filters.search)
