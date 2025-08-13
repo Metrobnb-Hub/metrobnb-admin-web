@@ -2,28 +2,28 @@ export interface Service {
   id: string
   name: string
   description: string
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
 }
 
 export interface Partner {
   id: string
   name: string
-  sharePercentage: number
+  share_percentage: number
   services: Service[]
   email?: string
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
 }
 
 export interface Unit {
   id: string
   name: string
-  partnerId: string
+  partner_id: string
   location?: string
   notes?: string
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
 }
 
 export interface AddOn {
@@ -34,65 +34,63 @@ export interface AddOn {
 export interface BookingSource {
   id: string
   name: string
-  commissionRate?: number
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
+  commission_rate?: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface PaymentMethod {
   id: string
   name: string
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface Booking {
   id: string
-  guestName: string
-  bookingDate: string
-  startDate: string
-  endDate: string
-  baseAmount: string  // API returns as string "1200.00"
+  guest_name: string
+  booking_date: string
+  start_date: string
+  end_date: string
+  base_amount: string  // API returns as string "1200.00"
   addons: AddOn[]
-  unitId: string
-  partnerId: string
-  paymentStatus: 'unpaid' | 'partial' | 'fully_paid'
-  bookingStatus: 'confirmed' | 'canceled' | 'refunded'
-  amountPaid: string  // API returns as string "1500.00"
-  paymentMethod: PaymentMethod
-  paymentMethodId: string
-  paymentReceivedBy: 'partner' | 'metrobnb'
-  bookingSource?: BookingSource  // Full booking source object if included
-  bookingSourceId: string
+  unit_id: string
+  partner_id: string
+  payment_status: 'unpaid' | 'partial' | 'fully_paid'
+  booking_status: 'confirmed' | 'canceled' | 'refunded'
+  amount_paid: string  // API returns as string "1500.00"
+  payment_method: PaymentMethod
+  payment_method_id: string
+  payment_received_by: 'partner' | 'metrobnb'
+  booking_source?: BookingSource  // Full booking source object if included
+  booking_source_id: string
   invoiced: boolean  // Invoice status
-  invoiceDate: string | null  // Invoice generation date
+  invoice_date: string | null  // Invoice generation date
   notes?: string
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
 }
 
 export interface Expense {
   id: string
-  partnerId: string
-  unitId: string
+  partner_id: string
+  unit_id: string
   date: string
   type: 'cleaning' | 'laundry' | 'utilities' | 'repair' | 'misc'
   amount: string  // API returns as string "150.00"
   billable: boolean
   paid: boolean  // Payment status
-  paidDate: string | null  // Payment date
+  paid_date: string | null  // Payment date
   notes?: string
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
 }
 
 export interface ApiFilters {
-  partnerId?: string
-  unitId?: string
-  partner_id?: string  // Support both camelCase and snake_case
-  unit_id?: string     // Support both camelCase and snake_case
+  partner_id?: string
+  unit_id?: string
   month?: string
   start_date?: string  // YYYY-MM-DD format
   end_date?: string    // YYYY-MM-DD format
@@ -103,19 +101,17 @@ export interface ApiFilters {
   page?: number
   limit?: number
   search?: string
-  sortBy?: string
-  sortOrder?: 'asc' | 'desc'
-  sort_by?: string     // Support both camelCase and snake_case
-  sort_order?: 'asc' | 'desc'  // Support both camelCase and snake_case
+  sort_by?: string
+  sort_order?: 'asc' | 'desc'
 }
 
 export interface PaginationMeta {
-  currentPage: number
-  totalPages: number
-  totalItems: number
-  perPage: number
-  hasNext: boolean
-  hasPrev: boolean
+  current_page: number
+  total_pages: number
+  total_items: number
+  per_page: number
+  has_next: boolean
+  has_prev: boolean
 }
 
 export interface PaginatedResponse<T> {

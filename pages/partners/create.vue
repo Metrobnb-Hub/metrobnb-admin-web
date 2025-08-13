@@ -39,9 +39,12 @@
 </template>
 
 <script setup lang="ts">
-const { services, addPartner, loadFromStorage } = usePartnerStore()
+const { partners, loadPartners } = useDataManager()
+const { createPartner } = useApi()
+const { notifySuccess, notifyError } = useNotify()
 const router = useRouter()
-const toast = useToast()
+
+const services = ref([])
 
 const loading = ref(false)
 const selectedServices = ref<string[]>([])
@@ -52,36 +55,24 @@ const form = ref({
 })
 
 const handleSubmit = async () => {
-  if (!form.value.name || !form.value.sharePercentage || selectedServices.value.length === 0) {
-    toast.add({
-      title: 'Error',
-      description: 'Please fill in all required fields and select at least one service',
-      color: 'red'
-    })
+  if (!form.value.name || !form.value.sharePercentage) {
+    notifyError('Please fill in all required fields')
     return
   }
 
   loading.value = true
   try {
-    await addPartner({
+    await createPartner({
       name: form.value.name,
       email: form.value.email,
       sharePercentage: form.value.sharePercentage,
       serviceIds: selectedServices.value
     })
     
-    toast.add({
-      title: 'Success',
-      description: 'Partner added successfully'
-    })
-    
+    notifySuccess('Partner added successfully')
     router.push('/partners')
   } catch (error) {
-    toast.add({
-      title: 'Error',
-      description: 'Failed to add partner',
-      color: 'red'
-    })
+    notifyError('Failed to add partner')
   } finally {
     loading.value = false
   }
@@ -89,7 +80,13 @@ const handleSubmit = async () => {
 
 onMounted(async () => {
   try {
-    await loadFromStorage()
+    await loadPartners()
+    // Load services from API when available
+    services.value = [
+      { id: '1', name: 'Property Management', description: 'Full property management services' },
+      { id: '2', name: 'Cleaning', description: 'Professional cleaning services' },
+      { id: '3', name: 'Maintenance', description: 'Property maintenance and repairs' }
+    ]
   } catch (error) {
     console.error('Failed to load data:', error)
   }

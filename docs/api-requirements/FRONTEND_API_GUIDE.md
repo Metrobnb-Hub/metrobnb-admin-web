@@ -144,8 +144,31 @@ interface BookingQueryParams {
 }
 ```
 
-**Response:**
+**Response (Paginated):**
 ```typescript
+interface BookingResponse {
+  success: boolean
+  data: {
+    items: Booking[]           // Paginated booking items
+    pagination: PaginationInfo // Page info
+    summary: BookingSummary    // Summary stats (when paginated)
+  }
+}
+
+interface BookingSummary {
+  total_bookings: number
+  total_amount: string
+  by_source: Array<{
+    source_name: string    // "MetroBNB", "Airbnb"
+    count: number
+    amount: string
+  }>
+  by_payment_receiver: {
+    metrobnb: { count: number, amount: string }
+    partner: { count: number, amount: string }
+  }
+}
+
 interface Booking {
   id: string
   guest_name: string
@@ -439,9 +462,9 @@ const newBooking = await createBooking({
 })
 ```
 
-### Filter Bookings
+### Filter Bookings with Summary
 ```typescript
-// Get bookings for specific partner with pagination
+// Get bookings with summary stats
 const response = await fetch('/api/bookings?' + new URLSearchParams({
   partner_id: 'partner-uuid',
   page: '1',
@@ -449,12 +472,18 @@ const response = await fetch('/api/bookings?' + new URLSearchParams({
   sort_by: 'booking_date',
   sort_order: 'desc'
 }))
+const { items, pagination, summary } = response.data
 
-// Get bookings for specific month
-const response = await fetch('/api/bookings?' + new URLSearchParams({
+// Summary includes filtered statistics
+console.log(`Total: ${summary.total_bookings} bookings`)
+console.log(`Amount: ₱${summary.total_amount}`)
+
+// Get bookings for specific month with stats
+const monthlyResponse = await fetch('/api/bookings?' + new URLSearchParams({
   month: '2025-06',
   payment_status: 'fully_paid',
-  search: 'angela'
+  page: '1',
+  limit: '10'
 }))
 ```
 

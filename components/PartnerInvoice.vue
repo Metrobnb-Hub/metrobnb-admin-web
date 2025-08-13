@@ -112,6 +112,84 @@
         
 
       </div>
+      
+      <!-- Canceled/Refunded Bookings -->
+      <div v-if="canceledRefundedBookings.length">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3 print:text-gray-900">❌ Canceled/Refunded Bookings (Not included in calculations)</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse border border-gray-300 dark:border-gray-600 print:border-gray-300">
+            <thead>
+              <tr class="bg-red-50 dark:bg-red-900 print:bg-red-50">
+                <th class="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900 w-32">Dates</th>
+                <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Guest</th>
+                <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Unit</th>
+                <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Status</th>
+                <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="booking in canceledRefundedBookings" :key="booking.date + booking.guestName">
+                <td class="border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900 w-32">{{ formatDateRange(booking.date, booking.endDate) }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.guestName }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.unitName }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">
+                  <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full" :class="booking.bookingStatus === 'canceled' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'">
+                    {{ booking.bookingStatus === 'canceled' ? 'Canceled' : 'Refunded' }}
+                  </span>
+                </td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">₱{{ booking.actualAmountReceived.toLocaleString() }}</td>
+              </tr>
+            </tbody>
+            <tfoot class="bg-red-50 dark:bg-red-900 print:bg-red-50">
+              <tr>
+                <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Total Refunds:</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-red-700 dark:text-red-400 print:border-gray-300 print:text-red-700">₱{{ totalRefunds.toLocaleString() }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Adjustments Table -->
+    <div v-if="invoice.journalEntries && invoice.journalEntries.length" class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 print:text-gray-900">⚖️ Adjustments</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse border border-gray-300 dark:border-gray-600 print:border-gray-300">
+          <thead>
+            <tr class="bg-yellow-50 dark:bg-yellow-900 print:bg-yellow-50">
+              <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Date</th>
+              <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Type</th>
+              <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Description</th>
+              <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Reference</th>
+              <th class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-right text-sm font-medium text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="entry in sortedJournalEntries" :key="entry.date + entry.description">
+              <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ formatDate(entry.date) }}</td>
+              <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">
+                <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full" :class="entry.type === 'credit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                  {{ entry.type === 'credit' ? 'Credit' : 'Debit' }}
+                </span>
+              </td>
+              <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ entry.description }}</td>
+              <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ entry.reference || '-' }}</td>
+              <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-right font-medium print:border-gray-300" :class="entry.type === 'credit' ? 'text-green-600 dark:text-green-400 print:text-green-600' : 'text-red-600 dark:text-red-400 print:text-red-600'">
+                {{ entry.type === 'credit' ? '+' : '-' }}₱{{ entry.amount.toLocaleString() }}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot class="bg-yellow-50 dark:bg-yellow-900 print:bg-yellow-50">
+            <tr>
+              <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Net Adjustments:</td>
+              <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right print:border-gray-300" :class="netJournalEntries >= 0 ? 'text-green-600 dark:text-green-400 print:text-green-600' : 'text-red-600 dark:text-red-400 print:text-red-600'">
+                {{ netJournalEntries >= 0 ? '+' : '' }}₱{{ netJournalEntries.toLocaleString() }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
 
     <!-- Expense Breakdown Table -->
@@ -166,13 +244,17 @@
             <td class="py-2 text-sm font-medium text-gray-900 dark:text-gray-100 print:text-gray-900">MetroBNB Expenses</td>
             <td class="py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:text-gray-900">+₱{{ totalExpenses.toLocaleString() }}</td>
           </tr>
+          <tr v-if="invoice.journalEntries && invoice.journalEntries.length" class="border-b border-gray-200 dark:border-gray-600">
+            <td class="py-2 text-sm font-medium text-gray-900 dark:text-gray-100 print:text-gray-900">Less: Adjustments (Net)</td>
+            <td class="py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:text-gray-900">{{ netJournalEntries >= 0 ? '-' : '+' }}₱{{ Math.abs(netJournalEntries).toLocaleString() }}</td>
+          </tr>
           <tr class="border-b border-gray-200 dark:border-gray-600">
             <td class="py-2 text-sm font-medium text-gray-900 dark:text-gray-100 print:text-gray-900">Less: Payments Received by MetroBNB</td>
             <td class="py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:text-gray-900">-₱{{ totalReceivedByMetroBNB.toLocaleString() }}</td>
           </tr>
           <tr class="border-t-2 border-gray-400">
             <td class="py-3 text-lg font-bold text-gray-900 dark:text-white print:text-gray-900">
-              {{ netDue >= 0 ? 'Net Due to MetroBNB' : 'Net Due to Partner' }}
+              {{ netDue >= 0 ? 'Amount Due to MetroBNB' : 'Amount Due to Partner' }}
             </td>
             <td class="py-3 text-lg font-bold text-right print:text-gray-900" :class="netDue >= 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
               ₱{{ Math.abs(netDue).toLocaleString() }}
@@ -215,6 +297,7 @@ interface Booking {
   total: number
   paymentReceivedBy: 'metrobnb' | 'partner'
   actualAmountReceived: number
+  bookingStatus?: 'confirmed' | 'canceled' | 'refunded'
 }
 
 interface Expense {
@@ -225,12 +308,22 @@ interface Expense {
   amount: number
 }
 
+interface JournalEntry {
+  date: string
+  type: 'credit' | 'debit'
+  description: string
+  reference?: string
+  notes?: string
+  amount: number
+}
+
 interface PartnerInvoice {
   partnerName: string
   period: string
   sharePercentage: number
   bookings: Booking[]
   expenses: Expense[]
+  journalEntries?: JournalEntry[]
 }
 
 interface Props {
@@ -304,17 +397,29 @@ const invoice: PartnerInvoice = props.invoice || {
   ]
 }
 
-// Computed values
+// Computed values - separate by status and payment receiver
+const confirmedBookings = computed(() => 
+  invoice?.bookings?.filter(booking => booking.bookingStatus === 'confirmed') || []
+)
+
+const canceledRefundedBookings = computed(() => 
+  invoice?.bookings?.filter(booking => ['canceled', 'refunded'].includes(booking.bookingStatus)) || []
+)
+
 const partnerBookings = computed(() => 
-  invoice?.bookings?.filter(booking => booking.paymentReceivedBy === 'partner') || []
+  confirmedBookings.value.filter(booking => booking.paymentReceivedBy === 'partner')
 )
 
 const metrobnbBookings = computed(() => 
-  invoice?.bookings?.filter(booking => booking.paymentReceivedBy === 'metrobnb') || []
+  confirmedBookings.value.filter(booking => booking.paymentReceivedBy === 'metrobnb')
 )
 
 const totalGrossEarnings = computed(() => 
-  invoice?.bookings?.reduce((sum, booking) => sum + booking.actualAmountReceived, 0) || 0
+  confirmedBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
+)
+
+const totalRefunds = computed(() => 
+  canceledRefundedBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
 )
 
 const partnerPaymentsTotal = computed(() => 
@@ -334,8 +439,9 @@ const metroBNBShare = computed(() =>
 )
 
 const netDue = computed(() => {
-  // Total Income × Share % + Expenses - MetroBNB Payments
-  return metroBNBShare.value + totalExpenses.value - totalReceivedByMetroBNB.value
+  // Total Income × Share % + Expenses - Adjustments - MetroBNB Payments
+  // Credits reduce what partner owes, Debits increase what partner owes
+  return metroBNBShare.value + totalExpenses.value - netJournalEntries.value - totalReceivedByMetroBNB.value
 })
 
 const formatDate = (dateString: string) => {
@@ -364,6 +470,17 @@ const sortedMetroBNBBookings = computed(() =>
 const sortedExpenses = computed(() => 
   [...(invoice?.expenses || [])].sort((a, b) => new Date(a.date) - new Date(b.date))
 )
+
+const sortedJournalEntries = computed(() => 
+  [...(invoice?.journalEntries || [])].sort((a, b) => new Date(a.date) - new Date(b.date))
+)
+
+const netJournalEntries = computed(() => {
+  if (!invoice?.journalEntries) return 0
+  return invoice.journalEntries.reduce((sum, entry) => {
+    return entry.type === 'credit' ? sum + entry.amount : sum - entry.amount
+  }, 0)
+})
 
 // Breakdown by source with base/addons separation
 const partnerBreakdownBySource = computed(() => {

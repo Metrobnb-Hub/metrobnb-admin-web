@@ -69,7 +69,7 @@ const partnerOptions = computed(() => {
 const unitOptions = computed(() => {
   if (!form.value.partnerId || !Array.isArray(units.value)) return []
   return units.value
-    .filter(u => (u.partnerId || u.partner_id) === form.value.partnerId)
+    .filter(u => u.partner_id === form.value.partnerId)
     .map(u => ({ label: u.name, value: u.id }))
 })
 
@@ -95,8 +95,8 @@ const handleSubmit = async () => {
   loading.value = true
   try {
     await createExpense({
-      partnerId: form.value.partnerId,
-      unitId: form.value.unitId,
+      partner_id: form.value.partnerId,
+      unit_id: form.value.unitId,
       date: form.value.date,
       type: form.value.type as any,
       amount: Number(form.value.amount),
