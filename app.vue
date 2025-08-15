@@ -1,15 +1,17 @@
 <template>
   <div>
+    <NuxtLoadingIndicator />
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
   </div>
 </template>
 
-<script setup>
-// Preload essential data on app start
+<script setup lang="ts">
+// Initialize preloader for SPA mode
+const { preloadEssentialData } = usePreloader()
+
 onMounted(async () => {
-  const { preloadEssentialData } = usePreloader()
-  preloadEssentialData()
+  await preloadEssentialData()
 })
 </script>

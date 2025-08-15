@@ -14,10 +14,10 @@ export default defineNuxtConfig({
     }
   },
   nitro: {
-    preset: 'vercel-edge',
+    preset: 'vercel',
     routeRules: {
       '/.well-known/**': { headers: { 'Access-Control-Allow-Origin': '*' } }
     }
   },
-  ssr: true
+  ssr: false
 })

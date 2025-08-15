@@ -17,11 +17,61 @@
       </div>
     </div>
 
+    <!-- View Toggle -->
+    <div class="flex items-center gap-4">
+      <UTabs v-model="activeView" :items="viewTabs" />
+    </div>
+
     <!-- Statistics Cards -->
     <AccountingBookingStatsCard :summary="bookingSummary" :loading="isLoading" />
 
+    <!-- Calendar View -->
+    <div v-if="activeView === 1" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div class="lg:col-span-3">
+        <UCard>
+          <template #header>
+            <h3 class="text-lg font-semibold">Booking Calendar</h3>
+          </template>
+          <div class="p-4">
+            <p class="text-sm text-gray-600 mb-4">Calendar view is active. Loading calendar...</p>
+            <BookingCalendar 
+              :partner-id="filters.partnerId || undefined"
+              :unit-id="filters.unitId || undefined"
+              @event-click="handleCalendarEventClick"
+            />
+          </div>
+        </UCard>
+      </div>
+      <div class="lg:col-span-1">
+        <CalendarLegend />
+        <!-- Calendar Filters -->
+        <UCard class="mt-4">
+          <template #header>
+            <h3 class="text-sm font-semibold">Filters</h3>
+          </template>
+          <div class="space-y-3">
+            <UFormGroup label="Partner">
+              <USelect 
+                v-model="filters.partnerId" 
+                :options="partnerOptions"
+                placeholder="All partners"
+              />
+            </UFormGroup>
+            <UFormGroup label="Unit">
+              <USelect 
+                v-model="filters.unitId" 
+                :options="unitOptions"
+                placeholder="All units"
+                :disabled="!filters.partnerId"
+              />
+            </UFormGroup>
+          </div>
+        </UCard>
+      </div>
+    </div>
+
     <!-- Table Section -->
-    <UCard>
+    <UCard v-if="activeView === 0">
       <template #header>
         <div class="flex justify-between items-center">
           <h3 class="text-lg font-semibold">All Bookings ({{ totalBookings }})</h3>
@@ -188,6 +238,10 @@
 </template>
 
 <script setup lang="ts">
+// Import calendar components explicitly
+import BookingCalendar from '~/components/calendar/BookingCalendar.vue'
+import CalendarLegend from '~/components/calendar/CalendarLegend.vue'
+
 const { handleSubmit } = useBookingForm()
 const { deleteBooking } = useAccountingStore()
 const { partners, units, loadPartners, loadUnits } = useDataManager()
@@ -198,6 +252,17 @@ const bookingSources = ref([])
 const showEditModal = ref(false)
 const showImportModal = ref(false)
 const selectedBooking = ref(null)
+const activeView = ref(0)
+
+const viewTabs = [
+  { label: 'Table View' },
+  { label: 'Calendar View' }
+]
+
+// Debug tab switching
+watch(activeView, (newView) => {
+  console.log('Active view changed to:', newView)
+})
 const bookings = ref([])
 const bookingSummary = ref(null)
 const currentPage = ref(1)
@@ -357,6 +422,11 @@ const handleUpdated = () => {
 
 const handleImported = () => {
   loadBookings()
+}
+
+const handleCalendarEventClick = (booking: any) => {
+  selectedBooking.value = booking
+  showEditModal.value = true
 }
 
 const loadBookings = async () => {
