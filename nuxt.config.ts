@@ -12,7 +12,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.API_BASE_URL || 'https://api.metrobnb.com'
+      apiBaseUrl: process.env.API_BASE_URL || 'https://metrobnb-api.onrender.com'
     }
   },
   nitro: {
