@@ -10,12 +10,14 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000'
+      apiBaseUrl: process.env.API_BASE_URL || 'https://api.metrobnb.com'
     }
   },
   nitro: {
+    preset: 'vercel',
     routeRules: {
       '/.well-known/**': { headers: { 'Access-Control-Allow-Origin': '*' } }
     }
-  }
+  },
+  ssr: false
 })

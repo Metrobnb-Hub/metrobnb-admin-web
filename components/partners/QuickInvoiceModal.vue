@@ -21,11 +21,28 @@
           </UFormGroup>
           
           <div class="grid grid-cols-2 gap-4">
-            <UFormGroup label="Start Date" name="startDate" required>
+            <UFormGroup label="Year" name="year" required>
+              <USelect v-model="state.year" :options="yearOptions" />
+            </UFormGroup>
+            
+            <UFormGroup label="Month" name="month" required>
+              <USelect v-model="state.month" :options="monthOptions" />
+            </UFormGroup>
+          </div>
+          
+          <UFormGroup label="Custom Date Range" name="useCustomDates">
+            <UToggle v-model="state.useCustomDates" />
+            <span class="ml-3 text-sm text-gray-600 dark:text-gray-400">
+              {{ state.useCustomDates ? 'Using custom date range' : 'Using month/year selection' }}
+            </span>
+          </UFormGroup>
+          
+          <div v-if="state.useCustomDates" class="grid grid-cols-2 gap-4">
+            <UFormGroup label="Start Date" name="startDate">
               <UInput v-model="state.startDate" type="date" />
             </UFormGroup>
             
-            <UFormGroup label="End Date" name="endDate" required>
+            <UFormGroup label="End Date" name="endDate">
               <UInput v-model="state.endDate" type="date" />
             </UFormGroup>
           </div>
@@ -58,11 +75,19 @@ const isOpen = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
+// Get current month and year
+const now = new Date()
+const currentYear = now.getFullYear().toString()
+const currentMonth = (now.getMonth() + 1).toString()
+
 const state = reactive({
   partnerId: '',
   unitId: '',
-  startDate: '2024-12-01',
-  endDate: '2024-12-31'
+  year: currentYear,
+  month: currentMonth,
+  useCustomDates: false,
+  startDate: '',
+  endDate: ''
 })
 
 const isGenerating = ref(false)
@@ -293,6 +318,36 @@ const availableMockUnits = computed(() => {
     .map(unit => ({ label: unit.name, value: unit.id }))
 })
 
+const yearOptions = computed(() => {
+  const years = []
+  const currentYear = new Date().getFullYear()
+  
+  for (let i = currentYear - 5; i <= currentYear + 2; i++) {
+    years.push({ label: i.toString(), value: i.toString() })
+  }
+  
+  return years.reverse()
+})
+
+const monthOptions = computed(() => {
+  const months = [
+    { label: 'January', value: '1' },
+    { label: 'February', value: '2' },
+    { label: 'March', value: '3' },
+    { label: 'April', value: '4' },
+    { label: 'May', value: '5' },
+    { label: 'June', value: '6' },
+    { label: 'July', value: '7' },
+    { label: 'August', value: '8' },
+    { label: 'September', value: '9' },
+    { label: 'October', value: '10' },
+    { label: 'November', value: '11' },
+    { label: 'December', value: '12' }
+  ]
+  
+  return months
+})
+
 watch(() => state.partnerId, () => {
   state.unitId = ''
 })
@@ -313,11 +368,31 @@ const onSubmit = async () => {
     console.log('Form state:', state)
     console.log('Selected partner:', partner)
     
+    // Determine date range based on toggle
+    let startDate, endDate
+    if (state.useCustomDates) {
+      startDate = new Date(state.startDate)
+      endDate = new Date(state.endDate)
+    } else {
+      // Use year/month to create date range
+      const year = parseInt(state.year)
+      const month = parseInt(state.month)
+      
+      // Create dates in local timezone to avoid timezone shifts
+      const firstDay = new Date(year, month - 1, 1)
+      const lastDay = new Date(year, month, 0)
+      
+      // Format dates manually to avoid timezone issues
+      const startDateStr = `${year}-${month.toString().padStart(2, '0')}-01`
+      const endDateStr = `${year}-${month.toString().padStart(2, '0')}-${lastDay.getDate().toString().padStart(2, '0')}`
+      
+      startDate = new Date(startDateStr)
+      endDate = new Date(endDateStr)
+    }
+    
     // Filter mock data by date range and partner
     const filteredBookings = mockBookings.filter(booking => {
       const bookingDate = new Date(booking.date)
-      const startDate = new Date(state.startDate)
-      const endDate = new Date(state.endDate)
       const matchesPartner = booking.partnerId === state.partnerId
       const matchesUnit = !state.unitId || booking.unitId === state.unitId
       const inDateRange = bookingDate >= startDate && bookingDate <= endDate
@@ -337,8 +412,6 @@ const onSubmit = async () => {
     
     const filteredExpenses = mockExpenses.filter(expense => {
       const expenseDate = new Date(expense.date)
-      const startDate = new Date(state.startDate)
-      const endDate = new Date(state.endDate)
       const matchesPartner = expense.partnerId === state.partnerId
       const matchesUnit = !state.unitId || expense.unitId === state.unitId
       const inDateRange = expenseDate >= startDate && expenseDate <= endDate
@@ -358,8 +431,8 @@ const onSubmit = async () => {
     
     console.log('Filtered results:', { filteredBookings, filteredExpenses })
     
-    const startMonth = new Date(state.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    const endMonth = new Date(state.endDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    const startMonth = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    const endMonth = endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     const period = startMonth === endMonth ? startMonth : `${startMonth} - ${endMonth}`
     
     const invoiceData = {

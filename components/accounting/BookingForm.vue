@@ -5,8 +5,16 @@
         <UInput v-model="state.guestName" />
       </UFormGroup>
       
-      <UFormGroup label="Date" name="date">
-        <UInput v-model="state.date" type="date" />
+      <UFormGroup label="Booking Date" name="bookingDate">
+        <UInput v-model="state.bookingDate" type="date" />
+      </UFormGroup>
+      
+      <UFormGroup label="Check-in Date" name="startDate">
+        <UInput v-model="state.startDate" type="date" />
+      </UFormGroup>
+      
+      <UFormGroup label="Check-out Date" name="endDate">
+        <UInput v-model="state.endDate" type="date" />
       </UFormGroup>
       
       <UFormGroup label="Base Amount" name="amount">
@@ -14,11 +22,11 @@
       </UFormGroup>
       
       <UFormGroup label="Payment Method" name="paymentMethod">
-        <USelect v-model="state.paymentMethod" :options="paymentMethods" />
+        <USelect v-model="state.paymentMethod" :options="paymentMethodOptions" />
       </UFormGroup>
       
       <UFormGroup label="Partner" name="partner">
-        <USelect v-model="state.partner" :options="partners" />
+        <USelect v-model="state.partner" :options="partnerOptions" />
       </UFormGroup>
       
       <UFormGroup label="Unit" name="unitId">
@@ -151,7 +159,9 @@ const paymentStatusOptions = [
 
 const schema = z.object({
   guestName: z.string().min(1, 'Guest name is required'),
-  date: z.string().min(1, 'Date is required'),
+  bookingDate: z.string().min(1, 'Booking date is required'),
+  startDate: z.string().min(1, 'Check-in date is required'),
+  endDate: z.string().min(1, 'Check-out date is required'),
   amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   paymentMethod: z.string().min(1, 'Payment method is required'),
   partner: z.string().min(1, 'Partner is required'),
@@ -166,7 +176,9 @@ const schema = z.object({
 
 const state = reactive({
   guestName: '',
-  date: '',
+  bookingDate: '',
+  startDate: '',
+  endDate: '',
   amount: 0,
   paymentMethod: '',
   partner: '',
@@ -180,37 +192,40 @@ const state = reactive({
   notes: ''
 })
 
-const paymentMethods = [
-  { label: 'Cash', value: 'cash' },
-  { label: 'Credit Card', value: 'credit' },
-  { label: 'Bank Transfer', value: 'transfer' },
-  { label: 'PayPal', value: 'paypal' }
-]
-
-const { partners: storePartners } = usePartnerStore()
-const { units: storeUnits } = useUnitStore()
-const { getBookingSources } = useApi()
+const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { getBookingSources, getPaymentMethods } = useApi()
 
 const bookingSources = ref([])
+const paymentMethods = ref([])
 
-const partners = computed(() => {
-  if (!storePartners || storePartners.length === 0) return []
-  return storePartners.map(p => ({ label: p.name, value: p.id }))
+const partnerOptions = computed(() => {
+  if (!Array.isArray(partners.value) || partners.value.length === 0) return []
+  return partners.value.map(p => ({ label: p.name, value: p.id }))
 })
 
 const availableUnits = computed(() => {
-  if (!state.partner || !storeUnits || storeUnits.length === 0) return []
-  return storeUnits
-    .filter(unit => unit && unit.partnerId === state.partner)
+  if (!state.partner || !Array.isArray(units.value) || units.value.length === 0) return []
+  return units.value
+    .filter(unit => unit && (unit.partnerId || unit.partner_id) === state.partner)
     .map(unit => ({ label: unit.name, value: unit.id }))
 })
 
-const bookingSourceOptions = computed(() => 
-  bookingSources.value.filter(source => source.isActive).map(source => ({
-    label: `${source.name}${source.commissionRate ? ` (${source.commissionRate}%)` : ''}`,
-    value: source.id
-  }))
-)
+const paymentMethodOptions = computed(() => {
+  if (!Array.isArray(paymentMethods.value)) return []
+  return paymentMethods.value
+    .filter(method => method.is_active)
+    .map(method => ({ label: method.name, value: method.id }))
+})
+
+const bookingSourceOptions = computed(() => {
+  if (!Array.isArray(bookingSources.value)) return []
+  return bookingSources.value
+    .filter(source => source.is_active)
+    .map(source => ({
+      label: `${source.name}${source.commission_rate ? ` (${source.commission_rate}%)` : ''}`,
+      value: source.id
+    }))
+})
 
 const emit = defineEmits<{
   submit: [booking: typeof state]
@@ -257,7 +272,9 @@ const onSubmit = () => {
   emit('submit', { ...state })
   Object.assign(state, { 
     guestName: '', 
-    date: '', 
+    bookingDate: '', 
+    startDate: '', 
+    endDate: '', 
     amount: 0, 
     paymentMethod: '', 
     partner: '',
@@ -273,6 +290,19 @@ const onSubmit = () => {
 }
 
 onMounted(async () => {
-  bookingSources.value = await getBookingSources()
+  try {
+    const [, , sources, methods] = await Promise.all([
+      loadPartners(),
+      loadUnits(),
+      getBookingSources(),
+      getPaymentMethods()
+    ])
+    bookingSources.value = sources || []
+    paymentMethods.value = methods || []
+  } catch (error) {
+    console.error('Failed to load dropdown data:', error)
+    bookingSources.value = []
+    paymentMethods.value = []
+  }
 })
 </script>

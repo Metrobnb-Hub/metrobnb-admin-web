@@ -7,7 +7,7 @@
 
     <!-- Sidebar -->
     <div :class="[
-      'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out',
+      'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out flex flex-col',
       sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
     ]">
       <div class="flex h-16 items-center justify-between px-4">
@@ -30,19 +30,33 @@
           />
         </div>
       </div>
-      <nav class="mt-6 px-3">
-        <NuxtLink
-          v-for="item in navigation"
-          :key="item.name"
-          :to="item.href"
-          class="flex items-center px-3 py-3 text-sm font-medium rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 mb-1 text-gray-700 dark:text-gray-200"
-          active-class="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-          @click="sidebarOpen = false"
-        >
-          <UIcon :name="item.icon" class="mr-3 h-5 w-5" />
-          {{ item.name }}
-        </NuxtLink>
+      <nav class="mt-6 px-3 space-y-6 flex-1 overflow-y-auto">
+        <div v-for="group in navigationGroups" :key="group.name">
+          <h3 class="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+            {{ group.name }}
+          </h3>
+          <div class="space-y-1">
+            <NuxtLink
+              v-for="item in group.items"
+              :key="item.name"
+              :to="item.href"
+              class="flex items-center px-3 py-2 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors duration-200"
+              active-class="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-r-2 border-blue-500"
+              @click="sidebarOpen = false"
+            >
+              <UIcon :name="item.icon" class="mr-3 h-5 w-5 flex-shrink-0" />
+              <span class="truncate">{{ item.name }}</span>
+            </NuxtLink>
+          </div>
+        </div>
       </nav>
+      
+      <!-- Sidebar Footer -->
+      <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="text-xs text-gray-500 dark:text-gray-400 text-center">
+          MetroBNB v1.0.0
+        </div>
+      </div>
     </div>
 
     <!-- Main content -->
@@ -64,6 +78,7 @@
 
       <!-- Page content -->
       <main class="p-4 lg:p-6">
+        <AppBreadcrumbs />
         <slot />
       </main>
     </div>
@@ -74,27 +89,57 @@
 const route = useRoute()
 const sidebarOpen = ref(false)
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: 'i-heroicons-home' },
-  { name: 'Bookings', href: '/accounting/bookings', icon: 'i-heroicons-document-text' },
-  { name: 'Partners', href: '/partners', icon: 'i-heroicons-users' },
-  { name: 'Units', href: '/admin/units', icon: 'i-heroicons-building-office' },
-  { name: 'Expenses', href: '/expenses', icon: 'i-heroicons-minus-circle' },
-  { name: 'Earnings', href: '/accounting/partners', icon: 'i-heroicons-chart-bar' },
-  { name: 'Services', href: '/admin/services', icon: 'i-heroicons-cog-6-tooth' },
-  { name: 'Booking Sources', href: '/admin/booking-sources', icon: 'i-heroicons-link' },
-  { name: 'Mock Demo', href: '/mock-demo', icon: 'i-heroicons-beaker' },
-  { name: 'Refresh Data', href: '/admin/refresh-data', icon: 'i-heroicons-arrow-path' },
+const navigationGroups = [
+  {
+    name: 'Overview',
+    items: [
+      { name: 'Dashboard', href: '/dashboard', icon: 'i-heroicons-home' },
+    ]
+  },
+  {
+    name: 'Operations',
+    items: [
+      { name: 'Bookings', href: '/accounting/bookings', icon: 'i-heroicons-calendar-days' },
+      { name: 'Expenses', href: '/expenses', icon: 'i-heroicons-receipt-percent' },
+      { name: 'Journal Entries', href: '/journal-entries', icon: 'i-heroicons-document-plus' },
+      { name: 'Partners & Earnings', href: '/accounting/partners', icon: 'i-heroicons-chart-bar-square' },
+    ]
+  },
+  {
+    name: 'Management',
+    items: [
+      { name: 'Partners', href: '/partners', icon: 'i-heroicons-users' },
+      { name: 'Units', href: '/admin/units', icon: 'i-heroicons-building-office-2' },
+      { name: 'Services', href: '/admin/services', icon: 'i-heroicons-wrench-screwdriver' },
+      { name: 'Booking Sources', href: '/admin/booking-sources', icon: 'i-heroicons-globe-alt' },
+    ]
+  },
+  {
+    name: 'Development',
+    items: [
+      { name: 'Mock Demo', href: '/mock-demo', icon: 'i-heroicons-beaker' },
+      { name: 'Refresh Data', href: '/admin/refresh-data', icon: 'i-heroicons-arrow-path' },
+    ]
+  }
 ]
 
 const pageTitle = computed(() => {
   const path = route.path
-  if (path === '/dashboard') return 'Dashboard'
-  if (path.includes('/accounting/bookings')) return 'Booking Payments'
-  if (path.includes('/accounting/partners')) return 'Partners & Earnings'
-  if (path.includes('/partners')) return 'Partners Management'
-  if (path.includes('/admin/units')) return 'Units Management'
-  if (path.includes('/expenses')) return 'Expense Management'
+  
+  // Find the current page in navigation groups
+  for (const group of navigationGroups) {
+    for (const item of group.items) {
+      if (path === item.href || (item.href !== '/' && path.startsWith(item.href))) {
+        return item.name
+      }
+    }
+  }
+  
+  // Fallback titles for specific paths
+  if (path.includes('/create')) return 'Create New'
+  if (path.includes('/edit')) return 'Edit'
+  if (path === '/') return 'Welcome'
+  
   return 'MetroBNB'
 })
 </script>

@@ -11,8 +11,16 @@
             <UInput v-model="state.guestName" name="guestName" />
           </UFormGroup>
           
-          <UFormGroup label="Date" name="date">
-            <UInput v-model="state.date" type="date" name="date" />
+          <UFormGroup label="Booking Date" name="bookingDate">
+            <UInput v-model="state.bookingDate" type="date" name="bookingDate" />
+          </UFormGroup>
+          
+          <UFormGroup label="Check-in Date" name="startDate">
+            <UInput v-model="state.startDate" type="date" name="startDate" />
+          </UFormGroup>
+          
+          <UFormGroup label="Check-out Date" name="endDate">
+            <UInput v-model="state.endDate" type="date" name="endDate" />
           </UFormGroup>
           
           <UFormGroup label="Base Amount" name="amount">
@@ -37,6 +45,10 @@
             />
           </UFormGroup>
           
+          <UFormGroup label="Booking Source" name="bookingSource">
+            <USelect v-model="state.bookingSource" :options="bookingSourceOptions" name="bookingSource" />
+          </UFormGroup>
+          
           <UFormGroup label="Booking Status" name="bookingStatus">
             <USelect v-model="state.bookingStatus" :options="bookingStatusOptions" name="bookingStatus" />
           </UFormGroup>
@@ -57,8 +69,17 @@
             <USelect v-model="state.invoiced" :options="invoiceStatusOptions" name="invoiced" />
           </UFormGroup>
           
-          <UFormGroup label="Invoice Date" name="invoiceDate" v-if="state.invoiced === 'true'">
-            <UInput v-model="state.invoiceDate" type="date" name="invoiceDate" />
+          <UFormGroup label="Notes" name="notes" class="sm:col-span-2">
+            <UTextarea 
+              v-model="state.notes" 
+              placeholder="Additional notes (max 100 characters)" 
+              :maxlength="100"
+              :rows="2"
+              name="notes"
+            />
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {{ state.notes.length }}/100 characters
+            </div>
           </UFormGroup>
         </div>
         
@@ -134,19 +155,40 @@ const isOpen = computed({
 })
 
 const { partners, units, loadPartners, loadUnits } = useDataManager()
-const { updateBooking } = useApi()
+const { updateBooking, getBookingSources, getPaymentMethods } = useApi()
 
 const paymentMethods = ref([])
+const bookingSources = ref([])
 
 // Load data when modal opens
 watch(() => props.modelValue, async (isOpen) => {
   if (isOpen) {
     await Promise.all([
       loadPartners(),
-      loadUnits()
+      loadUnits(),
+      loadBookingSources(),
+      loadPaymentMethods()
     ])
   }
 })
+
+const loadBookingSources = async () => {
+  try {
+    bookingSources.value = await getBookingSources()
+  } catch (error) {
+    console.error('Failed to load booking sources:', error)
+    bookingSources.value = []
+  }
+}
+
+const loadPaymentMethods = async () => {
+  try {
+    paymentMethods.value = await getPaymentMethods()
+  } catch (error) {
+    console.error('Failed to load payment methods:', error)
+    paymentMethods.value = []
+  }
+}
 
 const availableAddons: AddOnConfig[] = [
   { type: 'early_checkin', label: 'Early Check-In', amount: 300 },
@@ -156,30 +198,37 @@ const availableAddons: AddOnConfig[] = [
 
 const schema = z.object({
   guestName: z.string().min(1, 'Guest name is required'),
-  date: z.string().min(1, 'Date is required'),
+  bookingDate: z.string().min(1, 'Booking date is required'),
+  startDate: z.string().min(1, 'Check-in date is required'),
+  endDate: z.string().min(1, 'Check-out date is required'),
   amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   paymentMethod: z.string().min(1, 'Payment method is required'),
   partner: z.string().min(1, 'Partner is required'),
   unitId: z.string().min(1, 'Unit is required'),
+  bookingSource: z.string().min(1, 'Booking source is required'),
   bookingStatus: z.string().min(1, 'Booking status is required'),
   paymentStatus: z.string().min(1, 'Payment status is required'),
-  amountPaid: z.coerce.number().min(0, 'Amount paid must be 0 or greater')
+  amountPaid: z.coerce.number().min(0, 'Amount paid must be 0 or greater'),
+  notes: z.string().max(100, 'Notes must be 100 characters or less').optional()
 })
 
 const state = reactive({
   guestName: '',
-  date: '',
+  bookingDate: '',
+  startDate: '',
+  endDate: '',
   amount: 0,
   paymentMethod: '',
   partner: '',
   unitId: '',
+  bookingSource: '',
   addons: [] as { type: string; amount: number }[],
   bookingStatus: 'confirmed',
   paymentStatus: 'unpaid',
   amountPaid: 0,
   paymentReceivedBy: 'partner',
-  invoiced: 'false',
-  invoiceDate: ''
+  invoiced: false,
+  notes: ''
 })
 
 const bookingStatusOptions = [
@@ -194,14 +243,19 @@ const paymentStatusOptions = [
   { label: 'Fully Paid', value: 'fully_paid' }
 ]
 
-const paymentMethodOptions = [
-  { label: 'Cash', value: 'Cash' },
-  { label: 'Credit Card', value: 'Credit Card' },
-  { label: 'Bank Transfer', value: 'Bank Transfer' },
-  { label: 'PayPal', value: 'PayPal' },
-  { label: 'GCash', value: 'GCash' },
-  { label: 'Maya', value: 'Maya' }
-]
+const paymentMethodOptions = computed(() => {
+  if (!Array.isArray(paymentMethods.value)) return []
+  return paymentMethods.value
+    .filter(method => method.is_active)
+    .map(method => ({ label: method.name, value: method.id }))
+})
+
+const bookingSourceOptions = computed(() => {
+  if (!Array.isArray(bookingSources.value)) return []
+  return bookingSources.value
+    .filter(source => source.is_active)
+    .map(source => ({ label: source.name, value: source.id }))
+})
 
 const paymentReceivedByOptions = [
   { label: 'Partner', value: 'partner' },
@@ -209,9 +263,11 @@ const paymentReceivedByOptions = [
 ]
 
 const invoiceStatusOptions = [
-  { label: 'Not Invoiced', value: 'false' },
-  { label: 'Invoiced', value: 'true' }
+  { label: 'Not Invoiced', value: false },
+  { label: 'Invoiced', value: true }
 ]
+
+
 
 const partnerOptions = computed(() => {
   if (!Array.isArray(partners.value)) return []
@@ -221,7 +277,7 @@ const partnerOptions = computed(() => {
 const availableUnits = computed(() => {
   if (!state.partner || !Array.isArray(units.value)) return []
   return units.value
-    .filter(unit => unit && unit.partnerId === state.partner)
+    .filter(unit => unit && (unit.partner_id || unit.partnerId) === state.partner)
     .map(unit => ({ label: unit.name, value: unit.id }))
 })
 
@@ -251,19 +307,22 @@ const onSubmit = async () => {
   
   try {
     const updatedData = {
-      guestName: state.guestName,
-      bookingDate: state.date,
-      baseAmount: state.amount,
-      paymentMethod: state.paymentMethod,
-      partnerId: state.partner,
-      unitId: state.unitId,
+      guest_name: state.guestName,
+      booking_date: state.bookingDate,
+      start_date: state.startDate,
+      end_date: state.endDate,
+      base_amount: state.amount,
+      payment_method_id: state.paymentMethod,
+      partner_id: state.partner,
+      unit_id: state.unitId,
+      booking_source_id: state.bookingSource,
       addons: state.addons,
-      bookingStatus: state.bookingStatus,
-      paymentStatus: state.paymentStatus,
-      amountPaid: state.amountPaid,
-      paymentReceivedBy: state.paymentReceivedBy,
-      invoiced: state.invoiced === 'true',
-      invoiceDate: state.invoiced === 'true' ? (state.invoiceDate || new Date().toISOString().split('T')[0]) : null
+      booking_status: state.bookingStatus,
+      payment_status: state.paymentStatus,
+      amount_paid: state.amountPaid,
+      payment_received_by: state.paymentReceivedBy,
+      invoiced: state.invoiced,
+      notes: state.notes
     }
     
     await updateBooking(props.booking.id, updatedData)
@@ -273,16 +332,12 @@ const onSubmit = async () => {
     emit('updated')
     isOpen.value = false
   } catch (error) {
+    console.error('Update booking error:', error)
     notifyError('Failed to update booking')
   }
 }
 
-// Auto-set invoice date when marking as invoiced
-watch(() => state.invoiced, (newValue) => {
-  if (newValue === 'true' && !state.invoiceDate) {
-    state.invoiceDate = new Date().toISOString().split('T')[0]
-  }
-})
+
 
 // Reset unit selection when partner changes (but not during initialization)
 const isInitializing = ref(false)
@@ -300,19 +355,22 @@ watch(() => props.booking, (booking) => {
     isInitializing.value = true
     
     Object.assign(state, {
-      guestName: booking.guestName || '',
-      date: booking.bookingDate || booking.startDate || booking.date || '',
-      amount: parseFloat(booking.baseAmount) || 0,
-      paymentMethod: booking.paymentMethodId || booking.paymentMethod?.id || booking.paymentMethod?.name || '',
-      partner: booking.partnerId || '',
-      unitId: booking.unitId || '',
+      guestName: booking.guest_name || booking.guestName || '',
+      bookingDate: booking.booking_date || booking.bookingDate || '',
+      startDate: booking.start_date || booking.startDate || '',
+      endDate: booking.end_date || booking.endDate || '',
+      amount: parseFloat(booking.base_amount || booking.baseAmount) || 0,
+      paymentMethod: booking.payment_method_id || booking.paymentMethodId || booking.paymentMethod?.id || '',
+      partner: booking.partner_id || booking.partnerId || '',
+      unitId: booking.unit_id || booking.unitId || '',
+      bookingSource: booking.booking_source_id || booking.bookingSourceId || '',
       addons: Array.isArray(booking.addons) ? booking.addons : [],
-      bookingStatus: booking.bookingStatus || 'confirmed',
-      paymentStatus: booking.paymentStatus || 'unpaid',
-      amountPaid: parseFloat(booking.amountPaid) || 0,
-      paymentReceivedBy: booking.paymentReceivedBy || 'partner',
-      invoiced: booking.invoiced ? 'true' : 'false',
-      invoiceDate: booking.invoiceDate || ''
+      bookingStatus: booking.booking_status || booking.bookingStatus || 'confirmed',
+      paymentStatus: booking.payment_status || booking.paymentStatus || 'unpaid',
+      amountPaid: parseFloat(booking.amount_paid || booking.amountPaid) || 0,
+      paymentReceivedBy: booking.payment_received_by || booking.paymentReceivedBy || 'partner',
+      invoiced: booking.invoiced || false,
+      notes: booking.notes || ''
     })
     
     // Allow partner/unit relationship to settle

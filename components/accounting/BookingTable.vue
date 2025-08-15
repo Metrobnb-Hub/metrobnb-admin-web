@@ -8,9 +8,9 @@
       </template>
       <template #amount-data="{ row }">
         <div>
-          <div class="font-medium">₱{{ (getBookingTotal(row) || 0).toFixed(2) }}</div>
+          <div class="font-medium">₱{{ (getBookingTotal(row) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</div>
           <div v-if="(row.addons || []).length" class="text-xs text-gray-500 dark:text-gray-400">
-            Base: ₱{{ (parseFloat(getFieldValue(row, 'baseAmount', 'base_amount')) || 0).toFixed(2) }} + Add-ons: ₱{{ (getAddonsTotal(row) || 0).toFixed(2) }}
+            Base: ₱{{ (parseFloat(row.base_amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} + Add-ons: ₱{{ (getAddonsTotal(row) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
           </div>
         </div>
       </template>
@@ -32,9 +32,9 @@
           <div>
             <span 
               class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-              :class="getBookingStatusClass(row.bookingStatus)"
+              :class="getBookingStatusClass(row.booking_status)"
             >
-              {{ getBookingStatusLabel(row.bookingStatus) }}
+              {{ getBookingStatusLabel(row.booking_status) }}
             </span>
           </div>
           <div>
@@ -52,41 +52,42 @@
           <div>
             <span 
               class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-              :class="getPaymentStatusClass(row.paymentStatus)"
+              :class="getPaymentStatusClass(row.payment_status)"
             >
-              {{ getPaymentStatusLabel(row.paymentStatus) }}
+              {{ getPaymentStatusLabel(row.payment_status) }}
             </span>
           </div>
           <div>
             <span 
               class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-              :class="row.paymentReceivedBy === 'metrobnb' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'"
+              :class="row.payment_received_by === 'metrobnb' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'"
             >
-              {{ row.paymentReceivedBy === 'metrobnb' ? 'MetroBNB' : 'Partner' }}
+              {{ row.payment_received_by === 'metrobnb' ? 'MetroBNB' : 'Partner' }}
             </span>
           </div>
           <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {{ (row.paymentMethod || row.payment_method)?.name || 'N/A' }}
+            {{ row.payment_method?.name || 'N/A' }}
           </div>
         </div>
       </template>
       <template #guest-data="{ row }">
         <div>
           <div class="font-medium text-gray-900 dark:text-white">
-            {{ row.guestName || row.guest_name }}
+            {{ row.guest_name }}
           </div>
           <div class="text-sm text-gray-500 dark:text-gray-400">
-            {{ row.bookingDate || row.booking_date }}
+            <div>Stay: {{ formatDateRange(row.start_date, row.end_date) }}</div>
+            <div class="text-xs">Booked: {{ formatDate(row.booking_date) }}</div>
           </div>
         </div>
       </template>
       <template #location-data="{ row }">
         <div>
           <div class="font-medium text-gray-900 dark:text-white">
-            {{ getPartnerName(row.partnerId || row.partner_id) }}
+            {{ getPartnerName(row.partner_id) }}
           </div>
           <div class="text-sm text-gray-500 dark:text-gray-400">
-            {{ getUnitName(row.unitId || row.unit_id) }}
+            {{ getUnitName(row.unit_id) }}
           </div>
         </div>
       </template>
@@ -124,12 +125,11 @@ const props = defineProps<{
   units?: any[]
 }>()
 
-// Use props if provided, otherwise fallback to stores
-const { units: storeUnits } = useUnitStore()
-const { partners: storePartners } = usePartnerStore()
+// Use props if provided, otherwise fallback to data manager
+const { units: dataUnits, partners: dataPartners } = useDataManager()
 
-const units = computed(() => props.units || storeUnits || [])
-const partners = computed(() => props.partners || storePartners || [])
+const units = computed(() => props.units || dataUnits.value || [])
+const partners = computed(() => props.partners || dataPartners.value || [])
 
 // Debug first booking to see field names
 watch(() => props.bookings, (bookings) => {
@@ -146,7 +146,7 @@ const emit = defineEmits<{
 }>()
 
 const columns = [
-  { key: 'guest', label: 'Guest & Date' },
+  { key: 'guest', label: 'Guest & Stay Dates' },
   { key: 'location', label: 'Partner & Unit' },
   { key: 'amount', label: 'Total Amount' },
   { key: 'status', label: 'Status' },
@@ -163,7 +163,7 @@ const getAddonsTotal = (booking: Booking) => {
 
 const getBookingTotal = (booking: any) => {
   if (!booking) return 0
-  const baseAmount = parseFloat(getFieldValue(booking, 'baseAmount', 'base_amount')) || 0
+  const baseAmount = parseFloat(booking.base_amount) || 0
   const addonsTotal = getAddonsTotal(booking)
   return baseAmount + addonsTotal
 }
@@ -228,6 +228,34 @@ const getPartnerName = (partnerId?: string) => {
 // Helper to get field value with fallback for snake_case/camelCase
 const getFieldValue = (row: any, camelField: string, snakeField: string) => {
   return row[camelField] || row[snakeField]
+}
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return 'N/A'
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+}
+
+const formatDateRange = (startDate: string, endDate: string) => {
+  if (!startDate || !endDate) return 'N/A'
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  
+  const startFormatted = start.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  })
+  
+  const endFormatted = end.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+  
+  return `${startFormatted} - ${endFormatted}`
 }
 
 const getActions = (row: Booking) => [

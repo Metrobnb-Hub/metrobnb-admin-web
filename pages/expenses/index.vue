@@ -53,7 +53,7 @@
         <div class="flex justify-between items-center">
           <h3 class="text-lg font-semibold">
             All Expenses 
-            <span v-if="pagination">({{ pagination.totalItems }} total)</span>
+            <span v-if="pagination">({{ pagination.total_items }} total)</span>
             <span v-else>({{ expenses.length }})</span>
           </h3>
         </div>
@@ -86,8 +86,20 @@
         </div>
         
         <!-- Date Filters -->
-        <div class="flex gap-4 items-center">
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Date Range:</span>
+        <div class="flex gap-4 items-center flex-wrap">
+          <USelect 
+            v-model="filterYear" 
+            :options="yearOptions"
+            placeholder="All years"
+            class="w-32"
+          />
+          <USelect 
+            v-model="filterMonth" 
+            :options="monthOptions"
+            placeholder="All months"
+            class="w-36"
+          />
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">or Custom Range:</span>
           <UInput 
             v-model="startDate" 
             type="date" 
@@ -102,7 +114,7 @@
             class="w-40"
           />
           <UButton 
-            v-if="startDate || endDate" 
+            v-if="startDate || endDate || filterYear || filterMonth" 
             @click="clearDateFilters"
             color="gray" 
             variant="outline" 
@@ -131,11 +143,11 @@
           <div class="flex-1">
             <div class="flex items-center space-x-3">
               <span class="font-medium text-gray-900 dark:text-white">
-                {{ getPartnerName(expense.partnerId || expense.partner_id) }}
+                {{ getPartnerName(expense.partner_id) }}
               </span>
               <span class="text-sm text-gray-500 dark:text-gray-400">•</span>
               <span class="text-sm text-gray-600 dark:text-gray-400">
-                {{ getUnitName(expense.unitId || expense.unit_id) }}
+                {{ getUnitName(expense.unit_id) }}
               </span>
             </div>
             <div class="flex items-center space-x-4 mt-1">
@@ -180,15 +192,15 @@
       </div>
       
       <!-- Pagination -->
-      <div v-if="pagination && pagination.totalPages > 1" class="flex justify-between items-center mt-6 pt-4 border-t">
+      <div v-if="pagination && pagination.total_pages > 1" class="flex justify-between items-center mt-6 pt-4 border-t">
         <div class="text-sm text-gray-600 dark:text-gray-400">
-          Showing {{ ((pagination.currentPage - 1) * pagination.perPage) + 1 }} to 
-          {{ Math.min(pagination.currentPage * pagination.perPage, pagination.totalItems) }} of 
-          {{ pagination.totalItems }} results
+          Showing {{ ((pagination.current_page - 1) * pagination.per_page) + 1 }} to 
+          {{ Math.min(pagination.current_page * pagination.per_page, pagination.total_items) }} of 
+          {{ pagination.total_items }} results
         </div>
         <div class="flex items-center space-x-2">
           <UButton 
-            :disabled="!pagination.hasPrev" 
+            :disabled="!pagination.has_prev" 
             @click="goToPage(currentPage - 1)"
             color="gray" 
             variant="outline" 
@@ -214,7 +226,7 @@
           </div>
           
           <UButton 
-            :disabled="!pagination.hasNext" 
+            :disabled="!pagination.has_next" 
             @click="goToPage(currentPage + 1)"
             color="gray" 
             variant="outline" 
@@ -244,7 +256,14 @@ const selectedExpense = ref(null)
 const searchQuery = ref('')
 const sortBy = ref('date_desc')
 const filterType = ref('all')
+// Get current month and year
+const now = new Date()
+const currentYear = now.getFullYear().toString()
+const currentMonth = (now.getMonth() + 1).toString()
+
 const filterPaid = ref('all')
+const filterYear = ref(currentYear)
+const filterMonth = ref(currentMonth)
 const startDate = ref('')
 const endDate = ref('')
 const expenses = ref([])
@@ -279,6 +298,36 @@ const paidFilterOptions = [
   { label: 'Unpaid', value: 'false' }
 ]
 
+const yearOptions = computed(() => {
+  const years = []
+  const currentYear = new Date().getFullYear()
+  
+  for (let i = currentYear - 5; i <= currentYear + 2; i++) {
+    years.push({ label: i.toString(), value: i.toString() })
+  }
+  
+  return [{ label: 'All Years', value: '' }, ...years.reverse()]
+})
+
+const monthOptions = computed(() => {
+  const months = [
+    { label: 'January', value: '1' },
+    { label: 'February', value: '2' },
+    { label: 'March', value: '3' },
+    { label: 'April', value: '4' },
+    { label: 'May', value: '5' },
+    { label: 'June', value: '6' },
+    { label: 'July', value: '7' },
+    { label: 'August', value: '8' },
+    { label: 'September', value: '9' },
+    { label: 'October', value: '10' },
+    { label: 'November', value: '11' },
+    { label: 'December', value: '12' }
+  ]
+  
+  return [{ label: 'All Months', value: '' }, ...months]
+})
+
 const loadExpensesData = async () => {
   try {
     isLoading.value = true
@@ -303,12 +352,31 @@ const loadExpensesData = async () => {
       filters.paid = filterPaid.value === 'true'
     }
     
-    if (startDate.value) {
-      filters.start_date = startDate.value
+    // Convert year/month to start_date and end_date
+    let actualStartDate = startDate.value
+    let actualEndDate = endDate.value
+    
+    if (filterYear.value || filterMonth.value) {
+      const year = filterYear.value || new Date().getFullYear()
+      const month = filterMonth.value || ''
+      
+      if (month) {
+        const monthNum = parseInt(month)
+        actualStartDate = `${year}-${monthNum.toString().padStart(2, '0')}-01`
+        const lastDay = new Date(year, monthNum, 0).getDate()
+        actualEndDate = `${year}-${monthNum.toString().padStart(2, '0')}-${lastDay}`
+      } else {
+        actualStartDate = `${year}-01-01`
+        actualEndDate = `${year}-12-31`
+      }
     }
     
-    if (endDate.value) {
-      filters.end_date = endDate.value
+    if (actualStartDate) {
+      filters.start_date = actualStartDate
+    }
+    
+    if (actualEndDate) {
+      filters.end_date = actualEndDate
     }
     
     const result = await getExpenses(filters)
@@ -438,7 +506,7 @@ const togglePayment = async (expense: any) => {
   try {
     const updateData = {
       paid: !expense.paid,
-      paidDate: !expense.paid ? new Date().toISOString().split('T')[0] : null,
+      paid_date: !expense.paid ? new Date().toISOString().split('T')[0] : null,
       billable: expense.billable,
       amount: expense.amount,
       type: expense.type,
@@ -467,7 +535,7 @@ const goToPage = (page: number) => {
 const getVisiblePages = () => {
   if (!pagination.value) return []
   
-  const total = pagination.value.totalPages
+  const total = pagination.value.total_pages
   const current = currentPage.value
   const pages = []
   
@@ -507,12 +575,14 @@ const getVisiblePages = () => {
 
 // Clear date filters function
 const clearDateFilters = () => {
+  filterYear.value = ''
+  filterMonth.value = ''
   startDate.value = ''
   endDate.value = ''
 }
 
 // Watch for filter changes
-watch([sortBy, filterType, filterPaid, startDate, endDate], () => {
+watch([sortBy, filterType, filterPaid, filterYear, filterMonth, startDate, endDate], () => {
   currentPage.value = 1 // Reset to first page
   loadExpensesData()
 })

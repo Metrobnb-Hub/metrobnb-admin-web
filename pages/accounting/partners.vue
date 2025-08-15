@@ -9,7 +9,7 @@
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Partners</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ partners.length }}</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ partners.value?.length || 0 }}</p>
           </div>
         </div>
       </UCard>
@@ -21,7 +21,7 @@
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Earnings</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">${{ totalEarnings.toFixed(2) }}</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">₱{{ totalEarnings.toFixed(2) }}</p>
           </div>
         </div>
       </UCard>
@@ -34,7 +34,7 @@
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Avg per Partner</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white">
-              ${{ partners.length ? (totalEarnings / partners.length).toFixed(2) : '0.00' }}
+              ₱{{ partners.value?.length ? (totalEarnings.value / partners.value.length).toFixed(2) : '0.00' }}
             </p>
           </div>
         </div>
@@ -68,10 +68,10 @@
           </div>
           <div class="text-right">
             <p class="font-semibold text-gray-900 dark:text-white">
-              ${{ partner.earnings.toFixed(2) }}
+              ₱{{ partner.earnings.toFixed(2) }}
             </p>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-              {{ ((partner.earnings / totalEarnings) * 100 || 0).toFixed(1) }}%
+              {{ ((partner.earnings / totalEarnings.value) * 100 || 0).toFixed(1) }}%
             </p>
           </div>
         </div>
@@ -81,27 +81,56 @@
 </template>
 
 <script setup lang="ts">
-const { totalEarnings, bookings, getPartnerEarnings, loadFromStorage } = useAccountingStore()
-const { partners, loadFromStorage: loadPartners } = usePartnerStore()
+const { partners, loadPartners } = useDataManager()
+const { getBookings } = useApi()
+
+const bookings = ref([])
+const totalEarnings = ref(0)
+
+const getBookingTotal = (booking: any) => {
+  if (!booking) return 0
+  const baseAmount = parseFloat(booking.baseAmount || booking.base_amount || 0)
+  const addonsTotal = (booking.addons || []).reduce((sum: number, addon: any) => {
+    return sum + (parseFloat(addon.amount) || 0)
+  }, 0)
+  return baseAmount + addonsTotal
+}
 
 const sortedPartners = computed(() => {
-  if (!partners || partners.length === 0) return []
-  return [...partners]
+  if (!Array.isArray(partners.value) || partners.value.length === 0) return []
+  return [...partners.value]
     .filter(partner => partner && partner.id)
-    .map(partner => ({
-      ...partner,
-      earnings: getPartnerEarnings(partner.id) || 0
-    }))
+    .map(partner => {
+      const partnerBookings = bookings.value.filter(b => b && (b.partnerId || b.partner_id) === partner.id)
+      const earnings = partnerBookings.reduce((sum, booking) => {
+        return sum + getBookingTotal(booking)
+      }, 0)
+      return {
+        ...partner,
+        earnings: earnings || 0
+      }
+    })
     .sort((a, b) => (b.earnings || 0) - (a.earnings || 0))
 })
 
 const getPartnerBookingCount = (partnerId: string) => {
-  if (!bookings || !partnerId) return 0
-  return bookings.filter(booking => booking && booking.partner === partnerId).length
+  if (!Array.isArray(bookings.value) || !partnerId) return 0
+  return bookings.value.filter(booking => booking && (booking.partnerId || booking.partner_id) === partnerId).length
 }
 
-onMounted(async () => {
-  await loadFromStorage()
-  await loadPartners()
-})
+const loadData = async () => {
+  try {
+    const [apiBookings] = await Promise.all([
+      getBookings(),
+      loadPartners()
+    ])
+    
+    bookings.value = Array.isArray(apiBookings) ? apiBookings : []
+    totalEarnings.value = bookings.value.reduce((sum, booking) => sum + getBookingTotal(booking), 0)
+  } catch (error) {
+    console.error('Failed to load data:', error)
+  }
+}
+
+onMounted(loadData)
 </script>

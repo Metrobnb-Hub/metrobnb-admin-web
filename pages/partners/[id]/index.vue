@@ -62,14 +62,14 @@
       <UCard>
         <template #header>
           <div class="flex justify-between items-center">
-            <h3 class="text-lg font-semibold">Units ({{ units.length }})</h3>
+            <h3 class="text-lg font-semibold">Units ({{ partnerUnits.length }})</h3>
             <UButton :to="`/partners/${partnerId}/add-unit`" size="sm" color="primary">Add Unit</UButton>
           </div>
         </template>
         
-        <div v-if="units.length" class="space-y-4">
+        <div v-if="partnerUnits.length" class="space-y-4">
           <div 
-            v-for="unit in units" 
+            v-for="unit in partnerUnits" 
             :key="unit.id"
             class="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
           >
@@ -154,9 +154,9 @@
 const route = useRoute()
 const partnerId = route.params.id as string
 
-const { getPartnerByIdSync, loadFromStorage: loadPartners } = usePartnerStore()
-const { getUnitsByPartnerSync, loadFromStorage: loadUnits } = useUnitStore()
+const { partners, units, loadPartners, loadUnits } = useDataManager()
 const { updateUnit: apiUpdateUnit, deleteUnit: apiDeleteUnit } = useApi()
+const { notifySuccess, notifyError } = useNotify()
 
 const isLoading = ref(true)
 const showInvoiceModal = ref(false)
@@ -169,12 +169,13 @@ const editForm = reactive({
   notes: ''
 })
 const partner = computed(() => {
-  if (isLoading.value || !partnerId) return null
-  return getPartnerByIdSync(partnerId) || null
+  if (isLoading.value || !partnerId || !Array.isArray(partners.value)) return null
+  return partners.value.find(p => p.id === partnerId) || null
 })
-const units = computed(() => {
-  if (isLoading.value || !partnerId) return []
-  return getUnitsByPartnerSync(partnerId) || []
+
+const partnerUnits = computed(() => {
+  if (isLoading.value || !partnerId || !Array.isArray(units.value)) return []
+  return units.value.filter(u => (u.partnerId || u.partner_id) === partnerId) || []
 })
 
 const formatDate = (dateString: string) => {
@@ -217,17 +218,9 @@ const updateUnit = async () => {
     await loadUnits()
     showEditModal.value = false
     
-    useToast().add({
-      title: 'Unit updated',
-      description: `${editForm.name} has been updated successfully`,
-      color: 'green'
-    })
+    notifySuccess(`${editForm.name} has been updated successfully`)
   } catch (error) {
-    useToast().add({
-      title: 'Error',
-      description: 'Failed to update unit',
-      color: 'red'
-    })
+    notifyError('Failed to update unit')
   } finally {
     isUpdating.value = false
   }
@@ -239,17 +232,9 @@ const deleteUnitConfirm = async (unit: any) => {
       await apiDeleteUnit(unit.id)
       await loadUnits()
       
-      useToast().add({
-        title: 'Unit deleted',
-        description: `${unit.name} has been deleted`,
-        color: 'orange'
-      })
+      notifySuccess(`${unit.name} has been deleted`)
     } catch (error) {
-      useToast().add({
-        title: 'Error',
-        description: 'Failed to delete unit',
-        color: 'red'
-      })
+      notifyError('Failed to delete unit')
     }
   }
 }
