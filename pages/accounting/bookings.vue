@@ -5,10 +5,16 @@
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Bookings</h1>
         <p class="text-gray-600 dark:text-gray-400">Manage booking payments and records</p>
       </div>
-      <UButton to="/bookings/create" color="primary">
-        <UIcon name="i-heroicons-plus" class="mr-2" />
-        Add Booking
-      </UButton>
+      <div class="flex gap-3">
+        <UButton @click="showImportModal = true" color="green" variant="outline">
+          <UIcon name="i-heroicons-arrow-up-tray" class="mr-2" />
+          Import Airbnb CSV
+        </UButton>
+        <UButton to="/bookings/create" color="primary">
+          <UIcon name="i-heroicons-plus" class="mr-2" />
+          Add Booking
+        </UButton>
+      </div>
     </div>
 
     <!-- Statistics Cards -->
@@ -172,6 +178,12 @@
       :booking="selectedBooking" 
       @updated="handleUpdated"
     />
+    
+    <!-- Import Modal -->
+    <AccountingAirbnbImportModal 
+      v-model="showImportModal" 
+      @imported="handleImported"
+    />
   </div>
 </template>
 
@@ -184,6 +196,7 @@ const { getBookings, getBookingSources } = useApi()
 const bookingSources = ref([])
 
 const showEditModal = ref(false)
+const showImportModal = ref(false)
 const selectedBooking = ref(null)
 const bookings = ref([])
 const bookingSummary = ref(null)
@@ -339,6 +352,10 @@ const handleDelete = async (id: string) => {
 
 const handleUpdated = () => {
   selectedBooking.value = null
+  loadBookings()
+}
+
+const handleImported = () => {
   loadBookings()
 }
 

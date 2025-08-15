@@ -44,15 +44,17 @@ const lastLoaded = reactive<Record<keyof DataCache, number>>({
 })
 
 export const useDataManager = () => {
+  const { cachedFetch, invalidate } = useCache()
   const { 
     getPartners, 
     getUnits, 
     getExpenses, 
     getServices, 
-    getBookingSources 
+    getBookingSources,
+    getPaymentMethods
   } = useApi()
 
-  const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+  const CACHE_DURATION = 10 * 60 * 1000 // 10 minutes - increased for better performance
 
   const isCacheValid = (key: keyof DataCache) => {
     return Date.now() - lastLoaded[key] < CACHE_DURATION
@@ -73,7 +75,10 @@ export const useDataManager = () => {
 
     try {
       loadingState.partners = true
-      const data = await getPartners()
+      const data = await cachedFetch('/api/partners', undefined, { 
+        skipCache: force,
+        ttl: 10 * 60 * 1000 // 10 minutes
+      })
       dataCache.partners = Array.isArray(data) ? data : []
       lastLoaded.partners = Date.now()
       return dataCache.partners
@@ -96,7 +101,10 @@ export const useDataManager = () => {
 
     try {
       loadingState.units = true
-      const data = await getUnits()
+      const data = await cachedFetch('/api/units', undefined, { 
+        skipCache: force,
+        ttl: 10 * 60 * 1000 // 10 minutes
+      })
       dataCache.units = Array.isArray(data) ? data : []
       lastLoaded.units = Date.now()
       return dataCache.units
@@ -142,7 +150,10 @@ export const useDataManager = () => {
 
     try {
       loadingState.services = true
-      const data = await getServices()
+      const data = await cachedFetch('/api/services', undefined, { 
+        skipCache: force,
+        ttl: 15 * 60 * 1000 // 15 minutes
+      })
       dataCache.services = Array.isArray(data) ? data : []
       lastLoaded.services = Date.now()
       return dataCache.services
@@ -151,15 +162,69 @@ export const useDataManager = () => {
     }
   }
 
+  const loadBookingSources = async (force = false) => {
+    if (!force && dataCache.bookingSources.length > 0 && isCacheValid('bookingSources')) {
+      return dataCache.bookingSources
+    }
+
+    if (loadingState.bookingSources) {
+      while (loadingState.bookingSources) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+      return dataCache.bookingSources
+    }
+
+    try {
+      loadingState.bookingSources = true
+      const data = await cachedFetch('/api/booking-sources', undefined, { 
+        skipCache: force,
+        ttl: 15 * 60 * 1000 // 15 minutes
+      })
+      dataCache.bookingSources = Array.isArray(data) ? data : []
+      lastLoaded.bookingSources = Date.now()
+      return dataCache.bookingSources
+    } finally {
+      loadingState.bookingSources = false
+    }
+  }
+
+  const loadPaymentMethods = async (force = false) => {
+    if (!force && dataCache.paymentMethods.length > 0 && isCacheValid('paymentMethods')) {
+      return dataCache.paymentMethods
+    }
+
+    if (loadingState.paymentMethods) {
+      while (loadingState.paymentMethods) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+      return dataCache.paymentMethods
+    }
+
+    try {
+      loadingState.paymentMethods = true
+      const data = await cachedFetch('/api/payment-methods', undefined, { 
+        skipCache: force,
+        ttl: 15 * 60 * 1000 // 15 minutes
+      })
+      dataCache.paymentMethods = Array.isArray(data) ? data : []
+      lastLoaded.paymentMethods = Date.now()
+      return dataCache.paymentMethods
+    } finally {
+      loadingState.paymentMethods = false
+    }
+  }
+
   const loadAll = async (force = false) => {
-    const [partners, units, expenses, services] = await Promise.all([
+    const [partners, units, expenses, services, bookingSources, paymentMethods] = await Promise.all([
       loadPartners(force),
       loadUnits(force),
       loadExpenses(force),
-      loadServices(force)
+      loadServices(force),
+      loadBookingSources(force),
+      loadPaymentMethods(force)
     ])
 
-    return { partners, units, expenses, services }
+    return { partners, units, expenses, services, bookingSources, paymentMethods }
   }
 
   const invalidateCache = (key?: keyof DataCache) => {
@@ -195,6 +260,8 @@ export const useDataManager = () => {
     units: readonly(toRef(dataCache, 'units')),
     expenses: readonly(toRef(dataCache, 'expenses')),
     services: readonly(toRef(dataCache, 'services')),
+    bookingSources: readonly(toRef(dataCache, 'bookingSources')),
+    paymentMethods: readonly(toRef(dataCache, 'paymentMethods')),
     
     // Loading states
     isLoading: readonly(loadingState),
@@ -204,6 +271,8 @@ export const useDataManager = () => {
     loadUnits,
     loadExpenses,
     loadServices,
+    loadBookingSources,
+    loadPaymentMethods,
     loadAll,
     refreshData,
     invalidateCache

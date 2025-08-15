@@ -11,6 +11,7 @@
   "devDependencies": {
     "@nuxt/devtools": "latest",
     "@nuxt/ui": "^2.11.1",
+    "@nuxtjs/vercel-builder": "^0.24.0",
     "nuxt": "^3.8.0",
     "typescript": "^5.2.2"
   },

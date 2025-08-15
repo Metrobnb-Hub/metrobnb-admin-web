@@ -99,17 +99,25 @@ export const useApi = () => {
   }
 
   const createPartner = async (partner: Omit<Partner, 'id' | 'created_at' | 'updated_at'> & { service_ids: string[] }): Promise<Partner> => {
-    return await apiClient<Partner>('/api/partners', {
+    const result = await apiClient<Partner>('/api/partners', {
       method: 'POST',
       body: JSON.stringify(partner)
     })
+    // Invalidate partners cache
+    const { invalidate } = useCache()
+    invalidate('/api/partners')
+    return result
   }
 
   const updatePartner = async (id: string, partner: Partial<Partner> & { service_ids?: string[] }): Promise<Partner> => {
-    return await apiClient<Partner>(`/api/partners/${id}`, {
+    const result = await apiClient<Partner>(`/api/partners/${id}`, {
       method: 'PUT',
       body: JSON.stringify(partner)
     })
+    // Invalidate partners cache
+    const { invalidate } = useCache()
+    invalidate('/api/partners')
+    return result
   }
 
   const deletePartner = async (id: string): Promise<void> => {
@@ -126,10 +134,14 @@ export const useApi = () => {
   }
 
   const createUnit = async (unit: Omit<Unit, 'id' | 'created_at' | 'updated_at'>): Promise<Unit> => {
-    return await apiClient<Unit>('/api/units', {
+    const result = await apiClient<Unit>('/api/units', {
       method: 'POST',
       body: JSON.stringify(unit)
     })
+    // Invalidate units cache
+    const { invalidate } = useCache()
+    invalidate('/api/units')
+    return result
   }
 
   const updateUnit = async (id: string, unit: Partial<Unit>): Promise<Unit> => {
@@ -216,10 +228,15 @@ export const useApi = () => {
   }
 
   const createBooking = async (booking: Omit<Booking, 'id' | 'created_at' | 'updated_at'>): Promise<Booking> => {
-    return await apiClient<Booking>('/api/bookings', {
+    const result = await apiClient<Booking>('/api/bookings', {
       method: 'POST',
       body: JSON.stringify(booking)
     })
+    // Invalidate bookings cache (affects dashboard and booking lists)
+    const { invalidate } = useCache()
+    invalidate('/api/bookings')
+    invalidate('/api/analytics')
+    return result
   }
 
   const updateBooking = async (id: string, booking: Partial<Booking>): Promise<Booking> => {
@@ -357,7 +374,8 @@ export const useApi = () => {
     const params = new URLSearchParams({
       partner_id: partnerId,
       start_date: startDate,
-      end_date: endDate
+      end_date: endDate,
+      paid: 'false' // Only include unpaid expenses in invoice
     })
     
     return await apiClient<{
@@ -466,6 +484,29 @@ export const useApi = () => {
     }>(`/api/bookings/stats/summary${query ? `?${query}` : ''}`)
   }
 
+  // Airbnb Import API
+  const importAirbnbBookings = async (data: {
+    partner_id: string
+    unit_id: string
+    csv_data: string
+  }) => {
+    const result = await apiClient<{
+      success: boolean
+      imported_count: number
+      skipped_count: number
+      errors: string[]
+      bookings_created: string[]
+    }>('/api/airbnb/import', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+    // Invalidate bookings cache after import
+    const { invalidate } = useCache()
+    invalidate('/api/bookings')
+    invalidate('/api/analytics')
+    return result
+  }
+
   // Helper function for booking total (client-side calculation)
   const getBookingTotal = (booking: Booking): number => {
     if (!booking) return 0
@@ -510,6 +551,7 @@ export const useApi = () => {
     createBooking,
     updateBooking,
     deleteBooking,
+    importAirbnbBookings,
     
     // Expenses
     getExpenses,
