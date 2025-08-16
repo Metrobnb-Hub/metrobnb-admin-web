@@ -1,29 +1,39 @@
 <template>
-  <div class="space-y-6">
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Bookings</h1>
-        <p class="text-gray-600 dark:text-gray-400">Manage booking payments and records</p>
+  <div class="space-y-3 sm:space-y-6">
+    <!-- Header -->
+    <div class="space-y-3">
+      <div class="flex justify-between items-start gap-3">
+        <div class="min-w-0 flex-1">
+          <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">Bookings</h1>
+          <p class="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">Manage booking payments and records</p>
+        </div>
+        <div class="flex gap-2">
+          <UButton @click="showImportModal = true" color="green" variant="outline" size="xs" class="sm:size-sm">
+            <UIcon name="i-heroicons-arrow-up-tray" class="sm:mr-1" />
+            <span class="hidden sm:inline">Import</span>
+          </UButton>
+          <UButton to="/bookings/create" color="primary" size="xs" class="sm:size-sm">
+            <UIcon name="i-heroicons-plus" class="sm:mr-1" />
+            <span class="hidden sm:inline">Add</span>
+          </UButton>
+        </div>
       </div>
-      <div class="flex gap-3">
-        <UButton @click="showImportModal = true" color="green" variant="outline">
-          <UIcon name="i-heroicons-arrow-up-tray" class="mr-2" />
-          Import Airbnb CSV
-        </UButton>
-        <UButton to="/bookings/create" color="primary">
-          <UIcon name="i-heroicons-plus" class="mr-2" />
-          Add Booking
-        </UButton>
+      
+      <!-- Mobile tabs -->
+      <div class="sm:hidden">
+        <UTabs v-model="activeView" :items="viewTabs" size="sm" />
       </div>
-    </div>
-
-    <!-- View Toggle -->
-    <div class="flex items-center gap-4">
-      <UTabs v-model="activeView" :items="viewTabs" />
+      
+      <!-- Desktop tabs -->
+      <div class="hidden sm:block">
+        <UTabs v-model="activeView" :items="viewTabs" />
+      </div>
     </div>
 
     <!-- Statistics Cards -->
-    <AccountingBookingStatsCard :summary="bookingSummary" :loading="isLoading" />
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+      <AccountingBookingStatsCard :summary="bookingSummary" :loading="isLoading" />
+    </div>
 
     <!-- Calendar View -->
     <div v-if="activeView === 1" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -79,27 +89,38 @@
       </template>
       
       <!-- Search and Filters -->
-      <div class="mb-4 space-y-4">
-        <div class="flex gap-4">
+      <div class="mb-4 space-y-3">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
           <UInput 
             v-model="searchQuery" 
-            placeholder="Search by guest name..."
+            placeholder="Search guests..."
             icon="i-heroicons-magnifying-glass"
-            class="flex-1"
+            class="w-full sm:flex-1"
+            size="sm"
             @input="handleSearchInput"
           />
-          <USelect 
-            v-model="sortBy" 
-            :options="sortOptions"
-            @change="loadBookings"
-          />
-          <UButton 
-            variant="outline" 
-            @click="showAdvancedFilters = !showAdvancedFilters"
-          >
-            <UIcon name="i-heroicons-funnel" class="mr-2" />
-            Filters
-          </UButton>
+          <div class="flex gap-2">
+            <USelect 
+              v-model="sortBy" 
+              :options="sortOptions"
+              class="flex-1 sm:w-auto"
+              size="sm"
+              @change="loadBookings"
+            />
+            <UButton 
+              variant="outline" 
+              size="sm"
+              @click="showAdvancedFilters = !showAdvancedFilters"
+            >
+              <UIcon name="i-heroicons-funnel" class="sm:mr-1" />
+              <span class="hidden sm:inline">Filters</span>
+            </UButton>
+          </div>
+        </div>
+        
+        <!-- Grouped by chip - mobile under filters -->
+        <div class="sm:hidden">
+          <UBadge color="blue" variant="soft" size="sm">Grouped by Invoice Period</UBadge>
         </div>
         
         <!-- Advanced Filters -->

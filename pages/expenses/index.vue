@@ -1,47 +1,53 @@
 <template>
-  <div class="space-y-6">
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Expenses</h1>
-        <p class="text-gray-600 dark:text-gray-400">Manage partner expenses and charges</p>
+  <div class="space-y-3 sm:space-y-6">
+    <!-- Header -->
+    <div class="space-y-3">
+      <div class="flex justify-between items-start gap-3">
+        <div class="min-w-0 flex-1">
+          <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">Expenses</h1>
+          <p class="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">Manage partner expenses and charges</p>
+        </div>
+        <UButton to="/expenses/create" color="primary" size="xs" class="sm:size-sm">
+          <UIcon name="i-heroicons-plus" class="sm:mr-1" />
+          <span class="hidden sm:inline">Add Expense</span>
+        </UButton>
       </div>
-      <UButton to="/expenses/create" color="primary">Add Expense</UButton>
     </div>
 
     <!-- Summary Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <UCard>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+      <UCard class="p-3 sm:p-4">
         <div class="flex items-center">
-          <div class="p-3 bg-red-100 dark:bg-red-900 rounded-lg">
-            <UIcon name="i-heroicons-minus-circle" class="h-8 w-8 text-red-600 dark:text-red-400" />
+          <div class="p-2 sm:p-3 bg-red-100 dark:bg-red-900 rounded-lg">
+            <UIcon name="i-heroicons-minus-circle" class="h-4 w-4 sm:h-6 sm:w-6 text-red-600 dark:text-red-400" />
           </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Expenses</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">₱{{ totalExpenses.toFixed(2) }}</p>
+          <div class="ml-2 sm:ml-4 min-w-0 flex-1">
+            <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
+            <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">₱{{ totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</p>
           </div>
         </div>
       </UCard>
       
-      <UCard>
+      <UCard class="p-3 sm:p-4">
         <div class="flex items-center">
-          <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-            <UIcon name="i-heroicons-document-text" class="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <div class="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
+            <UIcon name="i-heroicons-document-text" class="h-4 w-4 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
           </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Records</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ expenses?.length || 0 }}</p>
+          <div class="ml-2 sm:ml-4 min-w-0 flex-1">
+            <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Records</p>
+            <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ expenses?.length || 0 }}</p>
           </div>
         </div>
       </UCard>
       
-      <UCard>
+      <UCard class="p-3 sm:p-4 col-span-2 sm:col-span-1">
         <div class="flex items-center">
-          <div class="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-            <UIcon name="i-heroicons-calendar" class="h-8 w-8 text-green-600 dark:text-green-400" />
+          <div class="p-2 sm:p-3 bg-green-100 dark:bg-green-900 rounded-lg">
+            <UIcon name="i-heroicons-calendar" class="h-4 w-4 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" />
           </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">This Month</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">₱{{ thisMonthExpenses.toFixed(2) }}</p>
+          <div class="ml-2 sm:ml-4 min-w-0 flex-1">
+            <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">This Month</p>
+            <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">₱{{ thisMonthExpenses.toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</p>
           </div>
         </div>
       </UCard>
@@ -60,67 +66,84 @@
       </template>
       
       <!-- Search and Filters -->
-      <div class="mb-4 space-y-4">
-        <div class="flex gap-4">
+      <div class="mb-4 space-y-3">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
           <UInput 
             v-model="searchQuery" 
             placeholder="Search expenses..."
             icon="i-heroicons-magnifying-glass"
-            class="flex-1"
+            class="w-full sm:flex-1"
+            size="sm"
           />
-          <USelect 
-            v-model="sortBy" 
-            :options="sortOptions"
-            class="w-48"
-          />
-          <USelect 
-            v-model="filterType" 
-            :options="typeFilterOptions"
-            class="w-40"
-          />
-          <USelect 
-            v-model="filterPaid" 
-            :options="paidFilterOptions"
-            class="w-40"
-          />
+          <div class="flex gap-2">
+            <USelect 
+              v-model="sortBy" 
+              :options="sortOptions"
+              class="flex-1 sm:w-48"
+              size="sm"
+            />
+            <USelect 
+              v-model="filterType" 
+              :options="typeFilterOptions"
+              class="flex-1 sm:w-40"
+              size="sm"
+            />
+            <USelect 
+              v-model="filterPaid" 
+              :options="paidFilterOptions"
+              class="flex-1 sm:w-40"
+              size="sm"
+            />
+          </div>
         </div>
         
         <!-- Date Filters -->
-        <div class="flex gap-4 items-center flex-wrap">
-          <USelect 
-            v-model="filterYear" 
-            :options="yearOptions"
-            placeholder="All years"
-            class="w-32"
-          />
-          <USelect 
-            v-model="filterMonth" 
-            :options="monthOptions"
-            placeholder="All months"
-            class="w-36"
-          />
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">or Custom Range:</span>
-          <UInput 
-            v-model="startDate" 
-            type="date" 
-            placeholder="Start date"
-            class="w-40"
-          />
-          <span class="text-gray-400">to</span>
-          <UInput 
-            v-model="endDate" 
-            type="date" 
-            placeholder="End date"
-            class="w-40"
-          />
+        <div class="space-y-2 sm:space-y-0 sm:flex sm:gap-4 sm:items-center">
+          <div class="flex gap-2">
+            <USelect 
+              v-model="filterYear" 
+              :options="yearOptions"
+              placeholder="Year"
+              class="flex-1 sm:w-32"
+              size="sm"
+            />
+            <USelect 
+              v-model="filterMonth" 
+              :options="monthOptions"
+              placeholder="Month"
+              class="flex-1 sm:w-36"
+              size="sm"
+            />
+          </div>
+          <span class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">or Custom:</span>
+          <div class="flex gap-2 items-center">
+            <UInput 
+              v-model="startDate" 
+              type="date" 
+              placeholder="Start"
+              class="flex-1 sm:w-40"
+              size="sm"
+            />
+            <span class="text-gray-400 text-sm">to</span>
+            <UInput 
+              v-model="endDate" 
+              type="date" 
+              placeholder="End"
+              class="flex-1 sm:w-40"
+              size="sm"
+            />
+          </div>
           <UButton 
             v-if="startDate || endDate || filterYear || filterMonth" 
             @click="clearDateFilters"
             color="gray" 
             variant="outline" 
-            size="sm"
+            size="xs"
+            class="sm:size-sm w-full sm:w-auto"
           >
-            Clear Dates
+            <UIcon name="i-heroicons-x-mark" class="sm:mr-1" />
+            <span class="sm:hidden">Clear Filters</span>
+            <span class="hidden sm:inline">Clear</span>
           </UButton>
         </div>
       </div>
@@ -129,7 +152,52 @@
         <div class="text-gray-500">Loading expenses...</div>
       </div>
       
-      <div v-else-if="expenses.length" class="space-y-3">
+      <!-- Mobile card layout -->
+      <div v-else-if="expenses.length" class="sm:hidden space-y-3">
+        <UCard v-for="expense in expenses" :key="expense.id" class="p-4">
+          <div class="space-y-3">
+            <div class="flex justify-between items-start">
+              <div class="min-w-0 flex-1">
+                <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ getPartnerName(expense.partner_id) }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ getUnitName(expense.unit_id) }}</p>
+              </div>
+              <UDropdown :items="getExpenseActions(expense)">
+                <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" size="xs" />
+              </UDropdown>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span class="text-gray-500 dark:text-gray-400">Type:</span>
+                <UBadge :color="getExpenseTypeColor(expense.type)" size="xs" class="ml-1">
+                  {{ expense.type }}
+                </UBadge>
+              </div>
+              <div>
+                <span class="text-gray-500 dark:text-gray-400">Amount:</span>
+                <p class="font-medium text-red-600 dark:text-red-400">₱{{ parseFloat(expense.amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</p>
+              </div>
+              <div>
+                <span class="text-gray-500 dark:text-gray-400">Status:</span>
+                <UBadge :color="expense.paid ? 'green' : 'red'" size="xs" class="ml-1">
+                  {{ expense.paid ? 'Paid' : 'Unpaid' }}
+                </UBadge>
+              </div>
+              <div>
+                <span class="text-gray-500 dark:text-gray-400">Date:</span>
+                <p class="font-medium">{{ formatDate(expense.date) }}</p>
+              </div>
+            </div>
+            
+            <p v-if="expense.notes" class="text-sm text-gray-600 dark:text-gray-400 truncate">
+              {{ expense.notes }}
+            </p>
+          </div>
+        </UCard>
+      </div>
+      
+      <!-- Desktop list layout -->
+      <div v-else-if="expenses.length" class="hidden sm:block space-y-3">
         <div 
           v-for="expense in expenses" 
           :key="expense.id"
@@ -458,6 +526,21 @@ const getExpenseTypeClass = (type: string) => {
     'Misc': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
   }
   return classes[type as keyof typeof classes] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+}
+
+const getExpenseTypeColor = (type: string) => {
+  const colors = {
+    'Cleaning': 'blue',
+    'Laundry': 'purple',
+    'Supplies': 'green',
+    'Wifi': 'indigo',
+    'Electricity': 'yellow',
+    'Repair': 'red',
+    'Repairs': 'red',
+    'Miscellaneous': 'gray',
+    'Misc': 'gray'
+  }
+  return colors[type as keyof typeof colors] || 'gray'
 }
 
 const formatDate = (dateString: string) => {

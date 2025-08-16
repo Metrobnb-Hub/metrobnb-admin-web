@@ -1,5 +1,44 @@
 <template>
-  <div class="overflow-x-auto">
+  <!-- Mobile card layout -->
+  <div class="sm:hidden space-y-3">
+    <UCard v-for="booking in bookings" :key="booking.id" class="p-4">
+      <div class="space-y-3">
+        <div class="flex justify-between items-start">
+          <div class="min-w-0 flex-1">
+            <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ booking.guest_name }}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ formatDateRange(booking.start_date, booking.end_date) }}</p>
+          </div>
+          <UDropdown :items="getActions(booking)">
+            <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" size="xs" />
+          </UDropdown>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Partner:</span>
+            <p class="font-medium truncate">{{ getPartnerName(booking.partner_id) }}</p>
+          </div>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Unit:</span>
+            <p class="font-medium truncate">{{ getUnitName(booking.unit_id) }}</p>
+          </div>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Amount:</span>
+            <p class="font-medium">₱{{ (getBookingTotal(booking) || 0).toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</p>
+          </div>
+          <div>
+            <span class="text-gray-500 dark:text-gray-400">Status:</span>
+            <UBadge :color="getBookingStatusColor(booking.booking_status)" size="xs">
+              {{ getBookingStatusLabel(booking.booking_status) }}
+            </UBadge>
+          </div>
+        </div>
+      </div>
+    </UCard>
+  </div>
+  
+  <!-- Desktop table layout -->
+  <div class="hidden sm:block overflow-x-auto">
     <UTable :rows="bookings" :columns="columns" class="min-w-full">
       <template #actions-data="{ row }">
         <UDropdown :items="getActions(row)">
@@ -202,6 +241,15 @@ const getBookingStatusClass = (status?: string) => {
     refunded: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
   }
   return classes[status as keyof typeof classes] || classes.confirmed
+}
+
+const getBookingStatusColor = (status?: string) => {
+  const colors = {
+    confirmed: 'green',
+    canceled: 'red', 
+    refunded: 'orange'
+  }
+  return colors[status as keyof typeof colors] || 'green'
 }
 
 const getPaymentStatusClass = (status?: string) => {

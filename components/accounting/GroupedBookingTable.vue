@@ -1,25 +1,29 @@
 <template>
   <div class="space-y-6">
     <!-- Toggle between grouped and flat view -->
-    <div class="flex justify-between items-center">
-      <div class="flex items-center gap-4">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+      <div class="flex items-center gap-2">
         <UButton 
           :variant="viewMode === 'grouped' ? 'solid' : 'outline'"
+          size="xs"
+          class="sm:size-sm"
           @click="viewMode = 'grouped'"
         >
-          <UIcon name="i-heroicons-squares-2x2" class="mr-2" />
-          Grouped by Invoice Period
+          <UIcon name="i-heroicons-squares-2x2" class="sm:mr-1" />
+          <span class="hidden sm:inline">Grouped</span>
         </UButton>
         <UButton 
           :variant="viewMode === 'flat' ? 'solid' : 'outline'"
+          size="xs"
+          class="sm:size-sm"
           @click="viewMode = 'flat'"
         >
-          <UIcon name="i-heroicons-list-bullet" class="mr-2" />
-          Flat List
+          <UIcon name="i-heroicons-list-bullet" class="sm:mr-1" />
+          <span class="hidden sm:inline">List</span>
         </UButton>
       </div>
-      <div class="text-sm text-gray-500">
-        Total: {{ bookings.length }} bookings
+      <div class="text-sm text-gray-500 text-center sm:text-right">
+        {{ bookings.length }} bookings
       </div>
     </div>
 
