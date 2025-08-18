@@ -371,28 +371,59 @@ export const useApi = () => {
   }
 
   const generateInvoice = async (partnerId: string, startDate: string, endDate: string) => {
-    const params = new URLSearchParams({
-      partner_id: partnerId,
-      start_date: startDate,
-      end_date: endDate,
-      paid: 'false' // Only include unpaid expenses in invoice
-    })
-    
     return await apiClient<{
+      id: string
+      invoice_number: string
       partner_name: string
-      period: string
       share_percentage: number
-      total_income: number
-      metrobnb_share: number
-      total_expenses: number
-      metrobnb_payments: number
-      net_due: number
-      bookings: {
-        metrobnb_received: any[]
-        partner_received: any[]
+      period: string
+      status: 'pending' | 'paid' | 'cancelled'
+      bookings: Array<{
+        id: string
+        date: string
+        end_date: string
+        guest_name: string
+        unit_name: string
+        booking_source_name: string
+        base_amount: string
+        addons_total: string
+        total_amount: string
+        payment_received_by: string
+        booking_status: string
+      }>
+      expenses: Array<{
+        id: string
+        date: string
+        unit_name: string
+        type: string
+        amount: string
+        notes: string
+        paid: boolean
+      }>
+      journal_entries: Array<{
+        id: string
+        date: string
+        type: 'credit' | 'debit'
+        description: string
+        reference: string
+        amount: string
+      }>
+      summary: {
+        total_gross_earnings: string
+        metrobnb_share: string
+        total_expenses: string
+        total_received_by_metrobnb: string
+        net_journal_entries: string
+        net_due: string
       }
-      expenses: any[]
-    }>(`/api/analytics/invoices/generate?${params.toString()}`, { method: 'POST' })
+    }>('/api/invoices/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        partner_id: partnerId,
+        start_date: startDate,
+        end_date: endDate
+      })
+    })
   }
 
   // Journal Entries API (no transformation - keep snake_case)
@@ -563,7 +594,6 @@ export const useApi = () => {
     getPartnerEarnings,
     getPartnerExpenses,
     getDashboardMetrics,
-    generateInvoice,
     
     // Journal Entries
     getJournalEntries,
@@ -571,6 +601,33 @@ export const useApi = () => {
     updateJournalEntry,
     settleJournalEntry,
     deleteJournalEntry,
+    
+    // Invoices
+    generateInvoice,
+    getInvoices: async (partnerId?: string, status?: string) => {
+      const params = new URLSearchParams()
+      if (partnerId) params.append('partner_id', partnerId)
+      if (status) params.append('status', status)
+      return await apiClient<any[]>(`/api/invoices?${params}`)
+    },
+    getInvoiceById: async (invoiceId: string) => {
+      return await apiClient<any>(`/api/invoices/${invoiceId}`)
+    },
+    settleInvoice: async (invoiceId: string, paidDate: string) => {
+      return await apiClient<any>(`/api/invoices/${invoiceId}/settle`, {
+        method: 'PATCH',
+        body: JSON.stringify({ paid_date: paidDate })
+      })
+    },
+    deleteInvoice: async (invoiceId: string) => {
+      return await apiClient<any>(`/api/invoices/${invoiceId}`, { method: 'DELETE' })
+    },
+    cancelInvoice: async (invoiceId: string) => {
+      return await apiClient<any>(`/api/invoices/${invoiceId}/cancel`, { method: 'PATCH' })
+    },
+    regenerateInvoice: async (invoiceId: string) => {
+      return await apiClient<any>(`/api/invoices/${invoiceId}/regenerate`, { method: 'POST' })
+    },
     
     // Helpers
     getBookingTotal
