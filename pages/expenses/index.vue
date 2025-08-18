@@ -152,8 +152,11 @@
         <div class="text-gray-500">Loading expenses...</div>
       </div>
       
-      <!-- Mobile card layout -->
-      <div v-else-if="expenses.length" class="sm:hidden space-y-3">
+      <div v-else>
+
+        
+        <!-- Mobile card layout -->
+        <div v-if="expenses.length" class="sm:hidden space-y-3">
         <UCard v-for="expense in expenses" :key="expense.id" class="p-4">
           <div class="space-y-3">
             <div class="flex justify-between items-start">
@@ -196,67 +199,51 @@
         </UCard>
       </div>
       
-      <!-- Desktop list layout -->
-      <div v-else-if="expenses.length" class="hidden sm:block space-y-3">
-        <div 
-          v-for="expense in expenses" 
-          :key="expense.id"
-          class="relative flex justify-between items-start p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
-        >
-          <div class="absolute top-2 right-2">
-            <UDropdown :items="getExpenseActions(expense)">
-              <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" size="sm" />
-            </UDropdown>
-          </div>
-          <div class="flex-1">
-            <div class="flex items-center space-x-3">
-              <span class="font-medium text-gray-900 dark:text-white">
-                {{ getPartnerName(expense.partner_id) }}
+        <!-- Desktop table layout -->
+        <div v-if="expenses.length" class="hidden sm:block">
+          <UTable :rows="expenses" :columns="expenseColumns">
+            <template #partner-data="{ row }">
+              <div>
+                <div class="font-medium text-gray-900 dark:text-white">{{ getPartnerName(row.partner_id) }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ getUnitName(row.unit_id) }}</div>
+              </div>
+            </template>
+            
+            <template #type-data="{ row }">
+              <UBadge :color="getExpenseTypeColor(row.type)" size="xs">
+                {{ row.type }}
+              </UBadge>
+            </template>
+            
+            <template #amount-data="{ row }">
+              <span class="font-semibold text-red-600 dark:text-red-400">
+                ₱{{ parseFloat(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
               </span>
-              <span class="text-sm text-gray-500 dark:text-gray-400">•</span>
-              <span class="text-sm text-gray-600 dark:text-gray-400">
-                {{ getUnitName(expense.unit_id) }}
-              </span>
-            </div>
-            <div class="flex items-center space-x-4 mt-1">
-              <span 
-                class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                :class="getExpenseTypeClass(expense.type)"
-              >
-                {{ expense.type }}
-              </span>
-              <span 
-                class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                :class="expense.billable ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'"
-              >
-                {{ expense.billable ? 'Billable' : 'Non-billable' }}
-              </span>
-              <span 
-                class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                :class="expense.paid ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
-              >
-                {{ expense.paid ? 'Paid' : 'Unpaid' }}
-              </span>
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                {{ formatDate(expense.date) }}
-              </span>
-            </div>
-            <p v-if="expense.notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {{ expense.notes }}
-            </p>
-          </div>
-          <div class="text-right pr-8">
-            <span class="font-semibold text-red-600 dark:text-red-400">
-              ₱{{ parseFloat(expense.amount).toFixed(2) }}
-            </span>
-          </div>
+            </template>
+            
+            <template #paid-data="{ row }">
+              <UBadge :color="row.paid ? 'green' : 'red'" size="xs">
+                {{ row.paid ? 'Paid' : 'Unpaid' }}
+              </UBadge>
+            </template>
+            
+            <template #date-data="{ row }">
+              {{ formatDate(row.date) }}
+            </template>
+            
+            <template #actions-data="{ row }">
+              <UDropdown :items="getExpenseActions(row)">
+                <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" size="sm" />
+              </UDropdown>
+            </template>
+          </UTable>
         </div>
-      </div>
       
-      <div v-else-if="!isLoading" class="text-center py-12">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No expenses yet</h3>
-        <p class="text-gray-600 dark:text-gray-400 mb-6">Start by recording your first expense</p>
-        <UButton to="/expenses/create" color="primary">Add Expense</UButton>
+        <div v-else class="text-center py-12">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No expenses yet</h3>
+          <p class="text-gray-600 dark:text-gray-400 mb-6">Start by recording your first expense</p>
+          <UButton to="/expenses/create" color="primary">Add Expense</UButton>
+        </div>
       </div>
       
       <!-- Pagination -->
@@ -364,6 +351,15 @@ const paidFilterOptions = [
   { label: 'All Status', value: 'all' },
   { label: 'Paid', value: 'true' },
   { label: 'Unpaid', value: 'false' }
+]
+
+const expenseColumns = [
+  { key: 'partner', label: 'Partner / Unit' },
+  { key: 'type', label: 'Type' },
+  { key: 'amount', label: 'Amount' },
+  { key: 'paid', label: 'Status' },
+  { key: 'date', label: 'Date' },
+  { key: 'actions', label: '' }
 ]
 
 const yearOptions = computed(() => {
