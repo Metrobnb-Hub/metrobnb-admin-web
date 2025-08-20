@@ -40,7 +40,7 @@
           
           <div>
             <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Share Percentage</label>
-            <p class="text-gray-900 dark:text-white">{{ partner.sharePercentage }}%</p>
+            <p class="text-gray-900 dark:text-white">{{ partner.share_percentage }}%</p>
           </div>
           
           <div v-if="partner.services && partner.services.length">
@@ -170,7 +170,9 @@ const editForm = reactive({
 })
 const partner = computed(() => {
   if (isLoading.value || !partnerId || !Array.isArray(partners.value)) return null
-  return partners.value.find(p => p.id === partnerId) || null
+  const found = partners.value.find(p => p.id === partnerId) || null
+  console.log('Partner data:', found)
+  return found
 })
 
 const partnerUnits = computed(() => {

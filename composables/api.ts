@@ -628,6 +628,12 @@ export const useApi = () => {
     regenerateInvoice: async (invoiceId: string) => {
       return await apiClient<any>(`/api/invoices/${invoiceId}/regenerate`, { method: 'POST' })
     },
+    updateInvoice: async (invoiceId: string, data: any) => {
+      return await apiClient<any>(`/api/invoices/${invoiceId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      })
+    },
     
     // Helpers
     getBookingTotal

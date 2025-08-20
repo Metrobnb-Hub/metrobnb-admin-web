@@ -74,77 +74,104 @@
             icon="i-heroicons-magnifying-glass"
             class="w-full sm:flex-1"
             size="sm"
+            @input="handleSearchInput"
           />
           <div class="flex gap-2">
             <USelect 
               v-model="sortBy" 
               :options="sortOptions"
-              class="flex-1 sm:w-48"
+              class="flex-1 sm:w-auto"
               size="sm"
+              @change="loadExpensesData"
             />
-            <USelect 
-              v-model="filterType" 
-              :options="typeFilterOptions"
-              class="flex-1 sm:w-40"
+            <UButton 
+              variant="outline" 
               size="sm"
-            />
-            <USelect 
-              v-model="filterPaid" 
-              :options="paidFilterOptions"
-              class="flex-1 sm:w-40"
-              size="sm"
-            />
+              @click="showAdvancedFilters = !showAdvancedFilters"
+            >
+              <UIcon name="i-heroicons-funnel" class="sm:mr-1" />
+              <span class="hidden sm:inline">Filters</span>
+            </UButton>
           </div>
         </div>
         
-        <!-- Date Filters -->
-        <div class="space-y-2 sm:space-y-0 sm:flex sm:gap-4 sm:items-center">
-          <div class="flex gap-2">
-            <USelect 
-              v-model="filterYear" 
-              :options="yearOptions"
-              placeholder="Year"
-              class="flex-1 sm:w-32"
-              size="sm"
-            />
-            <USelect 
-              v-model="filterMonth" 
-              :options="monthOptions"
-              placeholder="Month"
-              class="flex-1 sm:w-36"
-              size="sm"
-            />
+        <!-- Advanced Filters -->
+        <div v-if="showAdvancedFilters" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <UFormGroup label="Year">
+              <USelect 
+                v-model="filterYear" 
+                :options="yearOptions"
+                placeholder="All years"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Month">
+              <USelect 
+                v-model="filterMonth" 
+                :options="monthOptions"
+                placeholder="All months"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Partner">
+              <USelect 
+                v-model="filterPartner" 
+                :options="partnerOptions"
+                placeholder="Select partner"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Unit">
+              <USelect 
+                v-model="filterUnit" 
+                :options="unitOptions"
+                placeholder="Select unit"
+                :disabled="!filterPartner"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Type">
+              <USelect 
+                v-model="filterType" 
+                :options="typeFilterOptions"
+                placeholder="Select type"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Payment Status">
+              <USelect 
+                v-model="filterPaid" 
+                :options="paidFilterOptions"
+                placeholder="Select status"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Start Date">
+              <UInput 
+                v-model="startDate" 
+                type="date"
+                placeholder="From date"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="End Date">
+              <UInput 
+                v-model="endDate" 
+                type="date"
+                placeholder="To date"
+              />
+            </UFormGroup>
           </div>
-          <span class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">or Custom:</span>
-          <div class="flex gap-2 items-center">
-            <UInput 
-              v-model="startDate" 
-              type="date" 
-              placeholder="Start"
-              class="flex-1 sm:w-40"
-              size="sm"
-            />
-            <span class="text-gray-400 text-sm">to</span>
-            <UInput 
-              v-model="endDate" 
-              type="date" 
-              placeholder="End"
-              class="flex-1 sm:w-40"
-              size="sm"
-            />
+          
+          <div class="flex justify-end gap-2 mt-4">
+            <UButton variant="ghost" @click="clearFilters">
+              Clear All
+            </UButton>
+            <UButton color="primary" @click="applyFilters">
+              Apply Filters
+            </UButton>
           </div>
-          <UButton 
-            v-if="startDate || endDate || filterYear || filterMonth" 
-            @click="clearDateFilters"
-            color="gray" 
-            variant="outline" 
-            size="xs"
-            class="sm:size-sm w-full sm:w-auto"
-          >
-            <UIcon name="i-heroicons-x-mark" class="sm:mr-1" />
-            <span class="sm:hidden">Clear Filters</span>
-            <span class="hidden sm:inline">Clear</span>
-          </UButton>
         </div>
       </div>
       
@@ -310,15 +337,13 @@ const showEditModal = ref(false)
 const selectedExpense = ref(null)
 const searchQuery = ref('')
 const sortBy = ref('date_desc')
-const filterType = ref('all')
-// Get current month and year
-const now = new Date()
-const currentYear = now.getFullYear().toString()
-const currentMonth = (now.getMonth() + 1).toString()
-
-const filterPaid = ref('all')
-const filterYear = ref(currentYear)
-const filterMonth = ref(currentMonth)
+const showAdvancedFilters = ref(false)
+const filterType = ref('')
+const filterPaid = ref('')
+const filterPartner = ref('')
+const filterUnit = ref('')
+const filterYear = ref('')
+const filterMonth = ref('')
 const startDate = ref('')
 const endDate = ref('')
 const expenses = ref([])
@@ -335,8 +360,21 @@ const sortOptions = [
   { label: 'Type Z-A', value: 'type_desc' }
 ]
 
+const partnerOptions = computed(() => {
+  if (!Array.isArray(partners.value)) return []
+  return [{ label: 'All Partners', value: '' }, ...partners.value.map(p => ({ label: p.name, value: p.id }))]
+})
+
+const unitOptions = computed(() => {
+  if (!Array.isArray(units.value)) return []
+  const filteredUnits = filterPartner.value 
+    ? units.value.filter(u => u.partner_id === filterPartner.value)
+    : units.value
+  return [{ label: 'All Units', value: '' }, ...filteredUnits.map(u => ({ label: u.name, value: u.id }))]
+})
+
 const typeFilterOptions = [
-  { label: 'All Types', value: 'all' },
+  { label: 'All Types', value: '' },
   { label: 'Cleaning', value: 'Cleaning' },
   { label: 'Laundry', value: 'Laundry' },
   { label: 'Supplies', value: 'Supplies' },
@@ -348,7 +386,7 @@ const typeFilterOptions = [
 ]
 
 const paidFilterOptions = [
-  { label: 'All Status', value: 'all' },
+  { label: 'All Status', value: '' },
   { label: 'Paid', value: 'true' },
   { label: 'Unpaid', value: 'false' }
 ]
@@ -408,11 +446,19 @@ const loadExpensesData = async () => {
       filters.search = searchQuery.value.trim()
     }
     
-    if (filterType.value && filterType.value !== 'all') {
+    if (filterPartner.value) {
+      filters.partner_id = filterPartner.value
+    }
+    
+    if (filterUnit.value) {
+      filters.unit_id = filterUnit.value
+    }
+    
+    if (filterType.value) {
       filters.type = filterType.value
     }
     
-    if (filterPaid.value && filterPaid.value !== 'all') {
+    if (filterPaid.value) {
       filters.paid = filterPaid.value === 'true'
     }
     
@@ -540,7 +586,11 @@ const getExpenseTypeColor = (type: string) => {
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString()
+  return new Date(dateString).toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: '2-digit' 
+  })
 }
 
 const getExpenseActions = (expense: any) => [
@@ -652,29 +702,41 @@ const getVisiblePages = () => {
   return pages
 }
 
-// Clear date filters function
-const clearDateFilters = () => {
+const clearFilters = () => {
   filterYear.value = ''
   filterMonth.value = ''
+  filterPartner.value = ''
+  filterUnit.value = ''
+  filterType.value = ''
+  filterPaid.value = ''
   startDate.value = ''
   endDate.value = ''
+  searchQuery.value = ''
+  currentPage.value = 1
+  loadExpensesData()
 }
 
-// Watch for filter changes
-watch([sortBy, filterType, filterPaid, filterYear, filterMonth, startDate, endDate], () => {
-  currentPage.value = 1 // Reset to first page
+const applyFilters = () => {
+  currentPage.value = 1
   loadExpensesData()
+}
+
+const debouncedSearch = () => {
+  currentPage.value = 1
+  loadExpensesData()
+}
+
+let searchTimeout: NodeJS.Timeout
+const handleSearchInput = () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(debouncedSearch, 300)
+}
+
+watch(() => filterPartner.value, () => {
+  filterUnit.value = '' // Reset unit when partner changes
 })
 
-// Watch search with debounce
-let searchTimeout: NodeJS.Timeout
-watch(searchQuery, () => {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1 // Reset to first page
-    loadExpensesData()
-  }, 300)
-})
+// Removed auto-apply watchers - now requires Apply button
 
 onMounted(async () => {
   await Promise.all([

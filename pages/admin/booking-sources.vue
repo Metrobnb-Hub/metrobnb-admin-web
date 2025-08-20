@@ -15,13 +15,13 @@
       </template>
       
       <UTable :rows="sources" :columns="columns">
-        <template #commissionRate-data="{ row }">
-          <span class="font-medium">{{ row.commissionRate }}%</span>
+        <template #commission_rate-data="{ row }">
+          <span class="font-medium">{{ row.commission_rate }}%</span>
         </template>
         
-        <template #isActive-data="{ row }">
-          <UBadge :color="row.isActive ? 'green' : 'red'" variant="subtle">
-            {{ row.isActive ? 'Active' : 'Inactive' }}
+        <template #is_active-data="{ row }">
+          <UBadge :color="row.is_active ? 'green' : 'red'" variant="subtle">
+            {{ row.is_active ? 'Active' : 'Inactive' }}
           </UBadge>
         </template>
         
@@ -93,8 +93,8 @@ const formState = reactive({
 
 const columns = [
   { key: 'name', label: 'Name' },
-  { key: 'commissionRate', label: 'Commission Rate' },
-  { key: 'isActive', label: 'Status' },
+  { key: 'commission_rate', label: 'Commission Rate' },
+  { key: 'is_active', label: 'Status' },
   { key: 'actions', label: '' }
 ]
 
@@ -105,8 +105,8 @@ const getActions = (row: any) => [
     click: () => editSource(row)
   }],
   [{
-    label: row.isActive ? 'Deactivate' : 'Activate',
-    icon: row.isActive ? 'i-heroicons-x-circle' : 'i-heroicons-check-circle',
+    label: row.is_active ? 'Deactivate' : 'Activate',
+    icon: row.is_active ? 'i-heroicons-x-circle' : 'i-heroicons-check-circle',
     click: () => toggleStatus(row)
   }]
 ]
@@ -123,13 +123,13 @@ const editSource = (source: any) => {
 
 const toggleStatus = async (source: any) => {
   try {
-    await updateBookingSource(source.id, { ...source, isActive: !source.isActive })
-    source.isActive = !source.isActive
+    await updateBookingSource(source.id, { is_active: !source.is_active })
+    await loadSources()
     
     const toast = useToast()
     toast.add({
       title: 'Status updated',
-      description: `${source.name} is now ${source.isActive ? 'active' : 'inactive'}`,
+      description: `${source.name} is now ${!source.is_active ? 'active' : 'inactive'}`,
       color: 'green'
     })
   } catch (error) {
@@ -180,7 +180,13 @@ const onSubmit = async () => {
   }
 }
 
+const loadSources = async () => {
+  const result = await getBookingSources()
+  console.log('Booking sources API response:', result)
+  sources.value = result
+}
+
 onMounted(async () => {
-  sources.value = await getBookingSources()
+  await loadSources()
 })
 </script>

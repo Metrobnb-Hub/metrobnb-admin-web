@@ -99,7 +99,7 @@
                 </div>
                 <div>
                   <span class="text-gray-500 dark:text-gray-400">Amount:</span>
-                  <p class="font-medium text-red-600 dark:text-red-400">₱{{ parseFloat(invoice.summary?.net_due || 0).toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</p>
+                  <p class="font-medium text-red-600 dark:text-red-400">₱{{ parseFloat(invoice.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</p>
                 </div>
                 <div>
                   <span class="text-gray-500 dark:text-gray-400">Status:</span>
@@ -132,7 +132,7 @@
             
             <template #amount-data="{ row }">
               <span class="font-semibold text-red-600 dark:text-red-400">
-                ₱{{ parseFloat(row.summary?.net_due || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                ₱{{ parseFloat(row.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
               </span>
             </template>
             
@@ -168,7 +168,7 @@
 const { getInvoices, settleInvoice, deleteInvoice, cancelInvoice, regenerateInvoice } = useApi()
 const { partners, loadPartners } = useDataManager()
 
-const invoices = ref([])
+const invoices = ref<any[]>([])
 const isLoading = ref(false)
 const filterStatus = ref('all')
 const filterPartner = ref('all')
@@ -198,7 +198,9 @@ const invoiceColumns = [
 ]
 
 const filteredInvoices = computed(() => {
-  let filtered = invoices.value || []
+  if (!Array.isArray(invoices.value)) return []
+  
+  let filtered = invoices.value
   
   if (filterStatus.value !== 'all') {
     filtered = filtered.filter(invoice => invoice.status === filterStatus.value)
@@ -212,11 +214,11 @@ const filteredInvoices = computed(() => {
 })
 
 const pendingCount = computed(() => 
-  invoices.value?.filter(invoice => invoice.status === 'pending').length || 0
+  Array.isArray(invoices.value) ? invoices.value.filter(invoice => invoice.status === 'pending').length : 0
 )
 
 const paidCount = computed(() => 
-  invoices.value?.filter(invoice => invoice.status === 'paid').length || 0
+  Array.isArray(invoices.value) ? invoices.value.filter(invoice => invoice.status === 'paid').length : 0
 )
 
 const getStatusColor = (status: string) => {
@@ -326,7 +328,8 @@ const deleteInvoiceAction = async (invoice: any) => {
 const loadInvoices = async () => {
   try {
     isLoading.value = true
-    invoices.value = await getInvoices()
+    const result = await getInvoices()
+    invoices.value = result.items || result || []
   } catch (error) {
     console.error('Failed to load invoices:', error)
     invoices.value = []
