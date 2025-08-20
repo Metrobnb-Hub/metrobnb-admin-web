@@ -119,7 +119,7 @@ const state = reactive({
 const isGenerating = ref(false)
 
 const { partners, units, loadPartners, loadUnits, isLoading: dataLoading } = useDataManager()
-const { getBookings, getExpenses, getBookingSources, getJournalEntries } = useApi()
+const { generateInvoice } = useApi()
 
 const bookingSources = ref([])
 
@@ -174,12 +174,10 @@ watch(() => state.partnerId, () => {
 // Load data when modal opens
 watch(() => props.modelValue, async (isOpen) => {
   if (isOpen) {
-    const [, , sources] = await Promise.all([
+    await Promise.all([
       loadPartners(),
-      loadUnits(),
-      getBookingSources()
+      loadUnits()
     ])
-    bookingSources.value = sources
   }
 }, { immediate: true })
 
@@ -193,9 +191,6 @@ const onSubmit = async () => {
   try {
     isGenerating.value = true
     
-    const partner = partners.value.find(p => p.id === state.partnerId)
-    if (!partner) throw new Error('Partner not found')
-    
     // Determine date range based on toggle
     let startDate, endDate
     if (state.useCustomDates) {
@@ -206,195 +201,50 @@ const onSubmit = async () => {
       const year = parseInt(state.year)
       const month = parseInt(state.month)
       
-      // Create dates in local timezone to avoid timezone shifts
-      const firstDay = new Date(year, month - 1, 1)     // First day of selected month
-      const lastDay = new Date(year, month, 0)          // Last day of selected month
-      
       // Format dates manually to avoid timezone issues
       startDate = `${year}-${month.toString().padStart(2, '0')}-01`
-      endDate = `${year}-${month.toString().padStart(2, '0')}-${lastDay.getDate().toString().padStart(2, '0')}`
+      const lastDay = new Date(year, month, 0).getDate()
+      endDate = `${year}-${month.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
     }
     
-    // Build query parameters for API filtering
-    const bookingFilters = {
-      partner_id: state.partnerId,
-      ...(state.unitId && { unit_id: state.unitId }),
-      start_date: startDate,
-      end_date: endDate,
-      // Include all booking statuses for transparency
-      invoiced: false, // Only uninvoiced bookings for invoices
-      limit: 100 // API maximum
-    }
+    // Single API call - backend handles everything
+    const invoice = await generateInvoice(state.partnerId, startDate, endDate)
     
-    const expenseFilters = {
-      partner_id: state.partnerId,
-      ...(state.unitId && { unit_id: state.unitId }),
-      start_date: startDate,
-      end_date: endDate,
-      billable: true, // Only billable expenses for invoices
-      paid: false, // Only unpaid expenses for invoices
-      limit: 100 // API maximum
-    }
-    
-    // Fetch all pages of data
-    const fetchAllBookings = async () => {
-      let allBookings = []
-      let page = 1
-      let hasMore = true
-      
-      while (hasMore) {
-        const response = await getBookings({ ...bookingFilters, page })
-        const data = Array.isArray(response) ? response : response.data
-        const pagination = response.pagination
-        
-        allBookings = [...allBookings, ...data]
-        hasMore = pagination?.has_next || false
-        page++
-      }
-      
-      return allBookings
-    }
-    
-    const fetchAllExpenses = async () => {
-      let allExpenses = []
-      let page = 1
-      let hasMore = true
-      
-      while (hasMore) {
-        const response = await getExpenses({ ...expenseFilters, page })
-        const data = Array.isArray(response) ? response : response.data
-        const pagination = response.pagination
-        
-        allExpenses = [...allExpenses, ...data]
-        hasMore = pagination?.has_next || false
-        page++
-      }
-      
-      return allExpenses
-    }
-    
-    // Fetch journal entries
-    const journalEntriesResponse = await getJournalEntries({
-      partner_id: state.partnerId,
-      start_date: startDate,
-      end_date: endDate
-    })
-    
-    const journalEntries = journalEntriesResponse?.data || []
-    
-    const [bookings, expenses] = await Promise.all([
-      fetchAllBookings(),
-      fetchAllExpenses()
-    ])
-    
-    // Debug logging
-    console.log('Invoice Generation Debug (Check-out Date Filtering):', {
-      partnerId: state.partnerId,
-      unitId: state.unitId,
-      invoicePeriod: `${startDate} to ${endDate}`,
-      useCustomDates: state.useCustomDates,
-      yearMonth: state.useCustomDates ? null : `${state.year}-${state.month}`,
-      bookingsFound: bookings.length,
-      expensesFound: expenses.length,
-      journalEntriesFound: journalEntries.length,
-      filteringBy: 'endDate (check-out)',
-      sampleBooking: bookings[0] || null,
-      sampleJournalEntry: journalEntries[0] || null,
-      bookingFilters,
-      expenseFilters
-    })
-    
-    const startMonth = new Date(startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    const endMonth = new Date(endDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    const period = startMonth === endMonth ? startMonth : `${startMonth} - ${endMonth}`
-    
+    // Convert backend response to frontend format for compatibility
     const invoiceData = {
-      partnerName: partner.name,
-      period,
-      sharePercentage: partner.share_percentage || 20,
-      bookings: bookings.filter(booking => {
-        // Filter by check-out date (Airbnb approach)
-        const checkOutDate = new Date(booking.end_date)
-        const invoiceStartDate = new Date(startDate)
-        const invoiceEndDate = new Date(endDate)
-        return checkOutDate >= invoiceStartDate && checkOutDate <= invoiceEndDate
-      }).map(booking => {
-        // Handle both string and number formats for amounts
-        const baseAmount = typeof booking.base_amount === 'string' 
-          ? parseFloat(booking.base_amount) 
-          : (booking.base_amount || 0)
-        
-        const addonsTotal = Array.isArray(booking.addons) 
-          ? booking.addons.reduce((sum, addon) => sum + (addon.amount || 0), 0)
-          : 0
-        
-        const amountPaid = typeof booking.amount_paid === 'string'
-          ? parseFloat(booking.amount_paid)
-          : (booking.amount_paid || 0)
-        
-        return {
-          date: booking.start_date,
-          endDate: booking.end_date,
-          guestName: booking.guest_name,
-          unitName: units.value.find(u => u.id === booking.unit_id)?.name || 'Unknown Unit',
-          source: booking.booking_source?.name || bookingSources.value.find(s => s.id === booking.booking_source_id)?.name || 'Direct',
-          baseAmount,
-          addons: addonsTotal,
-          total: baseAmount + addonsTotal,
-          paymentReceivedBy: booking.payment_received_by,
-          actualAmountReceived: amountPaid,
-          bookingStatus: booking.booking_status || 'confirmed'
-        }
-      }),
-      expenses: expenses.filter(expense => {
-        // Additional client-side date validation
-        const expenseDate = new Date(expense.date)
-        const invoiceStartDate = new Date(startDate)
-        const invoiceEndDate = new Date(endDate)
-        return expenseDate >= invoiceStartDate && expenseDate <= invoiceEndDate
-      }).map(expense => {
-        const amount = typeof expense.amount === 'string'
-          ? parseFloat(expense.amount)
-          : (expense.amount || 0)
-        
-        return {
-          date: expense.date,
-          unitName: units.value.find(u => u.id === expense.unit_id)?.name || 'Unknown Unit',
-          type: expense.type,
-          notes: expense.notes || '',
-          amount
-        }
-      }),
-      journalEntries: journalEntries.filter(entry => {
-        const entryDate = new Date(entry.date)
-        const invoiceStartDate = new Date(startDate)
-        const invoiceEndDate = new Date(endDate)
-        return entryDate >= invoiceStartDate && entryDate <= invoiceEndDate
-      }).map(entry => {
-        const amount = typeof entry.amount === 'string'
-          ? parseFloat(entry.amount)
-          : (entry.amount || 0)
-        
-        return {
-          date: entry.date,
-          type: entry.type,
-          description: entry.description,
-          reference: entry.reference,
-          notes: entry.notes,
-          amount
-        }
-      })
+      partnerName: invoice.partner_name,
+      period: invoice.period,
+      sharePercentage: invoice.share_percentage,
+      bookings: invoice.bookings.map(booking => ({
+        date: booking.date,
+        endDate: booking.end_date,
+        guestName: booking.guest_name,
+        unitName: booking.unit_name,
+        source: booking.booking_source_name,
+        baseAmount: parseFloat(booking.base_amount),
+        addons: parseFloat(booking.addons_total),
+        total: parseFloat(booking.total_amount),
+        paymentReceivedBy: booking.payment_received_by,
+        actualAmountReceived: parseFloat(booking.total_amount),
+        bookingStatus: booking.booking_status
+      })),
+      expenses: invoice.expenses.map(expense => ({
+        date: expense.date,
+        unitName: expense.unit_name,
+        type: expense.type,
+        notes: expense.notes,
+        amount: parseFloat(expense.amount)
+      })),
+      journalEntries: invoice.journal_entries.map(entry => ({
+        date: entry.date,
+        type: entry.type,
+        description: entry.description,
+        reference: entry.reference,
+        amount: parseFloat(entry.amount)
+      }))
     }
     
-
-    
-    console.log('Final invoice data:', {
-      journalEntriesCount: invoiceData.journalEntries.length,
-      journalEntries: invoiceData.journalEntries
-    })
-    
-    localStorage.setItem('current-invoice', JSON.stringify(invoiceData))
-    await navigateTo('/invoice')
+    await navigateTo(`/invoices/${invoice.id}`)
     isOpen.value = false
     
   } catch (error) {

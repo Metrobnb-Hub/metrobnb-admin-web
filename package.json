@@ -6,12 +6,16 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed"
   },
   "devDependencies": {
     "@nuxt/devtools": "latest",
     "@nuxt/ui": "^2.11.1",
     "@nuxtjs/vercel-builder": "^0.25.0",
+    "@playwright/test": "^1.40.0",
     "nuxt": "^3.8.0",
     "typescript": "^5.2.2"
   },

@@ -281,9 +281,9 @@ const getFieldValue = (row: any, camelField: string, snakeField: string) => {
 const formatDate = (dateStr: string) => {
   if (!dateStr) return 'N/A'
   return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
+    month: 'long',
+    day: '2-digit'
   })
 }
 

@@ -74,77 +74,104 @@
             icon="i-heroicons-magnifying-glass"
             class="w-full sm:flex-1"
             size="sm"
+            @input="handleSearchInput"
           />
           <div class="flex gap-2">
             <USelect 
               v-model="sortBy" 
               :options="sortOptions"
-              class="flex-1 sm:w-48"
+              class="flex-1 sm:w-auto"
               size="sm"
+              @change="loadExpensesData"
             />
-            <USelect 
-              v-model="filterType" 
-              :options="typeFilterOptions"
-              class="flex-1 sm:w-40"
+            <UButton 
+              variant="outline" 
               size="sm"
-            />
-            <USelect 
-              v-model="filterPaid" 
-              :options="paidFilterOptions"
-              class="flex-1 sm:w-40"
-              size="sm"
-            />
+              @click="showAdvancedFilters = !showAdvancedFilters"
+            >
+              <UIcon name="i-heroicons-funnel" class="sm:mr-1" />
+              <span class="hidden sm:inline">Filters</span>
+            </UButton>
           </div>
         </div>
         
-        <!-- Date Filters -->
-        <div class="space-y-2 sm:space-y-0 sm:flex sm:gap-4 sm:items-center">
-          <div class="flex gap-2">
-            <USelect 
-              v-model="filterYear" 
-              :options="yearOptions"
-              placeholder="Year"
-              class="flex-1 sm:w-32"
-              size="sm"
-            />
-            <USelect 
-              v-model="filterMonth" 
-              :options="monthOptions"
-              placeholder="Month"
-              class="flex-1 sm:w-36"
-              size="sm"
-            />
+        <!-- Advanced Filters -->
+        <div v-if="showAdvancedFilters" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <UFormGroup label="Year">
+              <USelect 
+                v-model="filterYear" 
+                :options="yearOptions"
+                placeholder="All years"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Month">
+              <USelect 
+                v-model="filterMonth" 
+                :options="monthOptions"
+                placeholder="All months"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Partner">
+              <USelect 
+                v-model="filterPartner" 
+                :options="partnerOptions"
+                placeholder="Select partner"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Unit">
+              <USelect 
+                v-model="filterUnit" 
+                :options="unitOptions"
+                placeholder="Select unit"
+                :disabled="!filterPartner"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Type">
+              <USelect 
+                v-model="filterType" 
+                :options="typeFilterOptions"
+                placeholder="Select type"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Payment Status">
+              <USelect 
+                v-model="filterPaid" 
+                :options="paidFilterOptions"
+                placeholder="Select status"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="Start Date">
+              <UInput 
+                v-model="startDate" 
+                type="date"
+                placeholder="From date"
+              />
+            </UFormGroup>
+            
+            <UFormGroup label="End Date">
+              <UInput 
+                v-model="endDate" 
+                type="date"
+                placeholder="To date"
+              />
+            </UFormGroup>
           </div>
-          <span class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">or Custom:</span>
-          <div class="flex gap-2 items-center">
-            <UInput 
-              v-model="startDate" 
-              type="date" 
-              placeholder="Start"
-              class="flex-1 sm:w-40"
-              size="sm"
-            />
-            <span class="text-gray-400 text-sm">to</span>
-            <UInput 
-              v-model="endDate" 
-              type="date" 
-              placeholder="End"
-              class="flex-1 sm:w-40"
-              size="sm"
-            />
+          
+          <div class="flex justify-end gap-2 mt-4">
+            <UButton variant="ghost" @click="clearFilters">
+              Clear All
+            </UButton>
+            <UButton color="primary" @click="applyFilters">
+              Apply Filters
+            </UButton>
           </div>
-          <UButton 
-            v-if="startDate || endDate || filterYear || filterMonth" 
-            @click="clearDateFilters"
-            color="gray" 
-            variant="outline" 
-            size="xs"
-            class="sm:size-sm w-full sm:w-auto"
-          >
-            <UIcon name="i-heroicons-x-mark" class="sm:mr-1" />
-            <span class="sm:hidden">Clear Filters</span>
-            <span class="hidden sm:inline">Clear</span>
-          </UButton>
         </div>
       </div>
       
@@ -152,8 +179,11 @@
         <div class="text-gray-500">Loading expenses...</div>
       </div>
       
-      <!-- Mobile card layout -->
-      <div v-else-if="expenses.length" class="sm:hidden space-y-3">
+      <div v-else>
+
+        
+        <!-- Mobile card layout -->
+        <div v-if="expenses.length" class="sm:hidden space-y-3">
         <UCard v-for="expense in expenses" :key="expense.id" class="p-4">
           <div class="space-y-3">
             <div class="flex justify-between items-start">
@@ -196,67 +226,51 @@
         </UCard>
       </div>
       
-      <!-- Desktop list layout -->
-      <div v-else-if="expenses.length" class="hidden sm:block space-y-3">
-        <div 
-          v-for="expense in expenses" 
-          :key="expense.id"
-          class="relative flex justify-between items-start p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
-        >
-          <div class="absolute top-2 right-2">
-            <UDropdown :items="getExpenseActions(expense)">
-              <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" size="sm" />
-            </UDropdown>
-          </div>
-          <div class="flex-1">
-            <div class="flex items-center space-x-3">
-              <span class="font-medium text-gray-900 dark:text-white">
-                {{ getPartnerName(expense.partner_id) }}
+        <!-- Desktop table layout -->
+        <div v-if="expenses.length" class="hidden sm:block">
+          <UTable :rows="expenses" :columns="expenseColumns">
+            <template #partner-data="{ row }">
+              <div>
+                <div class="font-medium text-gray-900 dark:text-white">{{ getPartnerName(row.partner_id) }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ getUnitName(row.unit_id) }}</div>
+              </div>
+            </template>
+            
+            <template #type-data="{ row }">
+              <UBadge :color="getExpenseTypeColor(row.type)" size="xs">
+                {{ row.type }}
+              </UBadge>
+            </template>
+            
+            <template #amount-data="{ row }">
+              <span class="font-semibold text-red-600 dark:text-red-400">
+                ₱{{ parseFloat(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
               </span>
-              <span class="text-sm text-gray-500 dark:text-gray-400">•</span>
-              <span class="text-sm text-gray-600 dark:text-gray-400">
-                {{ getUnitName(expense.unit_id) }}
-              </span>
-            </div>
-            <div class="flex items-center space-x-4 mt-1">
-              <span 
-                class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                :class="getExpenseTypeClass(expense.type)"
-              >
-                {{ expense.type }}
-              </span>
-              <span 
-                class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                :class="expense.billable ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'"
-              >
-                {{ expense.billable ? 'Billable' : 'Non-billable' }}
-              </span>
-              <span 
-                class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                :class="expense.paid ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
-              >
-                {{ expense.paid ? 'Paid' : 'Unpaid' }}
-              </span>
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                {{ formatDate(expense.date) }}
-              </span>
-            </div>
-            <p v-if="expense.notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {{ expense.notes }}
-            </p>
-          </div>
-          <div class="text-right pr-8">
-            <span class="font-semibold text-red-600 dark:text-red-400">
-              ₱{{ parseFloat(expense.amount).toFixed(2) }}
-            </span>
-          </div>
+            </template>
+            
+            <template #paid-data="{ row }">
+              <UBadge :color="row.paid ? 'green' : 'red'" size="xs">
+                {{ row.paid ? 'Paid' : 'Unpaid' }}
+              </UBadge>
+            </template>
+            
+            <template #date-data="{ row }">
+              {{ formatDate(row.date) }}
+            </template>
+            
+            <template #actions-data="{ row }">
+              <UDropdown :items="getExpenseActions(row)">
+                <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" size="sm" />
+              </UDropdown>
+            </template>
+          </UTable>
         </div>
-      </div>
       
-      <div v-else-if="!isLoading" class="text-center py-12">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No expenses yet</h3>
-        <p class="text-gray-600 dark:text-gray-400 mb-6">Start by recording your first expense</p>
-        <UButton to="/expenses/create" color="primary">Add Expense</UButton>
+        <div v-else class="text-center py-12">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No expenses yet</h3>
+          <p class="text-gray-600 dark:text-gray-400 mb-6">Start by recording your first expense</p>
+          <UButton to="/expenses/create" color="primary">Add Expense</UButton>
+        </div>
       </div>
       
       <!-- Pagination -->
@@ -323,15 +337,13 @@ const showEditModal = ref(false)
 const selectedExpense = ref(null)
 const searchQuery = ref('')
 const sortBy = ref('date_desc')
-const filterType = ref('all')
-// Get current month and year
-const now = new Date()
-const currentYear = now.getFullYear().toString()
-const currentMonth = (now.getMonth() + 1).toString()
-
-const filterPaid = ref('all')
-const filterYear = ref(currentYear)
-const filterMonth = ref(currentMonth)
+const showAdvancedFilters = ref(false)
+const filterType = ref('')
+const filterPaid = ref('')
+const filterPartner = ref('')
+const filterUnit = ref('')
+const filterYear = ref('')
+const filterMonth = ref('')
 const startDate = ref('')
 const endDate = ref('')
 const expenses = ref([])
@@ -348,8 +360,21 @@ const sortOptions = [
   { label: 'Type Z-A', value: 'type_desc' }
 ]
 
+const partnerOptions = computed(() => {
+  if (!Array.isArray(partners.value)) return []
+  return [{ label: 'All Partners', value: '' }, ...partners.value.map(p => ({ label: p.name, value: p.id }))]
+})
+
+const unitOptions = computed(() => {
+  if (!Array.isArray(units.value)) return []
+  const filteredUnits = filterPartner.value 
+    ? units.value.filter(u => u.partner_id === filterPartner.value)
+    : units.value
+  return [{ label: 'All Units', value: '' }, ...filteredUnits.map(u => ({ label: u.name, value: u.id }))]
+})
+
 const typeFilterOptions = [
-  { label: 'All Types', value: 'all' },
+  { label: 'All Types', value: '' },
   { label: 'Cleaning', value: 'Cleaning' },
   { label: 'Laundry', value: 'Laundry' },
   { label: 'Supplies', value: 'Supplies' },
@@ -361,9 +386,18 @@ const typeFilterOptions = [
 ]
 
 const paidFilterOptions = [
-  { label: 'All Status', value: 'all' },
+  { label: 'All Status', value: '' },
   { label: 'Paid', value: 'true' },
   { label: 'Unpaid', value: 'false' }
+]
+
+const expenseColumns = [
+  { key: 'partner', label: 'Partner / Unit' },
+  { key: 'type', label: 'Type' },
+  { key: 'amount', label: 'Amount' },
+  { key: 'paid', label: 'Status' },
+  { key: 'date', label: 'Date' },
+  { key: 'actions', label: '' }
 ]
 
 const yearOptions = computed(() => {
@@ -412,11 +446,19 @@ const loadExpensesData = async () => {
       filters.search = searchQuery.value.trim()
     }
     
-    if (filterType.value && filterType.value !== 'all') {
+    if (filterPartner.value) {
+      filters.partner_id = filterPartner.value
+    }
+    
+    if (filterUnit.value) {
+      filters.unit_id = filterUnit.value
+    }
+    
+    if (filterType.value) {
       filters.type = filterType.value
     }
     
-    if (filterPaid.value && filterPaid.value !== 'all') {
+    if (filterPaid.value) {
       filters.paid = filterPaid.value === 'true'
     }
     
@@ -544,7 +586,11 @@ const getExpenseTypeColor = (type: string) => {
 }
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString()
+  return new Date(dateString).toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: '2-digit' 
+  })
 }
 
 const getExpenseActions = (expense: any) => [
@@ -656,29 +702,41 @@ const getVisiblePages = () => {
   return pages
 }
 
-// Clear date filters function
-const clearDateFilters = () => {
+const clearFilters = () => {
   filterYear.value = ''
   filterMonth.value = ''
+  filterPartner.value = ''
+  filterUnit.value = ''
+  filterType.value = ''
+  filterPaid.value = ''
   startDate.value = ''
   endDate.value = ''
+  searchQuery.value = ''
+  currentPage.value = 1
+  loadExpensesData()
 }
 
-// Watch for filter changes
-watch([sortBy, filterType, filterPaid, filterYear, filterMonth, startDate, endDate], () => {
-  currentPage.value = 1 // Reset to first page
+const applyFilters = () => {
+  currentPage.value = 1
   loadExpensesData()
+}
+
+const debouncedSearch = () => {
+  currentPage.value = 1
+  loadExpensesData()
+}
+
+let searchTimeout: NodeJS.Timeout
+const handleSearchInput = () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(debouncedSearch, 300)
+}
+
+watch(() => filterPartner.value, () => {
+  filterUnit.value = '' // Reset unit when partner changes
 })
 
-// Watch search with debounce
-let searchTimeout: NodeJS.Timeout
-watch(searchQuery, () => {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1 // Reset to first page
-    loadExpensesData()
-  }, 300)
-})
+// Removed auto-apply watchers - now requires Apply button
 
 onMounted(async () => {
   await Promise.all([
