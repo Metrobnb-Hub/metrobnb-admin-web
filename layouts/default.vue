@@ -102,6 +102,7 @@ const navigationGroups = [
       { name: 'Bookings', href: '/accounting/bookings', icon: 'i-heroicons-calendar-days' },
       { name: 'Expenses', href: '/expenses', icon: 'i-heroicons-receipt-percent' },
       { name: 'Journal Entries', href: '/journal-entries', icon: 'i-heroicons-document-plus' },
+      { name: 'Invoices', href: '/invoices', icon: 'i-heroicons-document-text' },
       { name: 'Partners & Earnings', href: '/accounting/partners', icon: 'i-heroicons-chart-bar-square' },
     ]
   },
