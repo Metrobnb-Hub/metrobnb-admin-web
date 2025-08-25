@@ -12,6 +12,9 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@vite-pwa/nuxt'
   ],
+  icon: {
+    mode: 'css'
+  },
   pwa: {
     registerType: 'autoUpdate',
     workbox: {
@@ -66,6 +69,7 @@ export default defineNuxtConfig({
     }
   },
   nitro: {
+    preset: process.env.NODE_ENV === 'production' ? 'vercel' : undefined,
     devProxy: {
       '/api': {
         target: 'http://localhost:8000',
