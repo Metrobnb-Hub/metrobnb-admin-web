@@ -13,9 +13,9 @@
   },
   "devDependencies": {
     "@nuxt/devtools": "latest",
-    "@nuxt/ui": "^2.11.1",
     "@nuxtjs/vercel-builder": "^0.25.0",
     "@playwright/test": "^1.40.0",
+    "@vite-pwa/nuxt": "^0.4.0",
     "nuxt": "^3.8.0",
     "typescript": "^5.2.2"
   },
@@ -24,6 +24,7 @@
     "@fullcalendar/daygrid": "^6.1.10",
     "@fullcalendar/interaction": "^6.1.10",
     "@fullcalendar/vue3": "^6.1.10",
+    "@nuxt/ui": "^2.11.1",
     "@nuxtjs/tailwindcss": "^6.8.4",
     "@pinia/nuxt": "^0.5.1",
     "pinia": "^2.1.7",

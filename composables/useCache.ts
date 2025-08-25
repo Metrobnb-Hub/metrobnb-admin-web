@@ -50,6 +50,7 @@ class ApiCache {
 const globalCache = new ApiCache()
 
 export const useCache = () => {
+  const { isOnline } = usePWA()
   const getCacheKey = (endpoint: string, params?: Record<string, any>): string => {
     if (!params) return endpoint
     const sortedParams = Object.keys(params)
@@ -77,6 +78,15 @@ export const useCache = () => {
       if (cached) {
         return cached
       }
+    }
+
+    // If offline, return cached data even if expired
+    if (!isOnline.value) {
+      const cached = globalCache.get<T>(cacheKey)
+      if (cached) {
+        return cached
+      }
+      throw new Error('No cached data available while offline')
     }
 
     // Fetch fresh data

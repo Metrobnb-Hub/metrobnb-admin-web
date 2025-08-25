@@ -1,0 +1,1 @@
+import{u as r}from"./DH4W2Tv0.js";const i=()=>{const t=r();return{notifySuccess:o=>{t.add({title:"Success",description:o,color:"green"})},notifyError:o=>{t.add({title:"Error",description:o,color:"red"})},notifyInfo:o=>{t.add({title:"Info",description:o,color:"blue"})}}};export{i as u};

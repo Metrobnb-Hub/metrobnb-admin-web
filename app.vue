@@ -1,9 +1,11 @@
 <template>
   <div>
     <NuxtLoadingIndicator />
+    <OfflineIndicator />
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+    <PWAInstallBanner />
   </div>
 </template>
 
