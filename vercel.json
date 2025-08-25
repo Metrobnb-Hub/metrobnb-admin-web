@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "node_modules/@nuxt/ui/**": {
+      "includeFiles": "node_modules/@iconify/**"
+    }
+  }
+}
