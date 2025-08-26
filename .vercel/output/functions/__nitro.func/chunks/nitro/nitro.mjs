@@ -4173,7 +4173,7 @@ function _expandFromEnv(value) {
 const _inlineRuntimeConfig = {
   "app": {
     "baseURL": "/",
-    "buildId": "38b6149d-ad9f-4f04-91f1-0731b4b91e60",
+    "buildId": "6d512eae-ceac-4514-a1c7-b428c295985e",
     "buildAssetsDir": "/_nuxt/",
     "cdnURL": ""
   },
@@ -4183,6 +4183,12 @@ const _inlineRuntimeConfig = {
       "/__nuxt_error": {
         "cache": false,
         "isr": false
+      },
+      "/api/**": {
+        "proxy": {
+          "to": "https://metrobnb-api.onrender.com/api/**",
+          "_proxyStripBase": "/api"
+        }
       },
       "/.well-known/**": {
         "headers": {
@@ -4207,7 +4213,7 @@ const _inlineRuntimeConfig = {
     }
   },
   "public": {
-    "apiBaseUrl": "http://localhost:8000"
+    "apiBaseUrl": ""
   },
   "icon": {
     "serverKnownCssClasses": []

@@ -39,7 +39,7 @@ function createHead(options = {}) {
   return head;
 }
 
-const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1"},{"charset":"utf-8"}],"link":[],"style":[],"script":[],"noscript":[]};
+const appHead = {"meta":[{"charset":"utf-8"},{"name":"apple-mobile-web-app-capable","content":"yes"},{"name":"apple-mobile-web-app-status-bar-style","content":"default"},{"name":"apple-mobile-web-app-title","content":"MetroBNB Admin"},{"name":"mobile-web-app-capable","content":"yes"},{"name":"theme-color","content":"#3b82f6"},{"name":"viewport","content":"width=device-width, initial-scale=1, viewport-fit=cover"}],"link":[{"rel":"apple-touch-icon","href":"/apple-touch-icon.png"},{"rel":"icon","type":"image/png","sizes":"192x192","href":"/pwa-192x192.png"},{"rel":"icon","type":"image/png","sizes":"512x512","href":"/pwa-512x512.png"}],"style":[],"script":[],"noscript":[]};
 
 const appRootTag = "div";
 

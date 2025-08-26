@@ -15,6 +15,23 @@ export default defineNuxtConfig({
   icon: {
     mode: 'css'
   },
+  app: {
+    head: {
+      meta: [
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
+        { name: 'apple-mobile-web-app-title', content: 'MetroBNB Admin' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'theme-color', content: '#3b82f6' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' }
+      ],
+      link: [
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+        { rel: 'icon', type: 'image/png', sizes: '192x192', href: '/pwa-192x192.png' },
+        { rel: 'icon', type: 'image/png', sizes: '512x512', href: '/pwa-512x512.png' }
+      ]
+    }
+  },
   pwa: {
     registerType: 'autoUpdate',
     workbox: {
@@ -41,17 +58,34 @@ export default defineNuxtConfig({
       theme_color: '#3b82f6',
       background_color: '#ffffff',
       display: 'standalone',
-      start_url: '/',
+      orientation: 'portrait-primary',
+      scope: '/',
+      start_url: '/?standalone=true',
+      categories: ['business', 'productivity'],
       icons: [
         {
           src: 'pwa-192x192.png',
           sizes: '192x192',
-          type: 'image/png'
+          type: 'image/png',
+          purpose: 'any'
+        },
+        {
+          src: 'pwa-192x192.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'maskable'
         },
         {
           src: 'pwa-512x512.png',
           sizes: '512x512',
-          type: 'image/png'
+          type: 'image/png',
+          purpose: 'any'
+        },
+        {
+          src: 'pwa-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable'
         }
       ]
     }
@@ -65,7 +99,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.NODE_ENV === 'development' ? '' : (process.env.API_BASE_URL || 'https://metrobnb-api.onrender.com')
+      apiBaseUrl: ''
     }
   },
   nitro: {
@@ -77,6 +111,7 @@ export default defineNuxtConfig({
       }
     },
     routeRules: {
+      '/api/**': { proxy: { to: 'https://metrobnb-api.onrender.com/api/**' } },
       '/.well-known/**': { headers: { 'Access-Control-Allow-Origin': '*' } }
     }
   },
