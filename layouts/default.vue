@@ -97,6 +97,14 @@ const navigationGroups = [
     ]
   },
   {
+    name: 'Analytics',
+    items: [
+      { name: 'Business Overview', href: '/analytics/overview', icon: 'i-heroicons-chart-bar' },
+      { name: 'Own Units', href: '/analytics/own-units', icon: 'i-heroicons-home-modern' },
+      { name: 'Partners', href: '/analytics/partners', icon: 'i-heroicons-users' },
+    ]
+  },
+  {
     name: 'Operations',
     items: [
       { name: 'Bookings', href: '/accounting/bookings', icon: 'i-heroicons-calendar-days' },

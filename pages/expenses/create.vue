@@ -28,11 +28,51 @@
           <UFormGroup label="Amount" name="amount">
             <UInput v-model="form.amount" type="number" step="0.01" placeholder="0.00" />
           </UFormGroup>
-          <UFormGroup label="Billable" name="billable">
-            <UToggle v-model="form.billable" />
-            <span class="ml-2 text-sm text-gray-600">{{ form.billable ? 'Bill to partner' : 'MetroBNB absorbs' }}</span>
+          <UFormGroup label="Paid By" name="paidBy">
+            <USelect v-model="form.paidBy" :options="paidByOptions" placeholder="Who paid?" />
           </UFormGroup>
         </div>
+        
+        <UFormGroup label="Billable" name="billable">
+          <UToggle v-model="form.billable" />
+          <span class="ml-2 text-sm text-gray-600">{{ form.billable ? 'Bill to partner' : 'MetroBNB absorbs' }}</span>
+        </UFormGroup>
+        
+        <!-- Receipt Upload -->
+        <UFormGroup label="Receipt" name="receipt">
+          <div v-if="!form.receiptUrl" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6">
+            <div class="text-center">
+              <UIcon name="i-heroicons-photo" class="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <div class="space-y-2">
+                <input
+                  ref="fileInput"
+                  type="file"
+                  accept="image/*"
+                  class="hidden"
+                  @change="handleFileUpload"
+                />
+                <UButton @click="$refs.fileInput.click()" variant="outline" :loading="uploading">
+                  <UIcon name="i-heroicons-camera" class="mr-2" />
+                  Upload Receipt
+                </UButton>
+                <p class="text-sm text-gray-500">PNG, JPG up to 10MB</p>
+              </div>
+            </div>
+          </div>
+          
+          <div v-else class="relative">
+            <img :src="form.receiptUrl" alt="Receipt" class="w-full h-48 object-cover rounded-lg" />
+            <UButton 
+              @click="removeReceipt" 
+              color="red" 
+              variant="solid" 
+              size="sm"
+              class="absolute top-2 right-2"
+            >
+              <UIcon name="i-heroicons-x-mark" />
+            </UButton>
+          </div>
+        </UFormGroup>
         
         <UFormGroup label="Notes" name="notes">
           <UTextarea v-model="form.notes" placeholder="Optional notes" />
@@ -46,18 +86,22 @@
 
 <script setup lang="ts">
 const { partners, units, loadPartners, loadUnits } = useDataManager()
-const { createExpense } = useApi()
+const { createExpense, uploadFile } = useApi()
 const router = useRouter()
 const toast = useToast()
 
 const loading = ref(false)
+const uploading = ref(false)
 const form = ref({
   partnerId: '',
   unitId: '',
   date: new Date().toISOString().split('T')[0],
   type: '',
   amount: 0,
+  paidBy: 'metrobnb',
   billable: true,
+  receiptUrl: '',
+  receiptPublicId: '',
   notes: ''
 })
 
@@ -84,6 +128,38 @@ const expenseTypes = [
   { label: 'Miscellaneous', value: 'Miscellaneous' }
 ]
 
+const paidByOptions = [
+  { label: 'MetroBNB', value: 'metrobnb' },
+  { label: 'Partner', value: 'partner' },
+  { label: 'Employee', value: 'employee' },
+  { label: 'Owner', value: 'owner' }
+]
+
+const handleFileUpload = async (event: Event) => {
+  const { notifySuccess, notifyError } = useNotify()
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  uploading.value = true
+  try {
+    const result = await uploadFile(file, 'receipts')
+    form.value.receiptUrl = result.public_url
+    form.value.receiptPublicId = result.file_id
+    notifySuccess('Receipt uploaded successfully')
+  } catch (error) {
+    console.error('Upload failed:', error)
+    notifyError('Failed to upload receipt')
+  } finally {
+    uploading.value = false
+  }
+}
+
+const removeReceipt = () => {
+  form.value.receiptUrl = ''
+  form.value.receiptPublicId = ''
+}
+
 const handleSubmit = async () => {
   const { notifySuccess, notifyError } = useNotify()
   
@@ -100,7 +176,10 @@ const handleSubmit = async () => {
       date: form.value.date,
       type: form.value.type as any,
       amount: Number(form.value.amount),
+      paid_by: form.value.paidBy,
       billable: form.value.billable,
+      receipt_url: form.value.receiptUrl || undefined,
+      receipt_public_id: form.value.receiptPublicId || undefined,
       notes: form.value.notes
     })
     

@@ -43,6 +43,50 @@
             <UInput v-model="state.paidDate" type="date" />
           </UFormGroup>
           
+          <!-- Receipt Preview/Upload -->
+          <UFormGroup label="Receipt" name="receipt" class="md:col-span-2">
+            <div v-if="state.receiptUrl" class="space-y-3">
+              <div class="relative inline-block">
+                <img :src="state.receiptUrl" alt="Receipt" class="w-32 h-32 object-cover rounded-lg border" />
+                <UButton 
+                  @click="removeReceipt" 
+                  color="red" 
+                  variant="solid" 
+                  size="xs"
+                  class="absolute -top-2 -right-2"
+                >
+                  <UIcon name="i-heroicons-x-mark" />
+                </UButton>
+              </div>
+              <UButton @click="$refs.fileInput.click()" variant="outline" size="sm" :loading="uploading">
+                <UIcon name="i-heroicons-arrow-path" class="mr-2" />
+                Replace Receipt
+              </UButton>
+            </div>
+            
+            <div v-else class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+              <div class="text-center">
+                <UIcon name="i-heroicons-photo" class="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <input
+                  ref="fileInput"
+                  type="file"
+                  accept="image/*"
+                  class="hidden"
+                  @change="handleFileUpload"
+                />
+                <UButton @click="$refs.fileInput.click()" variant="outline" size="sm" :loading="uploading">
+                  <UIcon name="i-heroicons-camera" class="mr-2" />
+                  Upload Receipt
+                </UButton>
+                <p class="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB</p>
+              </div>
+            </div>
+          </UFormGroup>
+          
+          <UFormGroup label="Paid By" name="paidBy" class="md:col-span-1">
+            <USelect v-model="state.paidBy" :options="paidByOptions" />
+          </UFormGroup>
+          
           <UFormGroup label="Notes" name="notes" class="md:col-span-2">
             <UTextarea v-model="state.notes" placeholder="Additional details (optional)" />
           </UFormGroup>
@@ -94,8 +138,13 @@ const state = reactive({
   billable: 'true',
   paid: 'false',
   paidDate: '',
+  paidBy: 'metrobnb',
+  receiptUrl: '',
+  receiptPublicId: '',
   notes: ''
 })
+
+const uploading = ref(false)
 
 const expenseTypes = [
   { label: 'Cleaning', value: 'Cleaning' },
@@ -118,8 +167,15 @@ const paidOptions = [
   { label: 'Paid', value: 'true' }
 ]
 
+const paidByOptions = [
+  { label: 'MetroBNB', value: 'metrobnb' },
+  { label: 'Partner', value: 'partner' },
+  { label: 'Employee', value: 'employee' },
+  { label: 'Owner', value: 'owner' }
+]
+
 const { partners, units, loadPartners, loadUnits } = useDataManager()
-const { updateExpense } = useApi()
+const { updateExpense, uploadFile } = useApi()
 
 const partnerOptions = computed(() => {
   if (!Array.isArray(partners.value)) return []
@@ -151,6 +207,31 @@ watch(() => state.partnerId, (newPartnerId, oldPartnerId) => {
   }
 })
 
+const handleFileUpload = async (event: Event) => {
+  const { notifySuccess, notifyError } = useNotify()
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  uploading.value = true
+  try {
+    const result = await uploadFile(file, 'receipts')
+    state.receiptUrl = result.public_url
+    state.receiptPublicId = result.file_id
+    notifySuccess('Receipt uploaded successfully')
+  } catch (error) {
+    console.error('Upload failed:', error)
+    notifyError('Failed to upload receipt')
+  } finally {
+    uploading.value = false
+  }
+}
+
+const removeReceipt = () => {
+  state.receiptUrl = ''
+  state.receiptPublicId = ''
+}
+
 const onSubmit = async () => {
   const { notifySuccess, notifyError } = useNotify()
   
@@ -161,8 +242,11 @@ const onSubmit = async () => {
       date: state.date,
       type: state.type,
       amount: state.amount,
+      paid_by: state.paidBy,
       billable: state.billable === 'true',
       paid: state.paid === 'true',
+      receipt_url: state.receiptUrl || undefined,
+      receipt_public_id: state.receiptPublicId || undefined,
       notes: state.notes
     }
     
@@ -199,9 +283,12 @@ watch(() => props.expense, (expense) => {
       date: expense.date,
       type: expense.type,
       amount: parseFloat(expense.amount) || 0,
+      paidBy: expense.paid_by || 'metrobnb',
       billable: expense.billable ? 'true' : 'false',
       paid: expense.paid ? 'true' : 'false',
       paidDate: expense.paidDate || '',
+      receiptUrl: expense.receipt_url || '',
+      receiptPublicId: expense.receipt_public_id || '',
       notes: expense.notes || ''
     })
     

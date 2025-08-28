@@ -53,7 +53,29 @@
     <UCard>
       <template #header>
         <div class="flex justify-between items-center">
-          <h3 class="text-lg font-semibold">All Invoices</h3>
+          <div class="flex items-center space-x-4">
+            <h3 class="text-lg font-semibold">Invoices</h3>
+            <div class="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <button 
+                @click="switchToActive"
+                :class="[
+                  'px-3 py-1 text-sm font-medium rounded-md transition-colors',
+                  !showArchive ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                ]"
+              >
+                Active
+              </button>
+              <button 
+                @click="switchToArchive"
+                :class="[
+                  'px-3 py-1 text-sm font-medium rounded-md transition-colors',
+                  showArchive ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                ]"
+              >
+                Archive {{ archivedCount > 0 ? `(${archivedCount})` : '' }}
+              </button>
+            </div>
+          </div>
         </div>
       </template>
       
@@ -64,12 +86,14 @@
           :options="statusOptions"
           class="flex-1 sm:w-40"
           size="sm"
+          @change="onFilterChange"
         />
         <USelect 
           v-model="filterPartner" 
           :options="partnerOptions"
           class="flex-1 sm:w-48"
           size="sm"
+          @change="onFilterChange"
         />
       </div>
       
@@ -154,7 +178,18 @@
           </UTable>
         </div>
         
-        <div v-else class="text-center py-12">
+        <!-- Pagination -->
+        <div v-if="filteredInvoices.length && totalPages > 1" class="flex justify-center mt-6">
+          <UPagination 
+            v-model="currentPage" 
+            :page-count="totalPages" 
+            :total="totalItems"
+            :per-page="itemsPerPage"
+            @update:model-value="onPageChange"
+          />
+        </div>
+        
+        <div v-else-if="!filteredInvoices.length && !isLoading" class="text-center py-12">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No invoices yet</h3>
           <p class="text-gray-600 dark:text-gray-400 mb-6">Generate your first invoice from the partners page</p>
           <UButton to="/partners" color="primary">Go to Partners</UButton>
@@ -172,13 +207,24 @@ const invoices = ref<any[]>([])
 const isLoading = ref(false)
 const filterStatus = ref('all')
 const filterPartner = ref('all')
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
+const totalItems = ref(0)
+const showArchive = ref(false)
+const archivedCount = ref(0)
 
-const statusOptions = [
-  { label: 'All Status', value: 'all' },
-  { label: 'Pending', value: 'pending' },
-  { label: 'Paid', value: 'paid' },
-  { label: 'Cancelled', value: 'cancelled' }
-]
+const statusOptions = computed(() => {
+  if (showArchive.value) {
+    return [
+      { label: 'All Cancelled', value: 'all' }
+    ]
+  }
+  return [
+    { label: 'All Status', value: 'all' },
+    { label: 'Pending', value: 'pending' },
+    { label: 'Paid', value: 'paid' }
+  ]
+})
 
 const partnerOptions = computed(() => {
   const options = [{ label: 'All Partners', value: 'all' }]
@@ -198,20 +244,10 @@ const invoiceColumns = [
 ]
 
 const filteredInvoices = computed(() => {
-  if (!Array.isArray(invoices.value)) return []
-  
-  let filtered = invoices.value
-  
-  if (filterStatus.value !== 'all') {
-    filtered = filtered.filter(invoice => invoice.status === filterStatus.value)
-  }
-  
-  if (filterPartner.value !== 'all') {
-    filtered = filtered.filter(invoice => invoice.partner_id === filterPartner.value)
-  }
-  
-  return filtered
+  return Array.isArray(invoices.value) ? invoices.value : []
 })
+
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage.value))
 
 const pendingCount = computed(() => 
   Array.isArray(invoices.value) ? invoices.value.filter(invoice => invoice.status === 'pending').length : 0
@@ -225,7 +261,7 @@ const getStatusColor = (status: string) => {
   const colors = {
     'pending': 'orange',
     'paid': 'green',
-    'cancelled': 'red'
+    'cancelled': 'gray'
   }
   return colors[status] || 'gray'
 }
@@ -260,15 +296,12 @@ const getInvoiceActions = (invoice: any) => {
       {
         label: 'Cancel',
         icon: 'i-heroicons-x-circle',
-        click: () => cancelInvoiceAction(invoice)
-      },
-      {
-        label: 'Delete',
-        icon: 'i-heroicons-trash',
-        click: () => deleteInvoiceAction(invoice)
+        click: () => deleteInvoiceAction(invoice) // Now cancels instead of deletes
       }
     ])
   }
+  
+  // No actions for cancelled invoices in archive (read-only)
   
   return actions
 }
@@ -316,23 +349,58 @@ const cancelInvoiceAction = async (invoice: any) => {
 const deleteInvoiceAction = async (invoice: any) => {
   const { notifySuccess, notifyError } = useNotify()
   
+  const confirmed = confirm(`Cancel Invoice ${invoice.invoice_number}?\n\nThis will:\n• Mark the invoice as cancelled\n• Move it to the archive\n• Preserve audit trail\n\nThis action can be undone by regenerating the invoice.`)
+  
+  if (!confirmed) return
+  
   try {
     await deleteInvoice(invoice.id)
-    await loadInvoices()
-    notifySuccess('Invoice deleted successfully')
+    
+    if (showArchive.value) {
+      // If viewing archive, refresh archive list
+      await loadInvoices()
+    } else {
+      // If viewing active, remove from active list and refresh counts
+      await Promise.all([
+        loadInvoices(),
+        loadArchivedCount()
+      ])
+    }
+    
+    notifySuccess('Invoice cancelled and moved to archive')
   } catch (error) {
-    notifyError('Failed to delete invoice')
+    notifyError('Failed to cancel invoice')
   }
 }
 
 const loadInvoices = async () => {
   try {
     isLoading.value = true
-    const result = await getInvoices()
-    invoices.value = result.items || result || []
+    
+    const params = {
+      page: currentPage.value,
+      limit: itemsPerPage.value,
+      ...(filterStatus.value !== 'all' && { status: filterStatus.value }),
+      ...(filterPartner.value !== 'all' && { partner_id: filterPartner.value })
+    }
+    
+    // Use archive endpoint if viewing archive
+    const result = showArchive.value 
+      ? await getArchivedInvoices(params.partner_id)
+      : await getInvoices(params.partner_id, params.status)
+    
+    // Handle both paginated and non-paginated responses
+    if (result.items) {
+      invoices.value = result.items
+      totalItems.value = result.pagination?.total_items || result.items.length
+    } else {
+      invoices.value = Array.isArray(result) ? result : []
+      totalItems.value = invoices.value.length
+    }
   } catch (error) {
     console.error('Failed to load invoices:', error)
     invoices.value = []
+    totalItems.value = 0
     
     const { notifyError } = useNotify()
     notifyError('Failed to load invoices')
@@ -341,10 +409,45 @@ const loadInvoices = async () => {
   }
 }
 
+const loadArchivedCount = async () => {
+  try {
+    const result = await getArchivedInvoices()
+    archivedCount.value = result.items?.length || (Array.isArray(result) ? result.length : 0)
+  } catch (error) {
+    console.error('Failed to load archived count:', error)
+    archivedCount.value = 0
+  }
+}
+
+const switchToActive = () => {
+  showArchive.value = false
+  filterStatus.value = 'all'
+  currentPage.value = 1
+  loadInvoices()
+}
+
+const switchToArchive = () => {
+  showArchive.value = true
+  filterStatus.value = 'all'
+  currentPage.value = 1
+  loadInvoices()
+}
+
+const onPageChange = (page: number) => {
+  currentPage.value = page
+  loadInvoices()
+}
+
+const onFilterChange = () => {
+  currentPage.value = 1
+  loadInvoices()
+}
+
 onMounted(async () => {
   await Promise.all([
     loadPartners(),
-    loadInvoices()
+    loadInvoices(),
+    loadArchivedCount()
   ])
 })
 </script>

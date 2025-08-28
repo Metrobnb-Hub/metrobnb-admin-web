@@ -9,9 +9,9 @@
 
 <script setup lang="ts">
 // Initialize preloader for SPA mode
-const { preloadEssentialData } = usePreloader()
+// const { preloadEssentialData } = usePreloader()
 
-onMounted(async () => {
-  await preloadEssentialData()
-})
+// onMounted(async () => {
+//   await preloadEssentialData()
+// })
 </script>

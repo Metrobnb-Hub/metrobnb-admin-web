@@ -16,7 +16,8 @@ interface LoadingState {
   paymentMethods: boolean
 }
 
-const dataCache = reactive<DataCache>({
+// Global cache that persists across navigation
+const globalDataCache = reactive<DataCache>({
   partners: [],
   units: [],
   expenses: [],
@@ -25,7 +26,7 @@ const dataCache = reactive<DataCache>({
   paymentMethods: []
 })
 
-const loadingState = reactive<LoadingState>({
+const globalLoadingState = reactive<LoadingState>({
   partners: false,
   units: false,
   expenses: false,
@@ -34,7 +35,7 @@ const loadingState = reactive<LoadingState>({
   paymentMethods: false
 })
 
-const lastLoaded = reactive<Record<keyof DataCache, number>>({
+const globalLastLoaded = reactive<Record<keyof DataCache, number>>({
   partners: 0,
   units: 0,
   expenses: 0,
@@ -54,62 +55,73 @@ export const useDataManager = () => {
     getPaymentMethods
   } = useApi()
 
-  const CACHE_DURATION = 10 * 60 * 1000 // 10 minutes - increased for better performance
+  const CACHE_DURATION = parseInt(process.env.CACHE_DURATION_MINUTES || '5') * 60 * 1000
 
   const isCacheValid = (key: keyof DataCache) => {
-    return Date.now() - lastLoaded[key] < CACHE_DURATION
+    return Date.now() - globalLastLoaded[key] < CACHE_DURATION
   }
 
   const loadPartners = async (force = false) => {
-    if (!force && dataCache.partners.length > 0 && isCacheValid('partners')) {
-      return dataCache.partners
+    console.log('🔍 loadPartners - force:', force, 'cache length:', globalDataCache.partners.length, 'cache valid:', isCacheValid('partners'))
+    if (!force && globalDataCache.partners.length > 0 && isCacheValid('partners')) {
+      console.log('✅ Using cached partners')
+      return globalDataCache.partners
     }
+    
+    // If cache is valid but empty, invalidate it
+    if (globalDataCache.partners.length === 0 && isCacheValid('partners')) {
+      console.log('🗑️ Cache valid but empty - invalidating')
+      globalLastLoaded.partners = 0
+    }
+    console.log('🌐 Fetching fresh partners from API')
 
-    if (loadingState.partners) {
-      // Wait for existing request
-      while (loadingState.partners) {
+    if (globalLoadingState.partners) {
+      while (globalLoadingState.partners) {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
-      return dataCache.partners
+      return globalDataCache.partners
     }
 
     try {
-      loadingState.partners = true
+      globalLoadingState.partners = true
       const data = await cachedFetch('/api/partners', undefined, { 
         skipCache: force,
-        ttl: 10 * 60 * 1000 // 10 minutes
+        ttl: 10 * 60 * 1000
       })
-      dataCache.partners = Array.isArray(data) ? data : []
-      lastLoaded.partners = Date.now()
-      return dataCache.partners
+      console.log('📊 Raw API response:', data)
+      console.log('📊 Is array?', Array.isArray(data))
+      globalDataCache.partners = Array.isArray(data) ? data : []
+      console.log('💾 Cached partners count:', globalDataCache.partners.length)
+      globalLastLoaded.partners = Date.now()
+      return globalDataCache.partners
     } finally {
-      loadingState.partners = false
+      globalLoadingState.partners = false
     }
   }
 
   const loadUnits = async (force = false) => {
-    if (!force && dataCache.units.length > 0 && isCacheValid('units')) {
-      return dataCache.units
+    if (!force && globalDataCache.units.length > 0 && isCacheValid('units')) {
+      return globalDataCache.units
     }
 
-    if (loadingState.units) {
-      while (loadingState.units) {
+    if (globalLoadingState.units) {
+      while (globalLoadingState.units) {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
-      return dataCache.units
+      return globalDataCache.units
     }
 
     try {
-      loadingState.units = true
+      globalLoadingState.units = true
       const data = await cachedFetch('/api/units', undefined, { 
         skipCache: force,
-        ttl: 10 * 60 * 1000 // 10 minutes
+        ttl: 10 * 60 * 1000
       })
-      dataCache.units = Array.isArray(data) ? data : []
-      lastLoaded.units = Date.now()
-      return dataCache.units
+      globalDataCache.units = Array.isArray(data) ? data : []
+      globalLastLoaded.units = Date.now()
+      return globalDataCache.units
     } finally {
-      loadingState.units = false
+      globalLoadingState.units = false
     }
   }
 
@@ -256,15 +268,15 @@ export const useDataManager = () => {
 
   return {
     // Data
-    partners: readonly(toRef(dataCache, 'partners')),
-    units: readonly(toRef(dataCache, 'units')),
-    expenses: readonly(toRef(dataCache, 'expenses')),
-    services: readonly(toRef(dataCache, 'services')),
-    bookingSources: readonly(toRef(dataCache, 'bookingSources')),
-    paymentMethods: readonly(toRef(dataCache, 'paymentMethods')),
+    partners: readonly(toRef(globalDataCache, 'partners')),
+    units: readonly(toRef(globalDataCache, 'units')),
+    expenses: readonly(toRef(globalDataCache, 'expenses')),
+    services: readonly(toRef(globalDataCache, 'services')),
+    bookingSources: readonly(toRef(globalDataCache, 'bookingSources')),
+    paymentMethods: readonly(toRef(globalDataCache, 'paymentMethods')),
     
     // Loading states
-    isLoading: readonly(loadingState),
+    isLoading: readonly(globalLoadingState),
     
     // Methods
     loadPartners,

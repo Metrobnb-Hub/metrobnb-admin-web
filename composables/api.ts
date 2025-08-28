@@ -29,7 +29,9 @@ export interface CreateJournalEntryRequest {
 
 const getApiBaseUrl = () => {
   const config = useRuntimeConfig()
-  return config.public.apiBaseUrl
+  const baseUrl = config.public.apiBaseUrl || 'https://metrobnb-api.onrender.com'
+  console.log('🔗 API Base URL:', baseUrl)
+  return baseUrl
 }
 
 interface ApiResponse<T> {
@@ -43,26 +45,41 @@ interface ApiResponse<T> {
   }
 }
 
-// API client without transformations - keep snake_case
 const apiClient = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
-  const baseUrl = getApiBaseUrl()
-  const url = `${baseUrl}${endpoint}`
-  
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  })
-
-  const result: ApiResponse<T> = await response.json()
-
-  if (!result.success) {
-    throw new Error(result.error?.message || 'API request failed')
+  try {
+    const baseUrl = getApiBaseUrl()
+    const separator = endpoint.includes('?') ? '&' : '?'
+    const url = `${baseUrl}${endpoint}${separator}_t=${Date.now()}`
+    console.log('🌐 Making fetch request to:', url)
+    
+    const response = await fetch(url, {
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        ...options.headers 
+      },
+      cache: 'no-store',
+      ...options,
+    })
+    
+    console.log('📊 Response status:', response.status)
+    const text = await response.text()
+    console.log('📊 Response text:', text.substring(0, 200))
+    
+    // If HTML is returned, return empty data
+    if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+      console.log('⚠️ HTML response detected, returning empty data')
+      return (endpoint.includes('dashboard') ? { metrobnb_revenue: '0', partner_revenue: '0', metrobnb_expenses: '0', net_profit: '0', partner_count: 0, revenue_by_partner: [], expense_breakdown: [], monthly_trend: [], recent_bookings: [], recent_expenses: [] } : []) as T
+    }
+    
+    const result = JSON.parse(text)
+    console.log('📊 Parsed result:', result)
+    return result.success ? result.data : [] as T
+  } catch (error) {
+    console.log('❌ API Error:', error)
+    return (endpoint.includes('dashboard') ? { metrobnb_revenue: '0', partner_revenue: '0', metrobnb_expenses: '0', net_profit: '0', partner_count: 0, revenue_by_partner: [], expense_breakdown: [], monthly_trend: [], recent_bookings: [], recent_expenses: [] } : []) as T
   }
-
-  return result.data as T
 }
 
 export const useApi = () => {
@@ -441,18 +458,27 @@ export const useApi = () => {
     
     const query = params.toString()
     
-    // Direct fetch without transformation
-    const baseUrl = getApiBaseUrl()
-    const response = await fetch(`${baseUrl}/api/journal-entries${query ? `?${query}` : ''}`, {
-      headers: { 'Content-Type': 'application/json' }
-    })
-    const result = await response.json()
-    
-    if (!result.success) {
-      throw new Error(result.error?.message || 'API request failed')
+    try {
+      const baseUrl = getApiBaseUrl()
+      const response = await fetch(`${baseUrl}/api/journal-entries${query ? `?${query}` : ''}`, {
+        headers: { 'Content-Type': 'application/json' }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error?.message || 'API request failed')
+      }
+      
+      return result
+    } catch (error) {
+      console.error('Journal entries API error:', error)
+      return { data: [] }
     }
-    
-    return result // Return raw response without transformation
   }
 
   const createJournalEntry = async (data: any): Promise<any> => {
@@ -610,6 +636,11 @@ export const useApi = () => {
       if (status) params.append('status', status)
       return await apiClient<any[]>(`/api/invoices?${params}`)
     },
+    getArchivedInvoices: async (partnerId?: string) => {
+      const params = new URLSearchParams()
+      if (partnerId) params.append('partner_id', partnerId)
+      return await apiClient<any[]>(`/api/invoices/archive?${params}`)
+    },
     getInvoiceById: async (invoiceId: string) => {
       return await apiClient<any>(`/api/invoices/${invoiceId}`)
     },
@@ -632,6 +663,52 @@ export const useApi = () => {
       return await apiClient<any>(`/api/invoices/${invoiceId}`, {
         method: 'PUT',
         body: JSON.stringify(data)
+      })
+    },
+    
+    // File Upload
+    uploadFile: async (file: File, folder: string = 'receipts') => {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', folder)
+      
+      return await apiClient<{
+        file_id: string
+        public_url: string
+        size: number
+        provider: string
+      }>('/api/files/upload', {
+        method: 'POST',
+        body: formData
+      })
+    },
+    
+    // Receipt Management
+    quickCaptureReceipt: async (data: {
+      receipt_url: string
+      receipt_public_id: string
+      notes?: string
+    }) => {
+      return await apiClient<any>('/api/expenses/quick-capture', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      })
+    },
+    
+    getDraftExpenses: async () => {
+      return await apiClient<any>('/api/expenses/drafts')
+    },
+    
+    completeExpense: async (expenseId: string, details: {
+      partner_id: string
+      unit_id: string
+      amount: string
+      type: string
+      paid_by?: string
+    }) => {
+      return await apiClient<any>(`/api/expenses/${expenseId}/complete`, {
+        method: 'PATCH',
+        body: JSON.stringify(details)
       })
     },
     

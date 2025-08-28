@@ -243,9 +243,12 @@
             </template>
             
             <template #amount-data="{ row }">
-              <span class="font-semibold text-red-600 dark:text-red-400">
-                ₱{{ parseFloat(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
-              </span>
+              <div class="flex items-center space-x-2">
+                <span class="font-semibold text-red-600 dark:text-red-400">
+                  ₱{{ parseFloat(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                </span>
+                <UIcon v-if="row.receipt_url" name="i-heroicons-photo" class="h-4 w-4 text-gray-400" title="Has receipt" />
+              </div>
             </template>
             
             <template #paid-data="{ row }">
@@ -269,7 +272,13 @@
         <div v-else class="text-center py-12">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No expenses yet</h3>
           <p class="text-gray-600 dark:text-gray-400 mb-6">Start by recording your first expense</p>
+          <div class="flex space-x-3">
+          <UButton to="/expenses/capture" color="green">
+            <UIcon name="i-heroicons-camera" class="mr-2" />
+            Capture Receipt
+          </UButton>
           <UButton to="/expenses/create" color="primary">Add Expense</UButton>
+        </div>
         </div>
       </div>
       
@@ -593,23 +602,37 @@ const formatDate = (dateString: string) => {
   })
 }
 
-const getExpenseActions = (expense: any) => [
-  [{
+const getExpenseActions = (expense: any) => {
+  const actions = []
+  
+  if (expense.receipt_url) {
+    actions.push([{
+      label: 'View Receipt',
+      icon: 'i-heroicons-photo',
+      click: () => viewReceipt(expense)
+    }])
+  }
+  
+  actions.push([{
     label: expense.paid ? 'Mark Unpaid' : 'Mark Paid',
     icon: expense.paid ? 'i-heroicons-x-circle' : 'i-heroicons-check-circle',
     click: () => togglePayment(expense)
-  }],
-  [{
+  }])
+  
+  actions.push([{
     label: 'Edit',
     icon: 'i-heroicons-pencil-square',
     click: () => handleEdit(expense)
-  }],
-  [{
+  }])
+  
+  actions.push([{
     label: 'Delete',
     icon: 'i-heroicons-trash',
     click: () => handleDelete(expense.id)
-  }]
-]
+  }])
+  
+  return actions
+}
 
 const handleEdit = (expense: any) => {
   selectedExpense.value = expense
@@ -647,6 +670,12 @@ const togglePayment = async (expense: any) => {
     notifySuccess(`Expense marked as ${!expense.paid ? 'paid' : 'unpaid'}`)
   } catch (error) {
     notifyError('Failed to update payment status')
+  }
+}
+
+const viewReceipt = (expense: any) => {
+  if (expense.receipt_url) {
+    window.open(expense.receipt_url, '_blank')
   }
 }
 

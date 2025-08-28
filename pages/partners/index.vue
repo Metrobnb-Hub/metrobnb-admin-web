@@ -42,7 +42,7 @@
           <div class="flex justify-between items-start">
             <h3 class="font-semibold text-gray-900 dark:text-white">{{ partner.name }}</h3>
             <span class="text-sm font-medium text-blue-600 dark:text-blue-400">
-              {{ partner.sharePercentage }}%
+              {{ partner.share_percentage || partner.sharePercentage || 'N/A' }}%
             </span>
           </div>
           
@@ -68,7 +68,7 @@
           
           <div class="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
             <span>{{ getUnitCount(partner.id) }} units</span>
-            <span>{{ formatDate(partner.createdAt) }}</span>
+            <span>{{ formatDate(partner.created_at || partner.createdAt) }}</span>
           </div>
         </div>
       </UCard>
@@ -112,7 +112,11 @@ const getUnitCount = (partnerId: string) => {
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A'
   try {
-    return new Date(dateString).toLocaleDateString()
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
   } catch {
     return 'Invalid Date'
   }
@@ -143,12 +147,12 @@ const filteredPartners = computed(() => {
         bVal = b.name || ''
         break
       case 'share':
-        aVal = a.sharePercentage || 0
-        bVal = b.sharePercentage || 0
+        aVal = a.share_percentage || a.sharePercentage || 0
+        bVal = b.share_percentage || b.sharePercentage || 0
         break
       case 'created':
-        aVal = new Date(a.createdAt || 0)
-        bVal = new Date(b.createdAt || 0)
+        aVal = new Date(a.created_at || a.createdAt || 0)
+        bVal = new Date(b.created_at || b.createdAt || 0)
         break
       default:
         return 0
