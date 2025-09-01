@@ -117,18 +117,18 @@
               </UButton>
             </form>
             
-            <!-- Test Credentials Helper -->
-            <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <!-- Test Credentials Helper (Dev Mode Only) -->
+            <div v-if="config.public.devMode" class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Test Credentials (Dev Mode):</p>
               <div class="space-y-1 text-xs">
                 <button @click="fillCredentials('admin')" class="block w-full text-left hover:bg-gray-100 dark:hover:bg-gray-600 p-1 rounded">
-                  <strong>Admin:</strong> tonynini1998@gmail.com / TempPassword123!
+                  <strong>Admin:</strong> {{ config.public.testCredentials.admin.email }} / {{ config.public.testCredentials.admin.password }}
                 </button>
                 <button @click="fillCredentials('staff')" class="block w-full text-left hover:bg-gray-100 dark:hover:bg-gray-600 p-1 rounded">
-                  <strong>Staff:</strong> staff@metrobnb.test / TestPass123!
+                  <strong>Staff:</strong> {{ config.public.testCredentials.staff.email }} / {{ config.public.testCredentials.staff.password }}
                 </button>
                 <button @click="fillCredentials('partner')" class="block w-full text-left hover:bg-gray-100 dark:hover:bg-gray-600 p-1 rounded">
-                  <strong>Partner:</strong> hiroaki@partner.test / TestPass123!
+                  <strong>Partner:</strong> {{ config.public.testCredentials.partner.email }} / {{ config.public.testCredentials.partner.password }}
                 </button>
               </div>
             </div>
@@ -156,23 +156,21 @@ definePageMeta({
 const { login, loading } = useAuth()
 const { handleError, handleSuccess } = useErrorHandler()
 const router = useRouter()
+const config = useRuntimeConfig()
 
 const credentials = ref({
-  email: 'tonynini1998@gmail.com',
-  password: 'TempPassword123!' // Updated to match docs
+  email: config.public.devMode ? config.public.testCredentials.admin.email : '',
+  password: config.public.devMode ? config.public.testCredentials.admin.password : ''
 })
 
 const error = ref('')
 const showPassword = ref(false)
 
 const fillCredentials = (role: string) => {
-  const testCredentials = {
-    admin: { email: 'tonynini1998@gmail.com', password: 'TempPassword123!' },
-    staff: { email: 'staff@metrobnb.test', password: 'TestPass123!' },
-    partner: { email: 'hiroaki@partner.test', password: 'TestPass123!' }
+  const testCreds = config.public.testCredentials[role as keyof typeof config.public.testCredentials]
+  if (testCreds) {
+    credentials.value = { email: testCreds.email, password: testCreds.password }
   }
-  
-  credentials.value = testCredentials[role as keyof typeof testCredentials]
 }
 
 const handleLogin = async () => {
