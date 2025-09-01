@@ -28,8 +28,8 @@ export interface CreateJournalEntryRequest {
 }
 
 const getApiBaseUrl = () => {
-  // Hardcode for now to fix the issue
-  const baseUrl = 'http://localhost:8000'
+  const config = useRuntimeConfig()
+  const baseUrl = config.public.apiBaseUrl
   console.log('🔗 API Base URL:', baseUrl)
   return baseUrl
 }
