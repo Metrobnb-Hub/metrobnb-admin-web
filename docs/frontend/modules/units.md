@@ -73,26 +73,44 @@ curl -H "Authorization: Bearer <partner_token>" \
   data: {
     id: string
     name: string
-    address: string
-    city: string
-    state: string
-    zip_code: string
-    bedrooms: number
-    bathrooms: number
-    max_guests: number
-    base_rate: number
-    cleaning_fee: number
-    status: 'active' | 'inactive' | 'maintenance'
     partner_id: string
     organization_id: string
+    
+    // Legacy fields
+    location?: string
+    notes?: string
+    
+    // Extended fields (NEW)
+    type?: string                    // "apartment", "house", "condo"
+    description?: string
+    capacity?: number               // Default: 2
+    city?: string
+    building?: string
+    landmarks?: string[]            // ["Mall of Asia", "Airport"]
+    base_price?: number
+    extra_guest_fee?: number
+    cleaning_fee?: number
+    amenity_fee_rules?: string
+    amenities?: string[]            // ["wifi", "parking", "pool"]
+    special_features?: string
+    check_in_time?: string          // "15:00:00"
+    check_out_time?: string         // "11:00:00"
+    pets_allowed?: boolean
+    smoking_allowed?: boolean
+    parties_allowed?: boolean
+    remarks?: string
+    status?: string                 // "active", "inactive"
+    airbnb_url?: string
+    airbnb_rating?: number          // 0.00 to 5.00
+    bedrooms?: number
+    beds?: number
+    bathrooms?: number              // Can be decimal (1.5)
+    
     partner: {
       id: string
       name: string
       email: string
     }
-    amenities?: string[]
-    description?: string
-    photos?: string[]
     created_at: string
     updated_at: string
   }
@@ -106,19 +124,37 @@ curl -H "Authorization: Bearer <partner_token>" \
 ```typescript
 {
   name: string
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  bedrooms: number
-  bathrooms: number
-  max_guests: number
-  base_rate: number
-  cleaning_fee?: number
-  partner_id: string      // Must be in accessible_partners
-  status?: string
-  amenities?: string[]
+  partner_id: string              // Must be in accessible_partners
+  
+  // Legacy fields (optional)
+  location?: string
+  notes?: string
+  
+  // Extended fields (all optional)
+  type?: string                   // "apartment", "house", "condo"
   description?: string
+  capacity?: number               // Min: 1
+  city?: string
+  building?: string
+  landmarks?: string[]            // ["Mall of Asia", "Airport"]
+  base_price?: number             // Min: 0
+  extra_guest_fee?: number        // Min: 0
+  cleaning_fee?: number           // Min: 0
+  amenity_fee_rules?: string
+  amenities?: string[]            // ["wifi", "parking", "pool"]
+  special_features?: string
+  check_in_time?: string          // "15:00" or "15:00:00"
+  check_out_time?: string         // "11:00" or "11:00:00"
+  pets_allowed?: boolean
+  smoking_allowed?: boolean
+  parties_allowed?: boolean
+  remarks?: string
+  status?: string                 // "active", "inactive"
+  airbnb_url?: string
+  airbnb_rating?: number          // 0.00 to 5.00
+  bedrooms?: number               // Min: 0
+  beds?: number                   // Min: 0
+  bathrooms?: number              // Min: 0, can be decimal
 }
 ```
 
@@ -133,18 +169,37 @@ curl -H "Authorization: Bearer <partner_token>" \
 ```typescript
 {
   name?: string
-  address?: string
-  city?: string
-  state?: string
-  zip_code?: string
-  bedrooms?: number
-  bathrooms?: number
-  max_guests?: number
-  base_rate?: number
-  cleaning_fee?: number
-  status?: string
-  amenities?: string[]
+  partner_id?: string             // Must be in accessible_partners
+  
+  // Legacy fields
+  location?: string
+  notes?: string
+  
+  // Extended fields (all optional)
+  type?: string
   description?: string
+  capacity?: number
+  city?: string
+  building?: string
+  landmarks?: string[]
+  base_price?: number
+  extra_guest_fee?: number
+  cleaning_fee?: number
+  amenity_fee_rules?: string
+  amenities?: string[]
+  special_features?: string
+  check_in_time?: string
+  check_out_time?: string
+  pets_allowed?: boolean
+  smoking_allowed?: boolean
+  parties_allowed?: boolean
+  remarks?: string
+  status?: string
+  airbnb_url?: string
+  airbnb_rating?: number
+  bedrooms?: number
+  beds?: number
+  bathrooms?: number
 }
 ```
 
@@ -155,9 +210,26 @@ curl -H "Authorization: Bearer <partner_token>" \
 ### DELETE /api/units/{id}
 **Delete unit (Admin/Manager only)**
 
+**Response:**
+```typescript
+{
+  success: boolean
+  data: {}
+  message: string
+}
+```
+
 **RBAC Requirements:**
 - Role: `admin` or `manager`
 - Can only delete units from accessible partners
+- Returns 404 if unit not found or not accessible
+
+**Example:**
+```bash
+curl -X DELETE \
+  -H "Authorization: Bearer <admin_token>" \
+  "http://localhost:8000/api/units/123e4567-e89b-12d3-a456-426614174000"
+```
 
 ## 🔧 Frontend Implementation
 

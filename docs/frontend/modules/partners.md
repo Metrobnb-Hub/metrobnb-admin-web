@@ -116,9 +116,26 @@ curl -H "Authorization: Bearer <partner_token>" \
 ### DELETE /api/partners/{id}
 **Delete partner (Admin only)**
 
+**Response:**
+```typescript
+{
+  success: boolean
+  data: {}
+  message: string
+}
+```
+
 **RBAC Requirements:**
 - Role: `admin` only
 - Can only delete partners in organization
+- Returns 404 if partner not found or not accessible
+
+**Example:**
+```bash
+curl -X DELETE \
+  -H "Authorization: Bearer <admin_token>" \
+  "http://localhost:8000/api/partners/123e4567-e89b-12d3-a456-426614174000"
+```
 
 ## 🔧 Frontend Implementation
 

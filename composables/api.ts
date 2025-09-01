@@ -430,7 +430,7 @@ export const useApi = () => {
     })
   }
 
-  // Journal Entries API (no transformation - keep snake_case)
+  // Journal Entries API
   const getJournalEntries = async (filters: any = {}): Promise<any> => {
     const params = new URLSearchParams()
     if (filters.partner_id) params.append('partner_id', filters.partner_id)
@@ -444,28 +444,7 @@ export const useApi = () => {
     if (filters.sort_order) params.append('sort_order', filters.sort_order)
     
     const query = params.toString()
-    
-    try {
-      const baseUrl = getApiBaseUrl()
-      const response = await fetch(`${baseUrl}/api/journal-entries${query ? `?${query}` : ''}`, {
-        headers: { 'Content-Type': 'application/json' }
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      
-      const result = await response.json()
-      
-      if (!result.success) {
-        throw new Error(result.error?.message || 'API request failed')
-      }
-      
-      return result
-    } catch (error) {
-      console.error('Journal entries API error:', error)
-      return { data: [] }
-    }
+    return await apiClient<any>(`/api/journal-entries${query ? `?${query}` : ''}`)
   }
 
   const createJournalEntry = async (data: any): Promise<any> => {

@@ -20,10 +20,45 @@ export interface Unit {
   id: string
   name: string
   partner_id: string
+  organization_id: string
+  
+  // Legacy fields
   location?: string
   notes?: string
+  
+  // Extended fields
+  type?: string                    // "apartment", "house", "condo"
+  description?: string
+  capacity?: number               // Default: 2
+  city?: string
+  building?: string
+  landmarks?: string[]            // ["Mall of Asia", "Airport"]
+  base_price?: number
+  extra_guest_fee?: number
+  cleaning_fee?: number
+  amenity_fee_rules?: string
+  amenities?: string[]            // ["wifi", "parking", "pool"]
+  special_features?: string
+  check_in_time?: string          // "15:00:00"
+  check_out_time?: string         // "11:00:00"
+  pets_allowed?: boolean
+  smoking_allowed?: boolean
+  parties_allowed?: boolean
+  remarks?: string
+  status?: string                 // "active", "inactive", "maintenance"
+  airbnb_url?: string
+  airbnb_rating?: number          // 0.00 to 5.00
+  bedrooms?: number
+  beds?: number
+  bathrooms?: number              // Can be decimal (1.5)
+  
   created_at: string
   updated_at: string
+  partner?: {
+    id: string
+    name: string
+    email: string
+  }
 }
 
 export interface AddOn {

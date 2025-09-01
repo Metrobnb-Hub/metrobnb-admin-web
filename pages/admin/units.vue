@@ -1,288 +1,291 @@
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
+  <div class="p-6 space-y-6">
     <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Units Management</h1>
-        <p class="text-gray-600 dark:text-gray-400">Manage property units and their details</p>
-      </div>
-      <UButton @click="showCreateModal = true" color="primary">
+      <h1 class="text-2xl font-bold">Unit Management</h1>
+      <UButton
+        v-if="canCreateUnits"
+        @click="showCreateModal = true"
+        color="primary"
+      >
         <UIcon name="i-heroicons-plus" class="mr-2" />
         Add Unit
       </UButton>
     </div>
 
-    <!-- Units Table -->
-    <UCard>
-      <template #header>
-        <div class="flex justify-between items-center">
-          <h3 class="text-lg font-semibold">Units ({{ filteredUnits.length }})</h3>
-        </div>
-      </template>
+    <!-- Summary Cards -->
+    <div v-if="summary" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Units</h3>
+        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.total_units }}</p>
+      </div>
       
-      <!-- Search and Sort -->
-      <div class="mb-4 flex gap-4">
-        <UInput 
-          v-model="searchQuery" 
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Active Units</h3>
+        <p class="text-2xl font-bold text-green-600">{{ summary.active_units }}</p>
+      </div>
+      
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Occupancy Rate</h3>
+        <p class="text-2xl font-bold text-blue-600">{{ summary.occupancy_rate }}%</p>
+      </div>
+      
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Revenue/Unit</h3>
+        <p class="text-2xl font-bold text-purple-600">${{ formatCurrency(summary.avg_revenue_per_unit) }}</p>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+      <div class="flex gap-4">
+        <UInput
+          v-model="filters.search"
           placeholder="Search units..."
-          icon="i-heroicons-magnifying-glass"
-          class="flex-1"
+          @input="debouncedSearch"
         />
-        <USelect 
-          v-model="sortBy" 
-          :options="sortOptions"
-          class="w-48"
-        />
-      </div>
-
-      <div v-if="isLoading" class="flex justify-center py-8">
-        <div class="text-gray-500">Loading units...</div>
-      </div>
-
-      <UTable v-else :rows="filteredUnits" :columns="columns" class="min-w-full">
-        <template #partner-data="{ row }">
-          <span class="text-sm text-gray-900 dark:text-white">
-            {{ getPartnerName(row.partnerId || row.partner_id) }}
-          </span>
-        </template>
-        <template #actions-data="{ row }">
-          <UDropdown :items="getActions(row)">
-            <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" size="sm" />
-          </UDropdown>
-        </template>
-      </UTable>
-    </UCard>
-
-    <!-- Create/Edit Modal -->
-    <UModal v-model="showCreateModal">
-      <UCard>
-        <template #header>
-          <h3 class="text-lg font-semibold">{{ editingUnit ? 'Edit Unit' : 'Create Unit' }}</h3>
-        </template>
         
-        <UForm :schema="schema" :state="formState" @submit="onSubmit">
-          <div class="space-y-4">
-            <UFormGroup label="Unit Name" name="name" required>
-              <UInput v-model="formState.name" placeholder="Enter unit name" />
-            </UFormGroup>
-            
-            <UFormGroup label="Partner" name="partnerId" required>
-              <USelect v-model="formState.partnerId" :options="partnerOptions" placeholder="Select partner" />
-            </UFormGroup>
-            
-            <UFormGroup label="Location" name="location">
-              <UTextarea v-model="formState.location" placeholder="Enter unit location" />
-            </UFormGroup>
-            
-            <UFormGroup label="Notes" name="notes">
-              <UTextarea v-model="formState.notes" placeholder="Additional notes" />
-            </UFormGroup>
+        <USelect
+          v-model="filters.partner_id"
+          :options="partnerOptions"
+          placeholder="All Partners"
+          @change="applyFilters"
+        />
+        
+        <USelect
+          v-model="filters.status"
+          :options="statusOptions"
+          placeholder="All Statuses"
+          @change="applyFilters"
+        />
+      </div>
+    </div>
+
+    <!-- Units Grid -->
+    <div v-if="loading" class="text-center py-8">
+      <UIcon name="i-heroicons-arrow-path" class="animate-spin h-6 w-6 mx-auto mb-2" />
+      Loading units...
+    </div>
+    
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        v-for="unit in units"
+        :key="unit.id"
+        class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+      >
+        <!-- Unit Image Placeholder -->
+        <div class="h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+          <UIcon name="i-heroicons-photo" class="h-12 w-12 text-gray-400" />
+        </div>
+        
+        <!-- Unit Details -->
+        <div class="p-4">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ unit.name }}</h3>
+            <span 
+              :class="getStatusClass(unit.status)"
+              class="px-2 py-1 rounded-full text-xs font-medium capitalize"
+            >
+              {{ unit.status || 'active' }}
+            </span>
           </div>
           
-          <div class="flex justify-end space-x-3 mt-6">
-            <UButton color="gray" variant="ghost" @click="closeModal">Cancel</UButton>
-            <UButton type="submit" color="primary" :loading="isSubmitting">
-              {{ editingUnit ? 'Update' : 'Create' }} Unit
+          <p class="text-gray-600 dark:text-gray-400 text-sm mb-2">{{ unit.city || unit.location }}</p>
+          <p class="text-gray-600 dark:text-gray-400 text-sm mb-3">{{ unit.type || 'Property' }}</p>
+          
+          <div class="grid grid-cols-3 gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+            <div>🛏️ {{ unit.bedrooms || 0 }} bed</div>
+            <div>🚿 {{ unit.bathrooms || 0 }} bath</div>
+            <div>👥 {{ unit.capacity || 2 }} guests</div>
+          </div>
+          
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-lg font-bold text-gray-900 dark:text-white">
+              ${{ unit.base_price || 0 }}/night
+            </span>
+            <span class="text-sm text-gray-500 dark:text-gray-400">
+              {{ getPartnerName(unit.partner_id) }}
+            </span>
+          </div>
+          
+          <!-- Actions -->
+          <div class="flex gap-2">
+            <UButton
+              @click="viewUnit(unit.id)"
+              color="primary"
+              variant="solid"
+              size="sm"
+              class="flex-1"
+            >
+              View Details
+            </UButton>
+            <UButton
+              v-if="canEditUnit(unit)"
+              @click="editUnit(unit)"
+              color="gray"
+              variant="solid"
+              size="sm"
+            >
+              Edit
             </UButton>
           </div>
-        </UForm>
-      </UCard>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-if="!loading && units.length === 0" class="text-center py-12">
+      <UIcon name="i-heroicons-building-office-2" class="h-12 w-12 text-gray-400 mx-auto mb-4" />
+      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No units found</h3>
+      <p class="text-gray-500 dark:text-gray-400">Get started by creating your first unit.</p>
+    </div>
+
+    <!-- Create/Edit Unit Modal -->
+    <UModal v-model="showCreateModal">
+      <UnitForm
+        :unit="editingUnit"
+        @close="closeModal"
+        @saved="handleUnitSaved"
+      />
     </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { z } from 'zod'
+import { debounce } from 'lodash-es'
+import type { Unit } from '~/types/api'
 
-const { partners, units, loadPartners, loadUnits, refreshData, isLoading: dataLoading } = useDataManager()
-const { createUnit, updateUnit, deleteUnit } = useApi()
+definePageMeta({
+  middleware: 'auth'
+})
 
-const isLoading = computed(() => dataLoading.partners || dataLoading.units)
-const isSubmitting = ref(false)
+const { user } = useAuth()
+const { getUnits, getPartners } = useApi()
+
+const loading = ref(false)
 const showCreateModal = ref(false)
-const editingUnit = ref(null)
-const searchQuery = ref('')
-const sortBy = ref('name_asc')
+const editingUnit = ref<Unit | null>(null)
 
-const sortOptions = [
-  { label: 'Name A-Z', value: 'name_asc' },
-  { label: 'Name Z-A', value: 'name_desc' },
-  { label: 'Partner A-Z', value: 'partner_asc' },
-  { label: 'Partner Z-A', value: 'partner_desc' },
-  { label: 'Newest First', value: 'created_desc' },
-  { label: 'Oldest First', value: 'created_asc' }
-]
-
-const schema = z.object({
-  name: z.string().min(1, 'Unit name is required'),
-  partnerId: z.string().min(1, 'Partner is required'),
-  location: z.string().optional(),
-  notes: z.string().optional()
+const units = ref<Unit[]>([])
+const partners = ref([])
+const summary = ref({
+  total_units: 0,
+  active_units: 0,
+  occupancy_rate: 0,
+  avg_revenue_per_unit: 0
 })
 
-const formState = reactive({
-  name: '',
-  partnerId: '',
-  location: '',
-  notes: ''
+const filters = ref({
+  search: '',
+  partner_id: '',
+  status: ''
 })
 
-const columns = [
-  { key: 'name', label: 'Unit Name' },
-  { key: 'partner', label: 'Partner' },
-  { key: 'location', label: 'Location' },
-  { key: 'notes', label: 'Notes' },
-  { key: 'actions', label: '' }
-]
+const canCreateUnits = computed(() => {
+  return user.value?.role === 'admin' || user.value?.role === 'manager'
+})
 
 const partnerOptions = computed(() => {
-  if (!Array.isArray(partners.value)) return []
-  return partners.value.map(p => ({ label: p.name, value: p.id }))
+  return partners.value.map(partner => ({
+    label: partner.name,
+    value: partner.id
+  }))
 })
 
+const statusOptions = [
+  { label: 'Active', value: 'active' },
+  { label: 'Inactive', value: 'inactive' },
+  { label: 'Maintenance', value: 'maintenance' }
+]
+
+const canEditUnit = (unit: Unit) => {
+  if (!user.value) return false
+  
+  if (['admin', 'manager'].includes(user.value.role)) {
+    return true
+  }
+  
+  return user.value.accessible_partners?.includes(unit.partner_id) || false
+}
+
 const getPartnerName = (partnerId: string) => {
-  if (!Array.isArray(partners.value)) return 'Unknown Partner'
   const partner = partners.value.find(p => p.id === partnerId)
   return partner?.name || 'Unknown Partner'
 }
 
-const filteredUnits = computed(() => {
-  if (!Array.isArray(units.value)) return []
-  
-  let filtered = units.value.filter(unit => {
-    const searchLower = searchQuery.value.toLowerCase()
-    const unitName = unit.name?.toLowerCase() || ''
-    const partnerName = getPartnerName(unit.partnerId || unit.partner_id).toLowerCase()
-    const location = unit.location?.toLowerCase() || ''
-    
-    return unitName.includes(searchLower) || 
-           partnerName.includes(searchLower) || 
-           location.includes(searchLower)
-  })
-  
-  // Sort
-  const [field, order] = sortBy.value.split('_')
-  filtered.sort((a, b) => {
-    let aVal, bVal
-    
-    switch (field) {
-      case 'name':
-        aVal = a.name || ''
-        bVal = b.name || ''
-        break
-      case 'partner':
-        aVal = getPartnerName(a.partnerId || a.partner_id)
-        bVal = getPartnerName(b.partnerId || b.partner_id)
-        break
-      case 'created':
-        aVal = new Date(a.createdAt || a.created_at || 0)
-        bVal = new Date(b.createdAt || b.created_at || 0)
-        break
-      default:
-        return 0
-    }
-    
-    if (field === 'created') {
-      return order === 'asc' ? aVal - bVal : bVal - aVal
-    }
-    
-    const comparison = aVal.localeCompare(bVal)
-    return order === 'asc' ? comparison : -comparison
-  })
-  
-  return filtered
-})
+const getStatusClass = (status: string) => {
+  const classes = {
+    active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    maintenance: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+  }
+  return classes[status] || classes.active
+}
 
-const getActions = (unit: any) => [
-  [{
-    label: 'Edit',
-    icon: 'i-heroicons-pencil-square',
-    click: () => editUnit(unit)
-  }],
-  [{
-    label: 'Delete',
-    icon: 'i-heroicons-trash',
-    click: () => deleteUnitConfirm(unit)
-  }]
-]
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-US').format(amount)
+}
 
-const editUnit = (unit: any) => {
+const applyFilters = () => {
+  loadUnits()
+}
+
+const debouncedSearch = debounce(() => {
+  applyFilters()
+}, 300)
+
+const loadUnits = async () => {
+  loading.value = true
+  try {
+    const response = await getUnits()
+    units.value = Array.isArray(response) ? response : []
+    
+    // Calculate summary (mock data for now)
+    summary.value = {
+      total_units: units.value.length,
+      active_units: units.value.filter(u => u.status === 'active' || !u.status).length,
+      occupancy_rate: 75, // Mock data
+      avg_revenue_per_unit: 1200 // Mock data
+    }
+  } catch (error) {
+    console.error('Error loading units:', error)
+    units.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadPartners = async () => {
+  try {
+    const response = await getPartners()
+    partners.value = Array.isArray(response) ? response : []
+  } catch (error) {
+    console.error('Error loading partners:', error)
+    partners.value = []
+  }
+}
+
+const viewUnit = (unitId: string) => {
+  navigateTo(`/admin/units/${unitId}`)
+}
+
+const editUnit = (unit: Unit) => {
   editingUnit.value = unit
-  formState.name = unit.name
-  formState.partnerId = unit.partnerId || unit.partner_id
-  formState.location = unit.location || ''
-  formState.notes = unit.notes || ''
   showCreateModal.value = true
 }
 
 const closeModal = () => {
   showCreateModal.value = false
   editingUnit.value = null
-  Object.assign(formState, {
-    name: '',
-    partnerId: '',
-    location: '',
-    notes: ''
-  })
 }
 
-const onSubmit = async () => {
-  try {
-    isSubmitting.value = true
-    
-    if (editingUnit.value) {
-      await updateUnit(editingUnit.value.id, formState)
-      useToast().add({
-        title: 'Unit updated',
-        description: `${formState.name} has been updated successfully`,
-        color: 'green'
-      })
-    } else {
-      await createUnit(formState)
-      useToast().add({
-        title: 'Unit created',
-        description: `${formState.name} has been created successfully`,
-        color: 'green'
-      })
-    }
-    
-    await refreshData('units')
-    closeModal()
-  } catch (error) {
-    useToast().add({
-      title: 'Error',
-      description: 'Failed to save unit',
-      color: 'red'
-    })
-  } finally {
-    isSubmitting.value = false
-  }
+const handleUnitSaved = () => {
+  closeModal()
+  loadUnits()
 }
 
-const deleteUnitConfirm = async (unit: any) => {
-  if (confirm(`Are you sure you want to delete "${unit.name}"?`)) {
-    try {
-      await deleteUnit(unit.id)
-      await refreshData('units')
-      useToast().add({
-        title: 'Unit deleted',
-        description: `${unit.name} has been deleted`,
-        color: 'orange'
-      })
-    } catch (error) {
-      useToast().add({
-        title: 'Error',
-        description: 'Failed to delete unit',
-        color: 'red'
-      })
-    }
-  }
-}
-
-onMounted(async () => {
-  await Promise.all([
-    loadPartners(),
-    loadUnits()
-  ])
+// Load data on mount
+onMounted(() => {
+  loadUnits()
+  loadPartners()
 })
 </script>

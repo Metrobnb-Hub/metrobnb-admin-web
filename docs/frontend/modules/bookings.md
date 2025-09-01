@@ -155,6 +155,30 @@ curl -H "Authorization: Bearer <partner_token>" \
 - Can only update bookings from accessible partners
 - Cannot change `partner_id` or `unit_id` to inaccessible partners
 
+### DELETE /api/bookings/{id}
+**Delete booking (Admin/Manager only)**
+
+**Response:**
+```typescript
+{
+  success: boolean
+  data: {}
+  message: string
+}
+```
+
+**RBAC Requirements:**
+- Role: `admin` or `manager`
+- Can only delete bookings from accessible partners
+- Returns 404 if booking not found or not accessible
+
+**Example:**
+```bash
+curl -X DELETE \
+  -H "Authorization: Bearer <admin_token>" \
+  "http://localhost:8000/api/bookings/123e4567-e89b-12d3-a456-426614174000"
+```
+
 ## 🔧 Frontend Implementation
 
 ### Bookings Store

@@ -154,139 +154,137 @@ User management follows the multi-tenant SaaS architecture:
 
 ## 🔧 Frontend Implementation
 
-### Users Store
-```typescript
-// stores/users.ts
-import { defineStore } from 'pinia'
+### Profile Page Implementation
+```vue
+<!-- pages/profile.vue -->
+<template>
+  <div class="max-w-4xl mx-auto p-6 space-y-6">
+    <!-- Profile Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div class="flex items-center space-x-4">
+        <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+          <UIcon name="i-heroicons-user" class="h-8 w-8 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ user?.name }}</h1>
+          <p class="text-gray-600 dark:text-gray-400">{{ user?.email }}</p>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 capitalize">
+            {{ user?.role }}
+          </span>
+        </div>
+      </div>
+    </div>
 
-interface User {
-  id: string
-  email: string
-  name: string
-  role: string
-  organization_id: string
-  accessible_partners: string[]
-  permissions: string[]
-  last_login?: string
-  created_at: string
+    <!-- Profile Information -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Profile Information</h2>
+      
+      <form @submit.prevent="updateProfile" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Name</label>
+            <UInput v-model="profileForm.name" type="text" required />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email</label>
+            <UInput :value="user?.email" type="email" disabled class="bg-gray-50" />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Email cannot be changed</p>
+          </div>
+        </div>
+        
+        <div class="flex justify-end">
+          <UButton type="submit" :loading="updatingProfile" color="primary">
+            {{ updatingProfile ? 'Updating...' : 'Update Profile' }}
+          </UButton>
+        </div>
+      </form>
+    </div>
+
+    <!-- Change Password -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Change Password</h2>
+      
+      <form @submit.prevent="handleChangePassword" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Current Password</label>
+          <UInput v-model="passwordForm.current_password" type="password" required />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">New Password</label>
+          <UInput v-model="passwordForm.new_password" type="password" required minlength="8" />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Confirm New Password</label>
+          <UInput v-model="passwordForm.confirm_password" type="password" required />
+        </div>
+        
+        <div class="flex justify-end">
+          <UButton type="submit" :disabled="changingPassword || !passwordsMatch" :loading="changingPassword" color="red">
+            {{ changingPassword ? 'Changing...' : 'Change Password' }}
+          </UButton>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+definePageMeta({ middleware: 'auth' })
+
+const { user, changePassword } = useAuth()
+
+const updatingProfile = ref(false)
+const changingPassword = ref(false)
+
+const profileForm = ref({ name: user.value?.name || '' })
+const passwordForm = ref({
+  current_password: '',
+  new_password: '',
+  confirm_password: ''
+})
+
+const passwordsMatch = computed(() => {
+  return passwordForm.value.new_password === passwordForm.value.confirm_password
+})
+
+const updateProfile = async () => {
+  updatingProfile.value = true
+  try {
+    // TODO: Implement profile update API call
+    alert('Profile updated successfully')
+  } catch (error) {
+    alert('Failed to update profile')
+  } finally {
+    updatingProfile.value = false
+  }
 }
 
-export const useUsersStore = defineStore('users', () => {
-  const users = ref<User[]>([])
-  const currentUser = ref<User | null>(null)
-  const loading = ref(false)
-  const pagination = ref({
-    total: 0,
-    page: 1,
-    limit: 10,
-    pages: 0
-  })
-
-  const fetchProfile = async () => {
-    const { $api } = useNuxtApp()
-    
-    const response = await $api('/api/users/profile')
-    if (response.success) {
-      currentUser.value = response.data
-    }
-    return response
+const handleChangePassword = async () => {
+  if (!passwordsMatch.value) {
+    alert('Passwords do not match')
+    return
   }
-
-  const updateProfile = async (profileData) => {
-    const { $api } = useNuxtApp()
-    
-    const response = await $api('/api/users/profile', {
-      method: 'PATCH',
-      body: profileData
-    })
-    
-    if (response.success) {
-      currentUser.value = { ...currentUser.value, ...profileData }
-    }
-    
-    return response
+  
+  changingPassword.value = true
+  try {
+    await changePassword(passwordForm.value)
+    alert('Password changed successfully')
+    passwordForm.value = { current_password: '', new_password: '', confirm_password: '' }
+  } catch (error) {
+    alert('Failed to change password')
+  } finally {
+    changingPassword.value = false
   }
-
-  const changePassword = async (passwordData) => {
-    const { $api } = useNuxtApp()
-    
-    return await $api('/api/users/change-password', {
-      method: 'POST',
-      body: passwordData
-    })
-  }
-
-  const fetchUsers = async (params = {}) => {
-    loading.value = true
-    const { $api } = useNuxtApp()
-    
-    try {
-      const response = await $api('/api/users', {
-        query: params
-      })
-      
-      if (response.success) {
-        users.value = response.data.items
-        pagination.value = {
-          total: response.data.total,
-          page: response.data.page,
-          limit: response.data.limit,
-          pages: response.data.pages
-        }
-      }
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const createUser = async (userData) => {
-    const { $api } = useNuxtApp()
-    
-    const response = await $api('/api/users', {
-      method: 'POST',
-      body: userData
-    })
-    
-    if (response.success) {
-      await fetchUsers() // Refresh list
-    }
-    
-    return response
-  }
-
-  const updateUser = async (id: string, userData) => {
-    const { $api } = useNuxtApp()
-    
-    const response = await $api(`/api/users/${id}`, {
-      method: 'PATCH',
-      body: userData
-    })
-    
-    if (response.success) {
-      await fetchUsers() // Refresh list
-    }
-    
-    return response
-  }
-
-  return {
-    users,
-    currentUser,
-    loading,
-    pagination,
-    fetchProfile,
-    updateProfile,
-    changePassword,
-    fetchUsers,
-    createUser,
-    updateUser
-  }
-})
+}
+</script>
 ```
 
-### Profile Settings Component
+### User Management Page Implementation
 ```vue
-<!-- components/ProfileSettings.vue -->
+<!-- pages/users.vue -->
 <template>
   <div class="max-w-2xl mx-auto">
     <!-- Profile Information -->
@@ -422,11 +420,10 @@ export const useUsersStore = defineStore('users', () => {
   </div>
 </template>
 
-<script setup>
-const usersStore = useUsersStore()
-const partnersStore = usePartnersStore()
+<script setup lang="ts">
+definePageMeta({ middleware: 'auth' })
 
-const { currentUser } = storeToRefs(usersStore)
+const { user: currentUser } = useAuth()
 
 const updatingProfile = ref(false)
 const changingPassword = ref(false)
@@ -503,17 +500,31 @@ const handleChangePassword = async () => {
   }
 }
 
-// Load data on mount
-onMounted(() => {
-  usersStore.fetchProfile()
-  partnersStore.fetchPartners()
-})
+// Mock users data (replace with API calls)
+const mockUsers = ref([
+  {
+    id: '1',
+    name: 'Tony Nini',
+    email: 'tonynini1998@gmail.com',
+    role: 'admin',
+    accessible_partners: [],
+    permissions: ['admin']
+  },
+  {
+    id: '2',
+    name: 'Staff User',
+    email: 'staff@metrobnb.test',
+    role: 'staff',
+    accessible_partners: ['partner-1', 'partner-2'],
+    permissions: ['staff']
+  }
+])
 </script>
 ```
 
-### User Management Component (Admin/Manager)
+### User Management Features
 ```vue
-<!-- components/UserManagement.vue -->
+<!-- Continued from pages/users.vue -->
 <template>
   <div>
     <div class="flex justify-between items-center mb-6">
@@ -655,14 +666,11 @@ onMounted(() => {
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { debounce } from 'lodash-es'
 
-const usersStore = useUsersStore()
-const authStore = useAuthStore()
-const partnersStore = usePartnersStore()
-
-const { users, loading, pagination } = storeToRefs(usersStore)
+const { user: currentUser } = useAuth()
+const loading = ref(false)
 
 const showCreateModal = ref(false)
 const editingUser = ref(null)
@@ -673,20 +681,19 @@ const filters = ref({
 })
 
 const canCreateUsers = computed(() => {
-  return authStore.user?.role === 'admin'
+  return currentUser.value?.role === 'admin'
 })
 
 const canEditUser = (user) => {
-  const currentUser = authStore.user
-  if (!currentUser) return false
+  if (!currentUser.value) return false
   
   // Admin can edit anyone except other admins
-  if (currentUser.role === 'admin') {
-    return user.role !== 'admin' || user.id === currentUser.id
+  if (currentUser.value.role === 'admin') {
+    return user.role !== 'admin' || user.id === currentUser.value.id
   }
   
   // Manager can edit staff and partners
-  if (currentUser.role === 'manager') {
+  if (currentUser.value.role === 'manager') {
     return ['staff', 'partner'].includes(user.role)
   }
   
@@ -694,10 +701,9 @@ const canEditUser = (user) => {
 }
 
 const canDeleteUser = (user) => {
-  const currentUser = authStore.user
-  return currentUser?.role === 'admin' && 
+  return currentUser.value?.role === 'admin' && 
          user.role !== 'admin' && 
-         user.id !== currentUser.id
+         user.id !== currentUser.value.id
 }
 
 const getPartnerName = (partnerId) => {
@@ -762,11 +768,19 @@ const handleUserSaved = () => {
   fetchUsers()
 }
 
-// Load data on mount
-onMounted(() => {
-  fetchUsers()
-  partnersStore.fetchPartners()
-})
+// TODO: Replace with actual API calls
+const handleUserSubmit = async () => {
+  saving.value = true
+  try {
+    console.log('Save user:', userForm.value)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    closeModal()
+  } catch (error) {
+    console.error('Error saving user:', error)
+  } finally {
+    saving.value = false
+  }
+}
 </script>
 ```
 

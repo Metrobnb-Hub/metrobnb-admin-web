@@ -137,89 +137,189 @@ curl -X POST http://localhost:8000/api/auth/login \
 
 ## 🔧 Frontend Implementation
 
-### Authentication Store
+### Authentication Composable (Modern Approach)
 ```typescript
-// stores/auth.ts
-import { defineStore } from 'pinia'
-
+// composables/useAuth.ts
 interface User {
   id: string
   email: string
   name: string
   role: 'admin' | 'manager' | 'staff' | 'partner'
   organization_id: string
-  accessible_partners?: string[]
+  accessible_partners: string[]
   permissions: string[]
 }
 
-export const useAuthStore = defineStore('auth', () => {
+interface Organization {
+  id: string
+  name: string
+  plan: string
+  status?: string
+}
+
+export const useAuth = () => {
   const user = ref<User | null>(null)
-  const token = ref<string | null>(null)
+  const organization = ref<Organization | null>(null)
+  const loading = ref(false)
   
-  const isAuthenticated = computed(() => !!token.value)
+  // Cookie-based token storage with proper expiration
+  const authToken = useCookie('auth_token', {
+    maxAge: 900 // 15 minutes
+  })
   
-  const login = async (email: string, password: string) => {
-    const { $api } = useNuxtApp()
-    
-    const response = await $api('/api/auth/login', {
-      method: 'POST',
-      body: { email, password }
-    })
-    
-    if (response.success) {
-      user.value = response.data.user
-      token.value = response.data.access_token
-      
-      const tokenCookie = useCookie('auth_token', {
-        maxAge: 900 // 15 minutes
-      })
-      const refreshCookie = useCookie('refresh_token', {
-        maxAge: 60 * 60 * 24 * 7 // 7 days
-      })
-      
-      tokenCookie.value = response.data.access_token
-      refreshCookie.value = response.data.refresh_token
-      
-      await navigateTo('/dashboard')
+  const refreshToken = useCookie('refresh_token', {
+    maxAge: 60 * 60 * 24 * 7 // 7 days
+  })
+  
+  // Persistent user data cookies
+  const userCookie = useCookie('user_data', {
+    maxAge: 900,
+    serializer: {
+      read: (value: string) => {
+        try {
+          return JSON.parse(value)
+        } catch {
+          return null
+        }
+      },
+      write: (value: any) => JSON.stringify(value)
     }
-    
-    return response
+  })
+  
+  const orgCookie = useCookie('org_data', {
+    maxAge: 900,
+    serializer: {
+      read: (value: string) => {
+        try {
+          return JSON.parse(value)
+        } catch {
+          return null
+        }
+      },
+      write: (value: any) => JSON.stringify(value)
+    }
+  })
+  
+  const isAuthenticated = computed(() => !!authToken.value && !!user.value)
+  
+  const login = async (credentials: { email: string; password: string }) => {
+    loading.value = true
+    try {
+      const response = await apiRequest('/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials)
+      })
+      
+      if (response.success && response.data) {
+        // Store user and organization data
+        user.value = response.data.user
+        organization.value = response.data.organization
+        authToken.value = response.data.access_token
+        refreshToken.value = response.data.refresh_token
+        
+        // Persist in cookies for page reloads
+        userCookie.value = response.data.user
+        orgCookie.value = response.data.organization
+      }
+      
+      return response
+    } finally {
+      loading.value = false
+    }
   }
   
   const logout = async () => {
-    const { $api } = useNuxtApp()
-    
     try {
-      await $api('/api/auth/logout', { method: 'POST' })
+      await apiRequest('/logout', { method: 'POST' })
     } catch (error) {
-      // Continue with logout even if API call fails
+      console.log('Server logout failed, continuing with client logout:', error)
     }
     
+    // Clear all data
     user.value = null
-    token.value = null
-    
-    const tokenCookie = useCookie('auth_token')
-    const refreshCookie = useCookie('refresh_token')
-    tokenCookie.value = null
-    refreshCookie.value = null
-    
-    await navigateTo('/login')
+    organization.value = null
+    authToken.value = null
+    refreshToken.value = null
+    userCookie.value = null
+    orgCookie.value = null
   }
   
-  return { user, token, isAuthenticated, login, logout }
-})
+  const refreshAccessToken = async () => {
+    if (!refreshToken.value) {
+      throw new Error('No refresh token available')
+    }
+    
+    try {
+      const response = await apiRequest('/refresh', {
+        method: 'POST',
+        body: JSON.stringify({
+          refresh_token: refreshToken.value
+        })
+      })
+      
+      if (response.success && response.data) {
+        authToken.value = response.data.access_token
+        refreshToken.value = response.data.refresh_token
+        return response.data
+      }
+    } catch (error) {
+      // Clear tokens and redirect to login
+      authToken.value = null
+      refreshToken.value = null
+      userCookie.value = null
+      orgCookie.value = null
+      user.value = null
+      organization.value = null
+      await navigateTo('/login')
+      throw error
+    }
+  }
+  
+  const changePassword = async (passwordData: { current_password: string; new_password: string }) => {
+    return await apiRequest('/change-password', {
+      method: 'POST',
+      body: JSON.stringify(passwordData)
+    })
+  }
+  
+  const hasPermission = (permission: string) => {
+    return user.value?.permissions?.includes(permission) || user.value?.role === 'admin' || false
+  }
+  
+  const canAccessPartner = (partnerId: string) => {
+    if (user.value?.role === 'admin' || user.value?.role === 'manager') {
+      return true
+    }
+    return user.value?.accessible_partners?.includes(partnerId) || false
+  }
+  
+  return {
+    user: readonly(user),
+    organization: readonly(organization),
+    loading: readonly(loading),
+    isAuthenticated,
+    login,
+    logout,
+    refreshAccessToken,
+    changePassword,
+    hasPermission,
+    canAccessPartner
+  }
+}
 ```
 
-### API Plugin
+### API Plugin with Automatic Token Refresh
 ```typescript
 // plugins/api.client.ts
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
   
   const api = $fetch.create({
-    baseURL: config.public.apiBase,
+    baseURL: config.public.apiBaseUrl,
     onRequest({ options }) {
+      // Get fresh token cookie on each request
       const tokenCookie = useCookie('auth_token')
+      
       if (tokenCookie.value) {
         options.headers = {
           ...options.headers,
@@ -227,11 +327,50 @@ export default defineNuxtPlugin(() => {
         }
       }
     },
-    onResponseError({ response }) {
+    async onResponseError({ response, options }) {
       if (response.status === 401) {
+        const refreshCookie = useCookie('refresh_token')
+        
+        if (refreshCookie.value) {
+          try {
+            // Attempt token refresh
+            const refreshResponse = await $fetch('/api/auth/refresh', {
+              method: 'POST',
+              baseURL: config.public.apiBaseUrl,
+              body: { refresh_token: refreshCookie.value }
+            })
+            
+            if (refreshResponse.success) {
+              const tokenCookie = useCookie('auth_token')
+              tokenCookie.value = refreshResponse.data.access_token
+              refreshCookie.value = refreshResponse.data.refresh_token
+              
+              // Retry original request with new token
+              return $fetch(response.url, {
+                ...options,
+                headers: {
+                  ...options.headers,
+                  Authorization: `Bearer ${refreshResponse.data.access_token}`
+                }
+              })
+            }
+          } catch (error) {
+            console.log('Token refresh failed:', error)
+          }
+        }
+        
+        // Clear tokens and redirect to login
         const tokenCookie = useCookie('auth_token')
         tokenCookie.value = null
-        navigateTo('/login')
+        refreshCookie.value = null
+        
+        try {
+          navigateTo('/login')
+        } catch (error) {
+          if (process.client) {
+            window.location.href = '/login'
+          }
+        }
       }
     }
   })
@@ -424,9 +563,13 @@ curl -X POST http://localhost:8000/api/auth/logout
 
 ### **FULLY OPERATIONAL**
 - ✅ JWT token generation and validation
-- ✅ User authentication with any password (dev mode)
-- ✅ RBAC filtering (Admin sees 6 partners)
-- ✅ User profile management
-- ✅ Organization context
-- ✅ Short-lived tokens with refresh
-- ✅ Stateless logout
+- ✅ User authentication with proper credentials
+- ✅ RBAC filtering (Admin sees all partners, Staff/Partner see assigned)
+- ✅ User profile management with password change
+- ✅ Organization context and multi-tenancy
+- ✅ Automatic token refresh (seamless UX)
+- ✅ Cookie-based token persistence
+- ✅ Modern composable architecture
+- ✅ Production-ready security measures
+- ✅ Dark mode support
+- ✅ Mobile-responsive design
