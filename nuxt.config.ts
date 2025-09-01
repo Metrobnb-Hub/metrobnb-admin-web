@@ -6,13 +6,18 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@pinia/nuxt'
   ],
+  experimental: {
+    warnOnPageNotFound: false
+  },
   typescript: {
     strict: true
   },
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.API_BASE_URL || 'https://metrobnb-api.onrender.com'
+      apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000',
+      apiBase: process.env.API_BASE_URL || 'http://localhost:8000', // For compatibility with docs
+      dev: process.env.NODE_ENV === 'development'
     }
   },
   nitro: {

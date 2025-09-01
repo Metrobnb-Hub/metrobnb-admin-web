@@ -1,5 +1,5 @@
 {
-  "name": "metrobnb-web",
+  "name": "metrobnb-admin-web",
   "private": true,
   "scripts": {
     "build": "nuxt build",
@@ -9,24 +9,19 @@
     "postinstall": "nuxt prepare",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed"
+    "test:report": "playwright show-report"
   },
   "devDependencies": {
     "@nuxt/devtools": "latest",
-    "@nuxt/ui": "^2.11.1",
-    "@nuxtjs/vercel-builder": "^0.25.0",
-    "@playwright/test": "^1.40.0",
-    "nuxt": "^3.8.0",
-    "typescript": "^5.2.2"
+    "@playwright/test": "^1.55.0",
+    "nuxt": "^3.8.0"
   },
   "dependencies": {
-    "@fullcalendar/core": "^6.1.10",
-    "@fullcalendar/daygrid": "^6.1.10",
-    "@fullcalendar/interaction": "^6.1.10",
-    "@fullcalendar/vue3": "^6.1.10",
-    "@nuxtjs/tailwindcss": "^6.8.4",
-    "@pinia/nuxt": "^0.5.1",
-    "pinia": "^2.1.7",
-    "zod": "^3.22.4"
+    "@fullcalendar/daygrid": "^6.1.19",
+    "@fullcalendar/interaction": "^6.1.19",
+    "@fullcalendar/vue3": "^6.1.19",
+    "@nuxt/ui": "^2.11.1",
+    "@pinia/nuxt": "^0.11.2",
+    "pinia": "^3.0.3"
   }
 }
