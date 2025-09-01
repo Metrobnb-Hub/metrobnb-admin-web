@@ -47,6 +47,11 @@
 <script setup lang="ts">
 import type { Service } from '~/types/api'
 
+// Add role-based access control
+definePageMeta({
+  middleware: ['auth', 'role']
+})
+
 const { getServices, createService, updateService, deleteService: apiDeleteService } = useApi()
 const toast = useToast()
 

@@ -28,8 +28,8 @@ export interface CreateJournalEntryRequest {
 }
 
 const getApiBaseUrl = () => {
-  const config = useRuntimeConfig()
-  const baseUrl = config.public.apiBaseUrl || 'https://metrobnb-api.onrender.com'
+  // Hardcode for now to fix the issue
+  const baseUrl = 'http://localhost:8000'
   console.log('🔗 API Base URL:', baseUrl)
   return baseUrl
 }
@@ -47,35 +47,22 @@ interface ApiResponse<T> {
 
 const apiClient = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   try {
-    const baseUrl = getApiBaseUrl()
+    const { $api } = useNuxtApp()
     const separator = endpoint.includes('?') ? '&' : '?'
-    const url = `${baseUrl}${endpoint}${separator}_t=${Date.now()}`
-    console.log('🌐 Making fetch request to:', url)
+    const url = `${endpoint}${separator}_t=${Date.now()}`
+    console.log('🌐 Making API request to:', url)
     
-    const response = await fetch(url, {
-      headers: { 
-        'Content-Type': 'application/json',
+    const response = await $api(url, {
+      ...options,
+      headers: {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
-        ...options.headers 
-      },
-      cache: 'no-store',
-      ...options,
+        ...options.headers
+      }
     })
     
-    console.log('📊 Response status:', response.status)
-    const text = await response.text()
-    console.log('📊 Response text:', text.substring(0, 200))
-    
-    // If HTML is returned, return empty data
-    if (text.includes('<!DOCTYPE') || text.includes('<html')) {
-      console.log('⚠️ HTML response detected, returning empty data')
-      return (endpoint.includes('dashboard') ? { metrobnb_revenue: '0', partner_revenue: '0', metrobnb_expenses: '0', net_profit: '0', partner_count: 0, revenue_by_partner: [], expense_breakdown: [], monthly_trend: [], recent_bookings: [], recent_expenses: [] } : []) as T
-    }
-    
-    const result = JSON.parse(text)
-    console.log('📊 Parsed result:', result)
-    return result.success ? result.data : [] as T
+    console.log('📊 API Response:', response)
+    return response.success ? response.data : [] as T
   } catch (error) {
     console.log('❌ API Error:', error)
     return (endpoint.includes('dashboard') ? { metrobnb_revenue: '0', partner_revenue: '0', metrobnb_expenses: '0', net_profit: '0', partner_count: 0, revenue_by_partner: [], expense_breakdown: [], monthly_trend: [], recent_bookings: [], recent_expenses: [] } : []) as T
@@ -713,6 +700,11 @@ export const useApi = () => {
     },
     
     // Helpers
-    getBookingTotal
+    getBookingTotal,
+    getArchivedInvoices: async (partnerId?: string) => {
+      const params = new URLSearchParams()
+      if (partnerId) params.append('partner_id', partnerId)
+      return await apiClient<any[]>(`/api/invoices/archive?${params}`)
+    }
   }
 }
