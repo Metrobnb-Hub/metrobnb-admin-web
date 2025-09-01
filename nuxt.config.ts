@@ -6,6 +6,9 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@pinia/nuxt'
   ],
+  experimental: {
+    warnOnPageNotFound: false
+  },
   typescript: {
     strict: true
   },
