@@ -165,7 +165,7 @@ const props = defineProps<{
 }>()
 
 // Use props if provided, otherwise fallback to data manager
-const { units: dataUnits, partners: dataPartners } = useDataManager()
+const { units: dataUnits, partners: dataPartners } = useGlobalCache()
 
 const units = computed(() => props.units || dataUnits.value || [])
 const partners = computed(() => props.partners || dataPartners.value || [])

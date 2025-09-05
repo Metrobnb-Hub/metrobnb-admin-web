@@ -65,7 +65,7 @@
 import { z } from 'zod'
 import type { JournalEntry } from '~/types/journal-entry'
 
-const { partners, loadPartners } = useDataManager()
+const { partners, loadPartners } = useGlobalCache()
 const { getJournalEntries, updateJournalEntry } = useApi()
 const { notifySuccess, notifyError } = useNotify()
 const router = useRouter()

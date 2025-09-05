@@ -13,23 +13,37 @@ Expenses are filtered based on user role and `accessible_partners`:
 ## 📋 Expense Endpoints
 
 ### GET /api/expenses
-**Get paginated expenses list (RBAC filtered)**
+**Get paginated expenses list (RBAC filtered with comprehensive filtering)**
 
 **Query Parameters:**
 ```typescript
 {
-  page?: number        // Default: 1
-  limit?: number       // Default: 10
-  search?: string      // Search by description, vendor
-  sort_by?: string     // date, amount, type, status
+  page?: number             // Default: 1
+  limit?: number            // Default: 10
+  search?: string           // Search by description, vendor, notes
+  sort_by?: string          // date, amount, type, status, created_at
   sort_order?: 'asc' | 'desc'  // Default: desc
-  partner_id?: string  // Filter by specific partner
-  type?: string        // supplies, maintenance, utilities, etc.
-  status?: string      // draft, completed, approved
-  paid_by?: string     // metrobnb, partner
-  needs_review?: boolean // Filter draft receipts
-  date_from?: string   // Filter by expense date range
-  date_to?: string
+  
+  // Filter by relationships
+  partner_id?: string       // Filter by specific partner
+  unit_id?: string          // Filter by specific unit
+  
+  // Filter by expense properties
+  type?: string             // supplies, maintenance, utilities, cleaning, other
+  status?: string           // draft, completed, approved
+  paid_by?: string          // metrobnb, partner
+  paid?: boolean            // true = paid, false = unpaid
+  billable?: boolean        // true = billable, false = non-billable ✅
+  needs_review?: boolean    // true = needs review, false = reviewed
+  
+  // Date filtering
+  month?: string            // YYYY-MM format (e.g., "2025-01")
+  date_from?: string        // YYYY-MM-DD format
+  date_to?: string          // YYYY-MM-DD format
+  
+  // Amount filtering
+  amount_min?: number       // Minimum amount
+  amount_max?: number       // Maximum amount
 }
 ```
 
@@ -67,8 +81,40 @@ Expenses are filtered based on user role and `accessible_partners`:
 }
 ```
 
-**Usage:**
+**Usage Examples:**
 ```bash
+# Get all expenses
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/expenses"
+
+# Filter billable expenses only
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/expenses?billable=true"
+
+# Filter non-billable expenses
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/expenses?billable=false"
+
+# Filter by partner and date range
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/expenses?partner_id=123&date_from=2025-01-01&date_to=2025-01-31"
+
+# Filter by amount range and type
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/expenses?amount_min=100&amount_max=1000&type=maintenance"
+
+# Filter unpaid expenses that need review
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/expenses?paid=false&needs_review=true"
+
+# Filter by who paid (MetroBNB vs Partner)
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/expenses?paid_by=metrobnb"
+
+# Complex filtering with pagination
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/expenses?partner_id=123&billable=true&status=completed&page=1&limit=20"
+
 # Get draft receipts for review
 curl -H "Authorization: Bearer <token>" \
   "http://localhost:8000/api/expenses/drafts"
@@ -743,10 +789,497 @@ watch(drafts, initializeForms, { immediate: true })
 - Draft completion requires partner access
 - Receipt capture creates organization-scoped drafts
 
+### PATCH /api/expenses/bulk-update
+**Bulk update multiple expenses**
+
+**Request:**
+```typescript
+[
+  {
+    id: string              // Expense UUID
+    amount?: number
+    type?: string
+    billable?: boolean
+    paid?: boolean
+    notes?: string
+    // ... any other expense fields
+  }
+]
+```
+
+**Response:**
+```typescript
+{
+  success: boolean
+  data: {
+    updated_count: number
+    total_items: number
+    errors: Array<{
+      error: string
+      item: object
+    }>
+  }
+  message: string
+}
+```
+
+### PATCH /api/expenses/bulk-mark-paid
+**Bulk mark expenses as paid**
+
+**Request:**
+```typescript
+{
+  expense_ids: string[]     // Array of expense UUIDs
+  paid_date?: string        // YYYY-MM-DD (optional, defaults to today)
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean
+  data: {
+    updated_count: number
+    total_requested: number
+    paid_date: string
+  }
+  message: string
+}
+```
+
+### PATCH /api/expenses/bulk-assign-partner
+**Bulk assign expenses to a partner**
+
+**Request:**
+```typescript
+{
+  expense_ids: string[]     // Array of expense UUIDs
+  partner_id: string        // Partner UUID
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean
+  data: {
+    updated_count: number
+    total_requested: number
+    partner_name: string
+  }
+  message: string
+}
+```
+
+### PATCH /api/expenses/bulk-set-billable
+**Bulk set expenses as billable/non-billable**
+
+**Request:**
+```typescript
+{
+  expense_ids: string[]     // Array of expense UUIDs
+  billable: boolean         // true = billable, false = non-billable
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean
+  data: {
+    updated_count: number
+    total_requested: number
+    billable: boolean
+  }
+  message: string
+}
+```
+
+## 🔧 Bulk Operations
+
+### PATCH /api/expenses/bulk-update
+**Universal bulk update for any expense fields**
+
+**Request:**
+```typescript
+[
+  {
+    id: string              // Expense UUID (required)
+    amount?: number         // Update amount
+    type?: string          // Update type
+    billable?: boolean     // Update billable status ✅
+    paid?: boolean         // Update paid status
+    paid_date?: string     // Update paid date
+    status?: string        // Update status
+    notes?: string         // Update notes
+    partner_id?: string    // Reassign partner
+    // ... any other expense field
+  }
+]
+```
+
+**Response:**
+```typescript
+{
+  success: boolean
+  data: {
+    updated_count: number
+    total_items: number
+    errors: Array<{
+      error: string
+      item: object
+    }>
+  }
+  message: string
+}
+```
+
+### PATCH /api/expenses/bulk-mark-paid
+**Bulk mark expenses as paid**
+
+**Request:**
+```typescript
+{
+  expense_ids: string[]     // Array of expense UUIDs
+  paid_date?: string        // YYYY-MM-DD (optional, defaults to today)
+}
+```
+
+### PATCH /api/expenses/bulk-assign-partner
+**Bulk assign expenses to a partner**
+
+**Request:**
+```typescript
+{
+  expense_ids: string[]     // Array of expense UUIDs
+  partner_id: string        // Partner UUID
+}
+```
+
+### PATCH /api/expenses/bulk-set-billable
+**Bulk set expenses as billable/non-billable**
+
+**Request:**
+```typescript
+{
+  expense_ids: string[]     // Array of expense UUIDs
+  billable: boolean         // true = billable, false = non-billable
+}
+```
+
+## 🔧 Bulk Operations Frontend
+
+### Enhanced Expenses Store with Bulk Operations
+```typescript
+// Add to expenses store
+const bulkUpdate = async (updates: Array<{id: string, [key: string]: any}>) => {
+  const { $api } = useNuxtApp()
+  
+  const response = await $api('/api/expenses/bulk-update', {
+    method: 'PATCH',
+    body: updates
+  })
+  
+  if (response.success) {
+    await fetchExpenses() // Refresh list
+  }
+  
+  return response
+}
+
+const bulkMarkPaid = async (expenseIds: string[], paidDate?: string) => {
+  const { $api } = useNuxtApp()
+  
+  const response = await $api('/api/expenses/bulk-mark-paid', {
+    method: 'PATCH',
+    body: { expense_ids: expenseIds, paid_date: paidDate }
+  })
+  
+  if (response.success) {
+    await fetchExpenses()
+  }
+  
+  return response
+}
+
+const bulkAssignPartner = async (expenseIds: string[], partnerId: string) => {
+  const { $api } = useNuxtApp()
+  
+  const response = await $api('/api/expenses/bulk-assign-partner', {
+    method: 'PATCH',
+    body: { expense_ids: expenseIds, partner_id: partnerId }
+  })
+  
+  if (response.success) {
+    await fetchExpenses()
+  }
+  
+  return response
+}
+
+const bulkSetBillable = async (expenseIds: string[], billable: boolean) => {
+  const { $api } = useNuxtApp()
+  
+  const response = await $api('/api/expenses/bulk-set-billable', {
+    method: 'PATCH',
+    body: { expense_ids: expenseIds, billable }
+  })
+  
+  if (response.success) {
+    await fetchExpenses()
+  }
+  
+  return response
+}
+
+// Flexible bulk update examples
+const bulkSetBillableAndPaid = async (expenseIds: string[]) => {
+  const updates = expenseIds.map(id => ({
+    id,
+    billable: true,
+    paid: true,
+    paid_date: new Date().toISOString().split('T')[0]
+  }))
+  
+  return await bulkUpdate(updates)
+}
+
+const bulkUpdateAmounts = async (expenseUpdates: Array<{id: string, amount: number}>) => {
+  return await bulkUpdate(expenseUpdates)
+}
+```
+
+### Enhanced Bulk Actions Component
+```vue
+<!-- components/ExpensesBulkActions.vue -->
+<template>
+  <div v-if="selectedExpenses.length > 0" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+    <div class="flex items-center justify-between">
+      <div class="text-sm font-medium text-blue-800">
+        {{ selectedExpenses.length }} expenses selected
+      </div>
+      
+      <div class="flex gap-2">
+        <button
+          @click="showBulkActions = !showBulkActions"
+          class="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+        >
+          Bulk Actions
+        </button>
+        
+        <button
+          @click="clearSelection"
+          class="bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+    
+    <!-- Bulk Actions Menu -->
+    <div v-if="showBulkActions" class="mt-3">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <button
+          @click="bulkMarkAsPaid"
+          class="bg-green-600 text-white px-3 py-2 rounded text-sm"
+        >
+          Mark as Paid
+        </button>
+        
+        <button
+          @click="showPartnerAssign = true"
+          class="bg-purple-600 text-white px-3 py-2 rounded text-sm"
+        >
+          Assign Partner
+        </button>
+        
+        <button
+          @click="bulkSetBillable(true)"
+          class="bg-orange-600 text-white px-3 py-2 rounded text-sm"
+        >
+          Set Billable
+        </button>
+        
+        <button
+          @click="bulkSetBillable(false)"
+          class="bg-gray-600 text-white px-3 py-2 rounded text-sm"
+        >
+          Set Non-billable
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Partner Assignment Modal -->
+  <div v-if="showPartnerAssign" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 w-96">
+      <h3 class="text-lg font-bold mb-4">Assign Partner</h3>
+      
+      <select v-model="selectedPartnerId" class="w-full border rounded-lg p-2 mb-4">
+        <option value="">Select Partner</option>
+        <option v-for="partner in availablePartners" :key="partner.id" :value="partner.id">
+          {{ partner.name }}
+        </option>
+      </select>
+      
+      <div class="flex gap-3">
+        <button
+          @click="confirmPartnerAssign"
+          :disabled="!selectedPartnerId"
+          class="flex-1 bg-blue-600 text-white py-2 rounded font-medium disabled:opacity-50"
+        >
+          Assign
+        </button>
+        <button
+          @click="showPartnerAssign = false"
+          class="flex-1 bg-gray-300 text-gray-700 py-2 rounded font-medium"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+const props = defineProps({
+  selectedExpenses: {
+    type: Array,
+    required: true
+  }
+})
+
+const emit = defineEmits(['clearSelection', 'refresh'])
+
+const expensesStore = useExpensesStore()
+const partnersStore = usePartnersStore()
+
+const showBulkActions = ref(false)
+const showPartnerAssign = ref(false)
+const selectedPartnerId = ref('')
+
+const availablePartners = computed(() => partnersStore.partners)
+
+const clearSelection = () => {
+  emit('clearSelection')
+  showBulkActions.value = false
+}
+
+const bulkMarkAsPaid = async () => {
+  const expenseIds = props.selectedExpenses.map(e => e.id)
+  await expensesStore.bulkMarkPaid(expenseIds)
+  emit('refresh')
+  clearSelection()
+}
+
+const bulkSetBillable = async (billable: boolean) => {
+  const expenseIds = props.selectedExpenses.map(e => e.id)
+  await expensesStore.bulkSetBillable(expenseIds, billable)
+  emit('refresh')
+  clearSelection()
+}
+
+const confirmPartnerAssign = async () => {
+  if (!selectedPartnerId.value) return
+  
+  const expenseIds = props.selectedExpenses.map(e => e.id)
+  await expensesStore.bulkAssignPartner(expenseIds, selectedPartnerId.value)
+  
+  showPartnerAssign.value = false
+  selectedPartnerId.value = ''
+  emit('refresh')
+  clearSelection()
+}
+</script>
+```
+
 ### Receipt Workflow Security
 - Receipts uploaded to organization-specific folders
 - Draft expenses inherit organization context
 - Staff can only complete expenses for accessible partners
+
+### Expense Filtering Component
+```vue
+<!-- components/ExpenseFilters.vue -->
+<template>
+  <div class="expense-filters bg-white border rounded-lg p-4 mb-6">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-semibold">Filter Expenses</h3>
+      <button @click="clearFilters" class="text-sm text-blue-600">Clear All</button>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Billable Filter -->
+      <div>
+        <label class="block text-sm font-medium mb-1">Billable</label>
+        <select v-model="filters.billable" class="w-full border rounded p-2">
+          <option value="">All</option>
+          <option value="true">Billable</option>
+          <option value="false">Non-billable</option>
+        </select>
+      </div>
+      
+      <!-- Paid Filter -->
+      <div>
+        <label class="block text-sm font-medium mb-1">Payment Status</label>
+        <select v-model="filters.paid" class="w-full border rounded p-2">
+          <option value="">All</option>
+          <option value="true">Paid</option>
+          <option value="false">Unpaid</option>
+        </select>
+      </div>
+      
+      <!-- Type Filter -->
+      <div>
+        <label class="block text-sm font-medium mb-1">Type</label>
+        <select v-model="filters.type" class="w-full border rounded p-2">
+          <option value="">All Types</option>
+          <option value="supplies">Supplies</option>
+          <option value="maintenance">Maintenance</option>
+          <option value="utilities">Utilities</option>
+        </select>
+      </div>
+      
+      <!-- Amount Range -->
+      <div>
+        <label class="block text-sm font-medium mb-1">Min Amount</label>
+        <input v-model="filters.amount_min" type="number" step="0.01" class="w-full border rounded p-2" />
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium mb-1">Max Amount</label>
+        <input v-model="filters.amount_max" type="number" step="0.01" class="w-full border rounded p-2" />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+const emit = defineEmits(['filtersChanged'])
+
+const filters = ref({
+  billable: '',
+  paid: '',
+  type: '',
+  amount_min: '',
+  amount_max: ''
+})
+
+const clearFilters = () => {
+  Object.keys(filters.value).forEach(key => {
+    filters.value[key] = ''
+  })
+}
+
+watch(filters, (newFilters) => {
+  const cleanFilters = {}
+  for (const [key, value] of Object.entries(newFilters)) {
+    if (value !== '') cleanFilters[key] = value
+  }
+  emit('filtersChanged', cleanFilters)
+}, { deep: true })
+</script>
+```
 
 ### Mobile PWA Considerations
 - Receipt capture optimized for mobile devices

@@ -1,111 +1,28 @@
-# Authentication Module
+# MetroBNB Authentication API Guide
 
-> **JWT Authentication with RBAC for MetroBNB API**
+## Complete Frontend Integration Guide
 
-## 🔄 Authentication Flow
+### Base URL: `http://localhost:8000`
 
-### Complete Login Flow
-```mermaid
-sequenceDiagram
-    participant Client as Frontend
-    participant API as MetroBNB API
-    participant Auth as Auth Provider
-    participant DB as Database
-    
-    Client->>API: POST /api/auth/login {email, password}
-    API->>Auth: Generate JWT tokens
-    Auth-->>API: {access_token, refresh_token}
-    API->>DB: Find user by auth_provider_id
-    DB-->>API: AuthUser + UserProfile
-    API->>DB: Update last_login timestamp
-    API-->>Client: {user, organization, tokens}
-    
-    Note over Client: Store tokens in cookies
-    Note over Client: Redirect to /dashboard
-```
-
-### Token Usage Flow
-```mermaid
-sequenceDiagram
-    participant Client as Frontend
-    participant API as MetroBNB API
-    participant JWT as JWT Middleware
-    participant DB as Database
-    
-    Client->>API: GET /api/partners (Bearer token)
-    API->>JWT: Validate JWT token
-    JWT->>JWT: Decode token payload
-    JWT->>DB: Find user by auth_provider_id
-    DB-->>JWT: AuthUser + UserProfile + RBAC
-    JWT-->>API: Set request.state (user context)
-    API->>DB: Query partners (RBAC filtered)
-    DB-->>API: Filtered partner data
-    API-->>Client: {success: true, data: partners}
-```
-
-### Registration Flow
-```mermaid
-sequenceDiagram
-    participant Client as Frontend
-    participant API as MetroBNB API
-    participant Auth as Auth Provider
-    participant DB as Database
-    
-    Client->>API: POST /api/auth/register {email, password, name, org}
-    API->>Auth: Create auth user
-    Auth-->>API: {user_id, tokens}
-    API->>DB: Create Organization
-    API->>DB: Create AuthUser
-    API->>DB: Create UserProfile
-    API-->>Client: {user, organization, tokens}
-```
+---
 
 ## 🔐 Authentication Endpoints
 
-### POST /api/auth/login
-**User login with email and password**
+### 1. User Registration
 
-**Request:**
-```typescript
+**Endpoint:** `POST /api/auth/register`
+
+**Purpose:** Register new user and automatically create organization
+
+**Payload:**
+```json
 {
-  email: string
-  password: string
+  "email": "owner@company.com",
+  "password": "SecurePass123!",
+  "name": "John Doe",
+  "organization_name": "My Company",
+  "role": "owner"
 }
-```
-
-**Response:**
-```typescript
-{
-  success: boolean
-  data: {
-    user: {
-      id: string
-      email: string
-      name: string
-      role: 'admin' | 'manager' | 'staff' | 'partner'
-      organization_id: string
-      accessible_partners?: string[]
-      permissions: string[]
-    }
-    organization: {
-      id: string
-      name: string
-      plan: string
-      status: string
-    }
-    access_token: string
-    refresh_token: string
-    expires_in: number
-  }
-  message: string
-}
-```
-
-**Example:**
-```bash
-curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "tonynini1998@gmail.com", "password": "test"}'
 ```
 
 **Response:**
@@ -114,462 +31,455 @@ curl -X POST http://localhost:8000/api/auth/login \
   "success": true,
   "data": {
     "user": {
-      "id": "ee1e9b69-9b40-4e5f-9fba-0c9ee5cd3820",
-      "email": "tonynini1998@gmail.com",
-      "name": "Tony Nini",
-      "role": "admin",
-      "organization_id": "43d8bb82-8902-46c7-a014-aac2f430fd39",
-      "accessible_partners": [],
-      "permissions": ["admin"]
+      "id": "uuid",
+      "email": "owner@company.com",
+      "name": "John Doe",
+      "role": "owner"
     },
     "organization": {
-      "id": "43d8bb82-8902-46c7-a014-aac2f430fd39",
-      "name": "MetroBNB",
-      "plan": "trial"
+      "id": "uuid",
+      "name": "My Company",
+      "plan": "free"
     },
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBhYmFzZS10b255bmluaTE5OTgtZ21haWwtY29tIiwiZW1haWwiOiJ0b255bmluaTE5OThAZ21haWwuY29tIiwiaWF0IjoxNzU2NzA2NTc1LCJleHAiOjE3NTY3MDc0NzV9.z1_oqnGQ2VFkWwB7VL3KCWONQmXQsRiKuAD9NLkDtQQ",
-    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBhYmFzZS10b255bmluaTE5OTgtZ21haWwtY29tIiwidHlwZSI6InJlZnJlc2giLCJpYXQiOjE3NTY3MDY1NzUsImV4cCI6MTc1NzMxMTM3NX0.qzShUHJGDlUKkE_N8_bA7zJgWwOEIBCKH2RwzyUxDpM",
+    "access_token": "jwt_token_here",
+    "refresh_token": "refresh_token_here",
     "expires_in": 900
   },
-  "message": "Login successful"
+  "message": "Registration successful"
 }
 ```
 
-## 🔧 Frontend Implementation
+### 2. User Login
 
-### Authentication Composable (Modern Approach)
-```typescript
-// composables/useAuth.ts
-interface User {
-  id: string
-  email: string
-  name: string
-  role: 'admin' | 'manager' | 'staff' | 'partner'
-  organization_id: string
-  accessible_partners: string[]
-  permissions: string[]
-}
+**Endpoint:** `POST /api/auth/login`
 
-interface Organization {
-  id: string
-  name: string
-  plan: string
-  status?: string
-}
+**Purpose:** Authenticate user and get access token
 
-export const useAuth = () => {
-  const user = ref<User | null>(null)
-  const organization = ref<Organization | null>(null)
-  const loading = ref(false)
-  
-  // Cookie-based token storage with proper expiration
-  const authToken = useCookie('auth_token', {
-    maxAge: 900 // 15 minutes
-  })
-  
-  const refreshToken = useCookie('refresh_token', {
-    maxAge: 60 * 60 * 24 * 7 // 7 days
-  })
-  
-  // Persistent user data cookies
-  const userCookie = useCookie('user_data', {
-    maxAge: 900,
-    serializer: {
-      read: (value: string) => {
-        try {
-          return JSON.parse(value)
-        } catch {
-          return null
-        }
-      },
-      write: (value: any) => JSON.stringify(value)
-    }
-  })
-  
-  const orgCookie = useCookie('org_data', {
-    maxAge: 900,
-    serializer: {
-      read: (value: string) => {
-        try {
-          return JSON.parse(value)
-        } catch {
-          return null
-        }
-      },
-      write: (value: any) => JSON.stringify(value)
-    }
-  })
-  
-  const isAuthenticated = computed(() => !!authToken.value && !!user.value)
-  
-  const login = async (credentials: { email: string; password: string }) => {
-    loading.value = true
-    try {
-      const response = await apiRequest('/login', {
-        method: 'POST',
-        body: JSON.stringify(credentials)
-      })
-      
-      if (response.success && response.data) {
-        // Store user and organization data
-        user.value = response.data.user
-        organization.value = response.data.organization
-        authToken.value = response.data.access_token
-        refreshToken.value = response.data.refresh_token
-        
-        // Persist in cookies for page reloads
-        userCookie.value = response.data.user
-        orgCookie.value = response.data.organization
-      }
-      
-      return response
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  const logout = async () => {
-    try {
-      await apiRequest('/logout', { method: 'POST' })
-    } catch (error) {
-      console.log('Server logout failed, continuing with client logout:', error)
-    }
-    
-    // Clear all data
-    user.value = null
-    organization.value = null
-    authToken.value = null
-    refreshToken.value = null
-    userCookie.value = null
-    orgCookie.value = null
-  }
-  
-  const refreshAccessToken = async () => {
-    if (!refreshToken.value) {
-      throw new Error('No refresh token available')
-    }
-    
-    try {
-      const response = await apiRequest('/refresh', {
-        method: 'POST',
-        body: JSON.stringify({
-          refresh_token: refreshToken.value
-        })
-      })
-      
-      if (response.success && response.data) {
-        authToken.value = response.data.access_token
-        refreshToken.value = response.data.refresh_token
-        return response.data
-      }
-    } catch (error) {
-      // Clear tokens and redirect to login
-      authToken.value = null
-      refreshToken.value = null
-      userCookie.value = null
-      orgCookie.value = null
-      user.value = null
-      organization.value = null
-      await navigateTo('/login')
-      throw error
-    }
-  }
-  
-  const changePassword = async (passwordData: { current_password: string; new_password: string }) => {
-    return await apiRequest('/change-password', {
-      method: 'POST',
-      body: JSON.stringify(passwordData)
-    })
-  }
-  
-  const hasPermission = (permission: string) => {
-    return user.value?.permissions?.includes(permission) || user.value?.role === 'admin' || false
-  }
-  
-  const canAccessPartner = (partnerId: string) => {
-    if (user.value?.role === 'admin' || user.value?.role === 'manager') {
-      return true
-    }
-    return user.value?.accessible_partners?.includes(partnerId) || false
-  }
-  
-  return {
-    user: readonly(user),
-    organization: readonly(organization),
-    loading: readonly(loading),
-    isAuthenticated,
-    login,
-    logout,
-    refreshAccessToken,
-    changePassword,
-    hasPermission,
-    canAccessPartner
-  }
-}
-```
-
-### API Plugin with Automatic Token Refresh
-```typescript
-// plugins/api.client.ts
-export default defineNuxtPlugin(() => {
-  const config = useRuntimeConfig()
-  
-  const api = $fetch.create({
-    baseURL: config.public.apiBaseUrl,
-    onRequest({ options }) {
-      // Get fresh token cookie on each request
-      const tokenCookie = useCookie('auth_token')
-      
-      if (tokenCookie.value) {
-        options.headers = {
-          ...options.headers,
-          Authorization: `Bearer ${tokenCookie.value}`
-        }
-      }
-    },
-    async onResponseError({ response, options }) {
-      if (response.status === 401) {
-        const refreshCookie = useCookie('refresh_token')
-        
-        if (refreshCookie.value) {
-          try {
-            // Attempt token refresh
-            const refreshResponse = await $fetch('/api/auth/refresh', {
-              method: 'POST',
-              baseURL: config.public.apiBaseUrl,
-              body: { refresh_token: refreshCookie.value }
-            })
-            
-            if (refreshResponse.success) {
-              const tokenCookie = useCookie('auth_token')
-              tokenCookie.value = refreshResponse.data.access_token
-              refreshCookie.value = refreshResponse.data.refresh_token
-              
-              // Retry original request with new token
-              return $fetch(response.url, {
-                ...options,
-                headers: {
-                  ...options.headers,
-                  Authorization: `Bearer ${refreshResponse.data.access_token}`
-                }
-              })
-            }
-          } catch (error) {
-            console.log('Token refresh failed:', error)
-          }
-        }
-        
-        // Clear tokens and redirect to login
-        const tokenCookie = useCookie('auth_token')
-        tokenCookie.value = null
-        refreshCookie.value = null
-        
-        try {
-          navigateTo('/login')
-        } catch (error) {
-          if (process.client) {
-            window.location.href = '/login'
-          }
-        }
-      }
-    }
-  })
-  
-  return { provide: { api } }
-})
-```
-
-### POST /api/auth/logout
-**Logout user (client-side token clearing)**
-
-**How it works:**
-1. Server returns success message (no server-side action)
-2. Client clears tokens from cookies/storage
-3. Client redirects to login page
-4. Tokens remain valid until expiry (15 minutes max)
-
-**Response:**
-```typescript
+**Payload:**
+```json
 {
-  success: boolean
-  message: string
+  "email": "owner@company.com",
+  "password": "SecurePass123!"
 }
-```
-
-**Example:**
-```bash
-curl -X POST http://localhost:8000/api/auth/logout
 ```
 
 **Response:**
 ```json
 {
   "success": true,
-  "message": "Logged out successfully. Please clear your local tokens."
+  "data": {
+    "user": {
+      "id": "uuid",
+      "email": "owner@company.com",
+      "name": "John Doe",
+      "role": "owner",
+      "organization_id": "uuid",
+      "accessible_partners": [],
+      "permissions": ["admin"]
+    },
+    "organization": {
+      "id": "uuid",
+      "name": "My Company",
+      "plan": "free"
+    },
+    "access_token": "jwt_token_here",
+    "refresh_token": "refresh_token_here",
+    "expires_in": 900,
+    "requires_password_change": false
+  },
+  "message": "Login successful"
 }
 ```
 
-**Security Notes:**
-- ✅ **Stateless**: No server-side session storage
-- ✅ **Simple**: Just clear client tokens
-- ✅ **Auto-expiry**: Tokens expire in 15 minutes
-- ⚠️ **Token remains valid**: Until natural expiry
-- ⚠️ **No immediate revocation**: Stolen tokens work briefly
+### 3. Get Current User
 
-### POST /api/auth/refresh
-**Refresh access token using refresh token**
+**Endpoint:** `GET /api/auth/me`
 
-**Request:**
-```typescript
+**Headers:** `Authorization: Bearer {access_token}`
+
+**Response:**
+```json
 {
-  refresh_token: string
+  "success": true,
+  "data": {
+    "user": {
+      "id": "uuid",
+      "email": "owner@company.com",
+      "name": "John Doe",
+      "role": "owner"
+    },
+    "organization": {
+      "id": "uuid",
+      "name": "My Company",
+      "plan": "free"
+    }
+  }
+}
+```
+
+### 4. Invite User
+
+**Endpoint:** `POST /api/auth/invite-user`
+
+**Headers:** `Authorization: Bearer {access_token}`
+
+**Purpose:** Admin/Owner invites new users to organization
+
+**Payload:**
+```json
+{
+  "email": "staff@company.com",
+  "name": "Jane Smith",
+  "role": "staff",
+  "partner_ids": ["partner_uuid"]
 }
 ```
 
 **Response:**
-```typescript
+```json
 {
-  success: boolean
-  data: {
-    access_token: string
-    refresh_token: string
-    expires_in: number
-  }
-  message: string
+  "success": true,
+  "data": {
+    "user_id": "uuid",
+    "email": "staff@company.com",
+    "temporary_password": "temp_abc123",
+    "requires_password_change": true
+  },
+  "message": "User invited successfully"
 }
 ```
 
-### POST /api/auth/register
-**Register new user and organization**
+### 5. Set Initial Password
 
-**Request:**
-```typescript
+**Endpoint:** `POST /api/auth/set-password`
+
+**Purpose:** Set new password after invitation (first-time login)
+
+**Payload:**
+```json
 {
-  email: string
-  password: string
-  name: string
-  organization_name: string
-  plan?: string
+  "email": "staff@company.com",
+  "current_password": "temp_abc123",
+  "new_password": "NewSecurePass123!"
 }
 ```
 
 **Response:**
-```typescript
+```json
 {
-  success: boolean
-  data: {
-    user: {
-      id: string
-      email: string
-      name: string
-      role: string
-    }
-    organization: {
-      id: string
-      name: string
-      plan: string
-    }
-    access_token: string
-    refresh_token: string
-    expires_in: number
+  "success": true,
+  "message": "Password updated successfully"
+}
+```
+
+### 6. Change Password
+
+**Endpoint:** `POST /api/auth/change-password`
+
+**Headers:** `Authorization: Bearer {access_token}`
+
+**Purpose:** Change password for authenticated user
+
+**Payload:**
+```json
+{
+  "current_password": "OldPass123!",
+  "new_password": "NewPass123!"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "requires_password_change": false
+  },
+  "message": "Password changed successfully"
+}
+```
+
+### 7. Logout
+
+**Endpoint:** `POST /api/auth/logout`
+
+**Headers:** `Authorization: Bearer {access_token}`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+## 🔒 Role-Based Access Control (RBAC)
+
+### User Roles
+
+| Role | Permissions | Description |
+|------|-------------|-------------|
+| `owner` | Full admin access | Organization owner, all permissions |
+| `admin` | Most operations | Can manage users, partners, units |
+| `staff` | Limited operations | Can view/create basic records |
+| `partner` | Partner-specific | Access only to assigned partner data |
+
+### Permission Levels
+
+- **Admin**: Full CRUD operations
+- **Read**: View-only access
+- **Create**: Can create new records
+- **Update**: Can modify existing records
+
+---
+
+## 🚀 Frontend Implementation Guide
+
+### 1. Authentication Flow
+
+```javascript
+// 1. Registration
+const register = async (userData) => {
+  const response = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData)
+  });
+  const data = await response.json();
+  
+  if (data.success) {
+    localStorage.setItem('access_token', data.data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.data.user));
   }
-  message: string
-}
+  return data;
+};
+
+// 2. Login
+const login = async (email, password) => {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await response.json();
+  
+  if (data.success) {
+    localStorage.setItem('access_token', data.data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.data.user));
+    
+    // Check if password change required
+    if (data.data.requires_password_change) {
+      // Redirect to password change page
+    }
+  }
+  return data;
+};
+
+// 3. API calls with authentication
+const apiCall = async (endpoint, options = {}) => {
+  const token = localStorage.getItem('access_token');
+  
+  const response = await fetch(endpoint, {
+    ...options,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+  
+  return response.json();
+};
 ```
 
-## 🔄 Authentication Process
+### 2. Error Handling
 
-### 1. Login Process
-1. **Client sends credentials** to `/api/auth/login`
-2. **Auth provider generates JWT** with user identifier
-3. **API finds user** in database using `auth_provider_id`
-4. **API loads user profile** and organization context
-5. **API updates last_login** timestamp
-6. **API returns user data** with JWT tokens
-7. **Client stores tokens** in cookies (15min + 7 days)
-8. **Client redirects** to dashboard
-
-### 2. API Request Process
-1. **Client sends request** with `Authorization: Bearer <token>`
-2. **JWT Middleware intercepts** and validates token
-3. **Middleware decodes JWT** to get `auth_provider_id`
-4. **Middleware loads user context** from database
-5. **Middleware sets request.state** with user info
-6. **API endpoint uses RBAC** to filter data
-7. **API returns filtered data** based on user role
-
-### 3. Token Refresh Process
-1. **Access token expires** (15 minutes)
-2. **Client detects 401 error** from API
-3. **Client sends refresh_token** to `/api/auth/refresh`
-4. **API validates refresh token** (7 days max)
-5. **API generates new access_token** (15 minutes)
-6. **Client updates stored tokens**
-7. **Client retries original request**
-
-### 4. Logout Process
-1. **Client calls** `/api/auth/logout`
-2. **API returns success** (no server action)
-3. **Client clears tokens** from cookies/storage
-4. **Client redirects** to login page
-5. **Old tokens remain valid** until natural expiry
-
-## 🔑 Test Credentials
-
-| Role | Email | Password | Access | Status |
-|------|-------|----------|---------|--------|
-| Admin | tonynini1998@gmail.com | **any password** | 6 partners | ✅ Working |
-| Staff | staff@metrobnb.test | **any password** | 2 partners | ✅ Working |
-| Partner | hiroaki@partner.test | **any password** | 1 partner | ✅ Working |
-
-## 🔐 JWT Token Details
-
-### Access Token Payload
-```json
-{
-  "sub": "supabase-tonynini1998-gmail-com",
-  "email": "tonynini1998@gmail.com",
-  "iat": 1756706575,
-  "exp": 1756707475
-}
+```javascript
+const handleApiResponse = (data) => {
+  if (!data.success) {
+    switch (data.error?.code) {
+      case 'INVALID_TOKEN':
+        // Redirect to login
+        localStorage.removeItem('access_token');
+        window.location.href = '/login';
+        break;
+      case 'INSUFFICIENT_PERMISSIONS':
+        // Show permission error
+        alert('You do not have permission for this action');
+        break;
+      default:
+        // Show general error
+        alert(data.error?.message || 'An error occurred');
+    }
+  }
+  return data;
+};
 ```
 
-### Refresh Token Payload
-```json
-{
-  "sub": "supabase-tonynini1998-gmail-com",
-  "type": "refresh",
-  "iat": 1756706575,
-  "exp": 1757311375
-}
+### 3. User Management
+
+```javascript
+// Invite user
+const inviteUser = async (userData) => {
+  return apiCall('/api/auth/invite-user', {
+    method: 'POST',
+    body: JSON.stringify(userData)
+  });
+};
+
+// Set initial password
+const setPassword = async (email, currentPassword, newPassword) => {
+  return fetch('/api/auth/set-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      current_password: currentPassword,
+      new_password: newPassword
+    })
+  }).then(res => res.json());
+};
 ```
 
-### Token Validation
-- **Algorithm**: HS256
-- **Secret**: Environment variable `SECRET_KEY`
-- **Access Token**: 15 minutes (900 seconds)
-- **Refresh Token**: 7 days (604800 seconds)
-- **Validation**: JWT middleware decodes and verifies signature
+---
 
-### User Context Resolution
-1. **Extract `sub`** from JWT payload
-2. **Query AuthUser** by `auth_provider_id = sub`
-3. **Load UserProfile** by `auth_user_id`
-4. **Load accessible partners** from `user_partner_access`
-5. **Set permissions** based on user role
-6. **Store in request.state** for RBAC filtering
+## 📝 Complete Integration Example
 
-## ✅ System Status
+### React Component Example
 
-### **FULLY OPERATIONAL**
-- ✅ JWT token generation and validation
-- ✅ User authentication with proper credentials
-- ✅ RBAC filtering (Admin sees all partners, Staff/Partner see assigned)
-- ✅ User profile management with password change
-- ✅ Organization context and multi-tenancy
-- ✅ Automatic token refresh (seamless UX)
-- ✅ Cookie-based token persistence
-- ✅ Modern composable architecture
-- ✅ Production-ready security measures
-- ✅ Dark mode support
-- ✅ Mobile-responsive design
+```jsx
+import React, { useState, useEffect } from 'react';
+
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      try {
+        const data = await apiCall('/api/auth/me');
+        if (data.success) {
+          setUser(data.data.user);
+        } else {
+          localStorage.removeItem('access_token');
+        }
+      } catch (error) {
+        localStorage.removeItem('access_token');
+      }
+    }
+    setLoading(false);
+  };
+
+  const loginUser = async (email, password) => {
+    const data = await login(email, password);
+    if (data.success) {
+      setUser(data.data.user);
+      return { success: true, requiresPasswordChange: data.data.requires_password_change };
+    }
+    return { success: false, error: data.error?.message };
+  };
+
+  const logoutUser = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+    setUser(null);
+  };
+
+  const value = {
+    user,
+    login: loginUser,
+    logout: logoutUser,
+    isAuthenticated: !!user,
+    loading
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+```
+
+### Login Component
+
+```jsx
+const LoginForm = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { login } = useAuth();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    const result = await login(email, password);
+    if (result.success) {
+      if (result.requiresPasswordChange) {
+        // Redirect to password change
+        navigate('/change-password');
+      } else {
+        navigate('/dashboard');
+      }
+    } else {
+      setError(result.error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email"
+        required
+      />
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Password"
+        required
+      />
+      {error && <div className="error">{error}</div>}
+      <button type="submit">Login</button>
+    </form>
+  );
+};
+```
+
+---
+
+## 🔧 Error Codes Reference
+
+| Code | Description | Action |
+|------|-------------|--------|
+| `INVALID_TOKEN` | Token expired/invalid | Redirect to login |
+| `INSUFFICIENT_PERMISSIONS` | User lacks permission | Show error message |
+| `VALIDATION_ERROR` | Invalid input data | Show field errors |
+| `USER_EXISTS` | Email already registered | Show registration error |
+| `INVALID_CREDENTIALS` | Wrong email/password | Show login error |
+
+---
+
+## 🎯 Implementation Checklist
+
+- [ ] Set up authentication context/provider
+- [ ] Implement login/registration forms
+- [ ] Add password change workflow
+- [ ] Handle token expiration
+- [ ] Implement role-based UI components
+- [ ] Add error handling for all auth endpoints
+- [ ] Test user invitation flow
+- [ ] Implement logout functionality
+
+The API is production-ready with SOLID principles, proper RBAC, and comprehensive error handling!

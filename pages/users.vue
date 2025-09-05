@@ -48,7 +48,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-          <tr v-for="user in mockUsers" :key="user.id">
+          <tr v-for="user in users" :key="user.id">
             <td class="px-4 py-3">
               <div class="flex items-center">
                 <div class="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mr-3">
@@ -75,7 +75,7 @@
                   :key="partnerId"
                   class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
                 >
-                  Partner {{ partnerId.substring(0, 6) }}
+                  {{ getPartnerName(partnerId) }}
                 </span>
                 <span
                   v-if="user.accessible_partners.length > 2"
@@ -103,7 +103,7 @@
                 </UButton>
                 <UButton
                   v-if="canDeleteUser(user)"
-                  @click="deleteUser(user)"
+                  @click="deleteUserAction(user)"
                   size="xs"
                   color="red"
                   variant="ghost"
@@ -117,7 +117,7 @@
       </table>
 
       <!-- Empty State -->
-      <div v-if="!loading && mockUsers.length === 0" class="p-8 text-center text-gray-500 dark:text-gray-400">
+      <div v-if="!loading && users.length === 0" class="p-8 text-center text-gray-500 dark:text-gray-400">
         No users found
       </div>
     </div>
@@ -161,11 +161,28 @@
           <div v-if="userForm.role === 'staff' || userForm.role === 'partner'">
             <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Partner Access</label>
             <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Select which partners this user can access</p>
-            <!-- TODO: Add partner selection -->
-            <UInput
-              v-model="userForm.partner_access"
-              placeholder="Partner IDs (comma separated)"
-            />
+            
+            <div class="space-y-2">
+              <div v-for="partner in partners" :key="partner.id" class="flex items-center">
+                <UCheckbox
+                  :id="`partner-${partner.id}`"
+                  v-model="selectedPartners"
+                  :value="partner.id"
+                  class="mr-3"
+                />
+                <label 
+                  :for="`partner-${partner.id}`" 
+                  class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer flex-1"
+                >
+                  {{ partner.name }}
+                  <span class="text-xs text-gray-500 ml-2">({{ partner.email || 'No email' }})</span>
+                </label>
+              </div>
+              
+              <div v-if="partners.length === 0" class="text-sm text-gray-500 dark:text-gray-400">
+                No partners available. Create partners first.
+              </div>
+            </div>
           </div>
           
           <div class="flex justify-end space-x-3 pt-4">
@@ -196,7 +213,9 @@ definePageMeta({
   middleware: 'auth'
 })
 
-const { user: currentUser } = useAuth()
+const { user: currentUser, inviteUser } = useAuth()
+const { getPartners } = useApi()
+const { extractData } = useApiResponse()
 
 const loading = ref(false)
 const showCreateModal = ref(false)
@@ -211,9 +230,11 @@ const filters = ref({
 const userForm = ref({
   name: '',
   email: '',
-  role: '',
-  partner_access: ''
+  role: ''
 })
+
+const selectedPartners = ref([])
+const partners = ref([])
 
 const roleOptions = [
   { label: 'Manager', value: 'manager' },
@@ -221,33 +242,7 @@ const roleOptions = [
   { label: 'Partner', value: 'partner' }
 ]
 
-// Mock users data
-const mockUsers = ref([
-  {
-    id: '1',
-    name: 'Tony Nini',
-    email: 'tonynini1998@gmail.com',
-    role: 'admin',
-    accessible_partners: [],
-    permissions: ['admin']
-  },
-  {
-    id: '2',
-    name: 'Staff User',
-    email: 'staff@metrobnb.test',
-    role: 'staff',
-    accessible_partners: ['partner-1', 'partner-2'],
-    permissions: ['staff']
-  },
-  {
-    id: '3',
-    name: 'Hiroaki Partner',
-    email: 'hiroaki@partner.test',
-    role: 'partner',
-    accessible_partners: ['partner-3'],
-    permissions: ['partner']
-  }
-])
+const users = ref([])
 
 const canCreateUsers = computed(() => {
   return currentUser.value?.role === 'admin'
@@ -296,21 +291,43 @@ const debouncedSearch = debounce(() => {
   applyFilters()
 }, 300)
 
+// Load partners when modal opens
+watch(showCreateModal, async (isOpen) => {
+  if (isOpen) {
+    await loadPartners()
+  }
+})
+
+// Load data on mount
+onMounted(async () => {
+  await Promise.all([
+    loadPartners(),
+    loadUsers()
+  ])
+})
+
 const editUser = (user) => {
   editingUser.value = user
   userForm.value = {
     name: user.name,
     email: user.email,
-    role: user.role,
-    partner_access: user.accessible_partners?.join(', ') || ''
+    role: user.role
   }
+  selectedPartners.value = user.accessible_partners || []
   showCreateModal.value = true
 }
 
-const deleteUser = async (user) => {
+const deleteUserAction = async (user) => {
   if (confirm(`Are you sure you want to delete ${user.name}?`)) {
-    // TODO: Implement delete API call
-    console.log('Delete user:', user.id)
+    try {
+      // TODO: Implement user deletion when API is available
+      const { notifyError } = useNotify()
+      notifyError('User deletion not implemented yet')
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      const { notifyError } = useNotify()
+      notifyError('Failed to delete user')
+    }
   }
 }
 
@@ -320,25 +337,102 @@ const closeModal = () => {
   userForm.value = {
     name: '',
     email: '',
-    role: '',
-    partner_access: ''
+    role: ''
   }
+  selectedPartners.value = []
+}
+
+const loadPartners = async () => {
+  try {
+    const result = await getPartners()
+    partners.value = extractData(result)
+  } catch (error) {
+    console.error('Error loading partners:', error)
+    partners.value = []
+  }
+}
+
+const loadUsers = async () => {
+  try {
+    loading.value = true
+    // For now, show mock users since there's no users API endpoint
+    // In a real app, you'd have a /api/users endpoint
+    users.value = [
+      {
+        id: currentUser.value?.id,
+        name: currentUser.value?.name,
+        email: currentUser.value?.email,
+        role: currentUser.value?.role,
+        accessible_partners: currentUser.value?.accessible_partners || []
+      }
+    ]
+  } catch (error) {
+    console.error('Error loading users:', error)
+    users.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const getPartnerName = (partnerId: string) => {
+  const partner = partners.value.find(p => p.id === partnerId)
+  return partner?.name || `Partner ${partnerId.substring(0, 6)}`
 }
 
 const handleUserSubmit = async () => {
   saving.value = true
   
   try {
-    // TODO: Implement create/update API call
-    console.log('Save user:', userForm.value)
+    const userData = {
+      name: userForm.value.name,
+      email: userForm.value.email,
+      role: userForm.value.role,
+      partner_ids: selectedPartners.value
+    }
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    closeModal()
-    // TODO: Refresh users list
+    if (editingUser.value) {
+      // TODO: Implement user update when API is available
+      throw new Error('User update not implemented yet')
+    } else {
+      const response = await inviteUser(userData)
+      if (response.success) {
+        const { notifySuccess } = useNotify()
+        
+        // Show detailed success message with temporary password
+        const successMessage = `
+          ✅ User invited successfully!
+          
+          📧 Email: ${response.data.email}
+          🔑 Temporary Password: ${response.data.temporary_password}
+          
+          📝 Note: ${response.message || 'They must change their password on first login.'}
+        `
+        
+        notifySuccess(successMessage)
+        closeModal()
+        await loadUsers()
+      } else {
+        throw new Error(response.error?.message || 'Failed to invite user')
+      }
+    }
   } catch (error) {
     console.error('Error saving user:', error)
+    const { notifyError } = useNotify()
+    
+    // Handle specific error cases
+    let errorMessage = 'Failed to save user'
+    
+    if (error.message.includes('email_exists')) {
+      errorMessage = `A user with email "${userForm.value.email}" already exists. Please use a different email address.`
+    } else if (error.message.includes('422')) {
+      errorMessage = 'Invalid user data. Please check all fields and try again.'
+    } else if (error.message.includes('403') || error.message.includes('unauthorized')) {
+      errorMessage = 'You do not have permission to invite users.'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    notifyError(errorMessage)
   } finally {
     saving.value = false
   }

@@ -244,8 +244,21 @@ const onSubmit = async () => {
       }))
     }
     
-    await navigateTo(`/invoices/${invoice.id}`)
+    // Don't navigate automatically - let user stay on current page
     isOpen.value = false
+    
+    // Refresh invoices list if on invoices page
+    const route = useRoute()
+    if (route.path === '/invoices') {
+      // Trigger refresh of invoices list
+      await refreshCookie('invoices-refresh', Date.now().toString())
+    }
+    
+    const { notifySuccess } = useNotify()
+    notifySuccess(`Invoice generated: ${invoice.invoice_number}`)
+    
+    // Optional: Navigate only if user clicks "View Invoice" button
+    // navigateTo(`/invoices/${invoice.id}`)
     
   } catch (error) {
     const { notifyError } = useNotify()

@@ -133,7 +133,12 @@
               </div>
             </div>
             
-            <div class="mt-6 text-center">
+            <div class="mt-6 text-center space-y-3">
+              <p class="text-gray-600 dark:text-gray-400 text-sm">
+                <NuxtLink to="/reset-password" class="font-semibold text-blue-600 hover:text-blue-500">
+                  Forgot your password?
+                </NuxtLink>
+              </p>
               <p class="text-gray-600 dark:text-gray-400 text-sm">
                 New to MetroBNB?
                 <NuxtLink to="/register" class="font-semibold text-blue-600 hover:text-blue-500 ml-1">
@@ -177,7 +182,14 @@ const handleLogin = async () => {
   error.value = ''
   
   try {
-    await login(credentials.value)
+    const response = await login(credentials.value)
+    
+    // Check if user needs to change password (new user flow)
+    if (response.data?.requires_password_change) {
+      await router.push(`/set-password?email=${encodeURIComponent(credentials.value.email)}&temp_login=true`)
+      return
+    }
+    
     handleSuccess('login')
     await router.push('/dashboard')
   } catch (err: any) {

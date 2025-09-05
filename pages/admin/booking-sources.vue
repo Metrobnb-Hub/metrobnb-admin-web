@@ -74,6 +74,7 @@
 import { z } from 'zod'
 
 const { getBookingSources, createBookingSource, updateBookingSource } = useApi()
+const { extractData } = useApiResponse()
 
 const sources = ref([])
 const showCreateModal = ref(false)
@@ -182,8 +183,7 @@ const onSubmit = async () => {
 
 const loadSources = async () => {
   const result = await getBookingSources()
-  console.log('Booking sources API response:', result)
-  sources.value = result
+  sources.value = extractData(result)
 }
 
 onMounted(async () => {

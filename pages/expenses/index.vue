@@ -92,6 +92,40 @@
               <UIcon name="i-heroicons-funnel" class="sm:mr-1" />
               <span class="hidden sm:inline">Filters</span>
             </UButton>
+            <UButton 
+              v-if="selectedExpenses.length > 0"
+              variant="outline" 
+              size="sm"
+              @click="showBulkActions = !showBulkActions"
+            >
+              <UIcon name="i-heroicons-squares-plus" class="sm:mr-1" />
+              <span class="hidden sm:inline">Bulk ({{ selectedExpenses.length }})</span>
+            </UButton>
+          </div>
+        </div>
+        
+        <!-- Bulk Actions -->
+        <div v-if="showBulkActions && selectedExpenses.length > 0" class="border border-blue-200 dark:border-blue-700 rounded-lg p-4 bg-blue-50 dark:bg-blue-900">
+          <div class="flex flex-wrap gap-2">
+            <UButton size="sm" color="green" @click="bulkMarkPaid">
+              <UIcon name="i-heroicons-check-circle" class="mr-1" />
+              Mark Paid ({{ selectedExpenses.length }})
+            </UButton>
+            <UButton size="sm" color="red" @click="bulkMarkUnpaid">
+              <UIcon name="i-heroicons-x-circle" class="mr-1" />
+              Mark Unpaid ({{ selectedExpenses.length }})
+            </UButton>
+            <UButton size="sm" color="blue" @click="bulkMarkBillable">
+              <UIcon name="i-heroicons-tag" class="mr-1" />
+              Mark Billable ({{ selectedExpenses.length }})
+            </UButton>
+            <UButton size="sm" color="gray" @click="bulkMarkNonBillable">
+              <UIcon name="i-heroicons-minus" class="mr-1" />
+              Mark Non-Billable ({{ selectedExpenses.length }})
+            </UButton>
+            <UButton size="sm" color="red" variant="outline" @click="clearSelection">
+              Clear Selection
+            </UButton>
           </div>
         </div>
         
@@ -147,6 +181,14 @@
               />
             </UFormGroup>
             
+            <UFormGroup label="Billable">
+              <USelect 
+                v-model="filterBillable" 
+                :options="billableFilterOptions"
+                placeholder="Select billable"
+              />
+            </UFormGroup>
+            
             <UFormGroup label="Start Date">
               <UInput 
                 v-model="startDate" 
@@ -179,7 +221,7 @@
         <div class="text-gray-500">Loading expenses...</div>
       </div>
       
-      <div v-else>
+      <div v-if="!isLoading">
 
         
         <!-- Mobile card layout -->
@@ -187,9 +229,16 @@
         <UCard v-for="expense in expenses" :key="expense.id" class="p-4">
           <div class="space-y-3">
             <div class="flex justify-between items-start">
-              <div class="min-w-0 flex-1">
-                <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ getPartnerName(expense.partner_id) }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ getUnitName(expense.unit_id) }}</p>
+              <div class="flex items-start gap-3 min-w-0 flex-1">
+                <UCheckbox 
+                  :model-value="selectedExpenses.includes(expense.id)"
+                  @update:model-value="toggleExpenseSelection(expense.id)"
+                  class="mt-1"
+                />
+                <div class="min-w-0 flex-1">
+                  <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ getPartnerName(expense) }}</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ getUnitName(expense) }}</p>
+                </div>
               </div>
               <UDropdown :items="getExpenseActions(expense)">
                 <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" size="xs" />
@@ -214,6 +263,12 @@
                 </UBadge>
               </div>
               <div>
+                <span class="text-gray-500 dark:text-gray-400">Billable:</span>
+                <UBadge :color="expense.billable ? 'blue' : 'gray'" size="xs" class="ml-1">
+                  {{ expense.billable ? 'Yes' : 'No' }}
+                </UBadge>
+              </div>
+              <div>
                 <span class="text-gray-500 dark:text-gray-400">Date:</span>
                 <p class="font-medium">{{ formatDate(expense.date) }}</p>
               </div>
@@ -229,10 +284,17 @@
         <!-- Desktop table layout -->
         <div v-if="expenses.length" class="hidden sm:block">
           <UTable :rows="expenses" :columns="expenseColumns">
+            <template #select-data="{ row }">
+              <UCheckbox 
+                :model-value="selectedExpenses.includes(row.id)"
+                @update:model-value="toggleExpenseSelection(row.id)"
+              />
+            </template>
+            
             <template #partner-data="{ row }">
               <div>
-                <div class="font-medium text-gray-900 dark:text-white">{{ getPartnerName(row.partner_id) }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">{{ getUnitName(row.unit_id) }}</div>
+                <div class="font-medium text-gray-900 dark:text-white">{{ getPartnerName(row) }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ getUnitName(row) }}</div>
               </div>
             </template>
             
@@ -249,6 +311,12 @@
                 </span>
                 <UIcon v-if="row.receipt_url" name="i-heroicons-photo" class="h-4 w-4 text-gray-400" title="Has receipt" />
               </div>
+            </template>
+            
+            <template #billable-data="{ row }">
+              <UBadge :color="row.billable ? 'blue' : 'gray'" size="xs">
+                {{ row.billable ? 'Yes' : 'No' }}
+              </UBadge>
             </template>
             
             <template #paid-data="{ row }">
@@ -339,16 +407,20 @@
 </template>
 
 <script setup lang="ts">
-const { partners, units, loadPartners, loadUnits } = useDataManager()
 const { getExpenses, deleteExpense } = useApi()
+const { partners, units, loadPartners, loadUnits } = useGlobalCache()
+const { extractData, extractPagination } = useApiResponse()
 
 const showEditModal = ref(false)
 const selectedExpense = ref(null)
+const selectedExpenses = ref([])
+const showBulkActions = ref(false)
 const searchQuery = ref('')
 const sortBy = ref('date_desc')
 const showAdvancedFilters = ref(false)
 const filterType = ref('')
 const filterPaid = ref('')
+const filterBillable = ref('')
 const filterPartner = ref('')
 const filterUnit = ref('')
 const filterYear = ref('')
@@ -358,6 +430,7 @@ const endDate = ref('')
 const expenses = ref([])
 const pagination = ref(null)
 const currentPage = ref(1)
+const totalItems = ref(0)
 const isLoading = ref(false)
 
 const sortOptions = [
@@ -400,10 +473,18 @@ const paidFilterOptions = [
   { label: 'Unpaid', value: 'false' }
 ]
 
+const billableFilterOptions = [
+  { label: 'All', value: '' },
+  { label: 'Billable', value: 'true' },
+  { label: 'Non-Billable', value: 'false' }
+]
+
 const expenseColumns = [
+  { key: 'select', label: '' },
   { key: 'partner', label: 'Partner / Unit' },
   { key: 'type', label: 'Type' },
   { key: 'amount', label: 'Amount' },
+  { key: 'billable', label: 'Billable' },
   { key: 'paid', label: 'Status' },
   { key: 'date', label: 'Date' },
   { key: 'actions', label: '' }
@@ -471,6 +552,10 @@ const loadExpensesData = async () => {
       filters.paid = filterPaid.value === 'true'
     }
     
+    if (filterBillable.value) {
+      filters.billable = filterBillable.value === 'true'
+    }
+    
     // Convert year/month to start_date and end_date
     let actualStartDate = startDate.value
     let actualEndDate = endDate.value
@@ -500,15 +585,12 @@ const loadExpensesData = async () => {
     
     const result = await getExpenses(filters)
     
-    if (result.data && result.pagination) {
-      // Paginated response
-      expenses.value = result.data
-      pagination.value = result.pagination
-    } else {
-      // Non-paginated response (fallback)
-      expenses.value = Array.isArray(result) ? result : result.data || []
-      pagination.value = null
-    }
+    // Use standard response handler
+    expenses.value = extractData(result)
+    pagination.value = extractPagination(result)
+    totalItems.value = pagination.value?.total_items || expenses.value.length
+    
+    console.log('✅ Expenses loaded:', expenses.value.length, 'items')
   } catch (error) {
     console.error('Failed to load expenses:', error)
     expenses.value = []
@@ -552,16 +634,38 @@ const totalExpenses = computed(() => {
   }, 0)
 })
 
-const getPartnerName = (partnerId: string) => {
-  if (!partnerId || !Array.isArray(partners.value)) return 'Unknown Partner'
-  const partner = partners.value.find(p => p && p.id === partnerId)
-  return partner?.name || 'Unknown Partner'
+const getPartnerName = (expense: any) => {
+  // First check if expense has partner object directly
+  if (expense?.partner?.name) {
+    return expense.partner.name
+  }
+  
+  // Then check by partner_id in partners array
+  if (expense?.partner_id && Array.isArray(partners.value)) {
+    const partner = partners.value.find(p => p && p.id === expense.partner_id)
+    if (partner?.name) {
+      return partner.name
+    }
+  }
+  
+  return 'Unknown Partner'
 }
 
-const getUnitName = (unitId: string) => {
-  if (!unitId || !Array.isArray(units.value)) return 'Unknown Unit'
-  const unit = units.value.find(u => u && u.id === unitId)
-  return unit?.name || 'Unknown Unit'
+const getUnitName = (expense: any) => {
+  // First check if expense has unit object directly
+  if (expense?.unit?.name) {
+    return expense.unit.name
+  }
+  
+  // Then check by unit_id in units array
+  if (expense?.unit_id && Array.isArray(units.value)) {
+    const unit = units.value.find(u => u && u.id === expense.unit_id)
+    if (unit?.name) {
+      return unit.name
+    }
+  }
+  
+  return 'No Unit'
 }
 
 const getExpenseTypeClass = (type: string) => {
@@ -684,6 +788,127 @@ const handleUpdated = () => {
   loadExpensesData()
 }
 
+// Bulk Actions
+const toggleExpenseSelection = (expenseId: string) => {
+  const index = selectedExpenses.value.indexOf(expenseId)
+  if (index > -1) {
+    selectedExpenses.value.splice(index, 1)
+  } else {
+    selectedExpenses.value.push(expenseId)
+  }
+}
+
+const clearSelection = () => {
+  selectedExpenses.value = []
+  showBulkActions.value = false
+}
+
+const bulkMarkPaid = async () => {
+  const { notifySuccess, notifyError } = useNotify()
+  const { updateExpense } = useApi()
+  
+  try {
+    for (const expenseId of selectedExpenses.value) {
+      const expense = expenses.value.find(e => e.id === expenseId)
+      if (expense && !expense.paid) {
+        await updateExpense(expenseId, {
+          paid: true,
+          paid_date: new Date().toISOString().split('T')[0],
+          billable: expense.billable,
+          amount: expense.amount,
+          type: expense.type,
+          notes: expense.notes
+        })
+      }
+    }
+    
+    await loadExpensesData()
+    clearSelection()
+    notifySuccess(`Marked ${selectedExpenses.value.length} expenses as paid`)
+  } catch (error) {
+    notifyError('Failed to update expenses')
+  }
+}
+
+const bulkMarkUnpaid = async () => {
+  const { notifySuccess, notifyError } = useNotify()
+  const { updateExpense } = useApi()
+  
+  try {
+    for (const expenseId of selectedExpenses.value) {
+      const expense = expenses.value.find(e => e.id === expenseId)
+      if (expense && expense.paid) {
+        await updateExpense(expenseId, {
+          paid: false,
+          paid_date: null,
+          billable: expense.billable,
+          amount: expense.amount,
+          type: expense.type,
+          notes: expense.notes
+        })
+      }
+    }
+    
+    await loadExpensesData()
+    clearSelection()
+    notifySuccess(`Marked ${selectedExpenses.value.length} expenses as unpaid`)
+  } catch (error) {
+    notifyError('Failed to update expenses')
+  }
+}
+
+const bulkMarkBillable = async () => {
+  const { notifySuccess, notifyError } = useNotify()
+  const { updateExpense } = useApi()
+  
+  try {
+    for (const expenseId of selectedExpenses.value) {
+      const expense = expenses.value.find(e => e.id === expenseId)
+      if (expense && !expense.billable) {
+        await updateExpense(expenseId, {
+          billable: true,
+          paid: expense.paid,
+          amount: expense.amount,
+          type: expense.type,
+          notes: expense.notes
+        })
+      }
+    }
+    
+    await loadExpensesData()
+    clearSelection()
+    notifySuccess(`Marked ${selectedExpenses.value.length} expenses as billable`)
+  } catch (error) {
+    notifyError('Failed to update expenses')
+  }
+}
+
+const bulkMarkNonBillable = async () => {
+  const { notifySuccess, notifyError } = useNotify()
+  const { updateExpense } = useApi()
+  
+  try {
+    for (const expenseId of selectedExpenses.value) {
+      const expense = expenses.value.find(e => e.id === expenseId)
+      if (expense && expense.billable) {
+        await updateExpense(expenseId, {
+          billable: false,
+          paid: expense.paid,
+          amount: expense.amount,
+          type: expense.type,
+          notes: expense.notes
+        })
+      }
+    }
+    
+    await loadExpensesData()
+    clearSelection()
+    notifySuccess(`Marked ${selectedExpenses.value.length} expenses as non-billable`)
+  } catch (error) {
+    notifyError('Failed to update expenses')
+  }
+}
+
 // Pagination functions
 const goToPage = (page: number) => {
   currentPage.value = page
@@ -738,6 +963,7 @@ const clearFilters = () => {
   filterUnit.value = ''
   filterType.value = ''
   filterPaid.value = ''
+  filterBillable.value = ''
   startDate.value = ''
   endDate.value = ''
   searchQuery.value = ''
@@ -767,11 +993,17 @@ watch(() => filterPartner.value, () => {
 
 // Removed auto-apply watchers - now requires Apply button
 
+// loadPartners and loadUnits are now provided by useGlobalCache()
+
 onMounted(async () => {
-  await Promise.all([
-    loadPartners(),
-    loadUnits(),
-    loadExpensesData()
-  ])
+  try {
+    await Promise.all([
+      loadPartners(),
+      loadUnits(),
+      loadExpensesData()
+    ])
+  } catch (error) {
+    console.error('❌ Error loading data:', error)
+  }
 })
 </script>

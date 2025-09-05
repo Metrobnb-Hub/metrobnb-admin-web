@@ -34,7 +34,7 @@
           <div>
             <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email</label>
             <UInput
-              :value="user?.email"
+              v-model="userEmail"
               type="email"
               disabled
               class="bg-gray-50"
@@ -47,7 +47,7 @@
           <div>
             <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Role</label>
             <UInput
-              :value="user?.role"
+              v-model="userRole"
               type="text"
               disabled
               class="bg-gray-50 capitalize"
@@ -57,7 +57,7 @@
           <div>
             <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Organization</label>
             <UInput
-              :value="organization?.name"
+              v-model="organizationName"
               type="text"
               disabled
               class="bg-gray-50"
@@ -171,6 +171,8 @@ definePageMeta({
 
 const { user, organization } = useAuth()
 
+
+
 const updatingProfile = ref(false)
 const changingPassword = ref(false)
 
@@ -187,6 +189,11 @@ const passwordForm = ref({
 const passwordsMatch = computed(() => {
   return passwordForm.value.new_password === passwordForm.value.confirm_password
 })
+
+// Computed properties for form fields
+const userEmail = computed(() => user.value?.email || '')
+const userRole = computed(() => user.value?.role || '')
+const organizationName = computed(() => organization.value?.name || '')
 
 // Initialize form with current user data
 watch(user, (newUser) => {

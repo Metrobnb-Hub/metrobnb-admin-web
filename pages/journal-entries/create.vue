@@ -81,7 +81,7 @@
 import { z } from 'zod'
 import type { CreateJournalEntryRequest } from '~/composables/api'
 
-const { partners, loadPartners } = useDataManager()
+const { partners, loadPartners } = useGlobalCache()
 const { createJournalEntry } = useApi()
 const { notifySuccess, notifyError } = useNotify()
 const router = useRouter()

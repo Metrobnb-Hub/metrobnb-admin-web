@@ -196,19 +196,32 @@ const allNavigationGroups = [
 ]
 
 const navigationGroups = computed(() => {
-  if (!user.value) return []
+  if (!user.value) {
+    console.log('🔍 No user found for navigation')
+    return []
+  }
   
-  console.log('🔍 Filtering navigation for user role:', user.value.role)
+  console.log('🔍 User object:', user.value)
+  console.log('🔍 User role:', user.value.role, 'Type:', typeof user.value.role)
+  console.log('🔍 Available roles in navigation:', allNavigationGroups.map(g => g.roles).flat())
   
   const filtered = allNavigationGroups
-    .filter(group => group.roles.includes(user.value!.role))
+    .filter(group => {
+      const hasRole = group.roles.includes(user.value!.role)
+      console.log(`🔍 Group "${group.name}" roles:`, group.roles, 'User has access:', hasRole)
+      return hasRole
+    })
     .map(group => ({
       ...group,
-      items: group.items.filter(item => item.roles.includes(user.value!.role))
+      items: group.items.filter(item => {
+        const hasItemRole = item.roles.includes(user.value!.role)
+        console.log(`🔍 Item "${item.name}" roles:`, item.roles, 'User has access:', hasItemRole)
+        return hasItemRole
+      })
     }))
     .filter(group => group.items.length > 0)
     
-  console.log('🔍 Filtered navigation groups:', filtered)
+  console.log('🔍 Final filtered navigation groups:', filtered)
   return filtered
 })
 

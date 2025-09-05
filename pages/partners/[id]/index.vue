@@ -154,7 +154,7 @@
 const route = useRoute()
 const partnerId = route.params.id as string
 
-const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { updateUnit: apiUpdateUnit, deleteUnit: apiDeleteUnit } = useApi()
 const { notifySuccess, notifyError } = useNotify()
 

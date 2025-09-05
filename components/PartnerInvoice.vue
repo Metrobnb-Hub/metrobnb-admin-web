@@ -19,6 +19,16 @@
     <div class="mb-8 space-y-6">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 print:text-gray-900">📊 Booking Summary</h2>
       
+      <!-- No Bookings Message -->
+      <div v-if="!partnerBookings.length && !metrobnbBookings.length" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+        <div class="flex items-center">
+          <UIcon name="i-heroicons-information-circle" class="h-5 w-5 text-yellow-600 dark:text-yellow-400 mr-2" />
+          <p class="text-sm text-yellow-700 dark:text-yellow-300">
+            No bookings found for this period. This invoice contains only expenses.
+          </p>
+        </div>
+      </div>
+      
       <!-- Payments Received by Partner -->
       <div v-if="partnerBookings.length">
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3 print:text-gray-900">💰 Payments Received by Partner</h3>
@@ -195,7 +205,15 @@
     <!-- Expense Breakdown Table -->
     <div class="mb-8">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 print:text-gray-900">💸 Expense Breakdown</h2>
-      <div class="overflow-x-auto">
+      
+      <!-- No Expenses Message -->
+      <div v-if="!invoice?.expenses?.length" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400 text-center">
+          No expenses recorded for this period.
+        </p>
+      </div>
+      
+      <div v-if="invoice?.expenses?.length" class="overflow-x-auto">
         <table class="w-full border-collapse border border-gray-300 dark:border-gray-600 print:border-gray-300">
           <thead>
             <tr class="bg-gray-50 dark:bg-gray-800 print:bg-gray-50">
@@ -332,70 +350,24 @@ interface Props {
 
 const props = defineProps<Props>()
 
-// Use prop data or fallback to mock data
+// Use prop data - no fallback to mock data
 const invoice: PartnerInvoice = props.invoice || {
-  partnerName: 'Kate',
-  period: 'July 2025',
-  sharePercentage: 20,
-  bookings: [
-    {
-      date: '2025-07-05',
-      guestName: 'Juan Dela Cruz',
-      unitName: 'Casa Aurea',
-      source: 'Direct',
-      baseAmount: 2199,
-      addons: 300,
-      total: 2499,
-      paymentReceivedBy: 'metrobnb',
-      actualAmountReceived: 1000
-    },
-    {
-      date: '2025-07-12',
-      guestName: 'Maria Santos',
-      unitName: 'Casa Aurea',
-      source: 'Airbnb',
-      baseAmount: 3500,
-      addons: 500,
-      total: 4000,
-      paymentReceivedBy: 'partner',
-      actualAmountReceived: 4000
-    },
-    {
-      date: '2025-07-20',
-      guestName: 'Robert Johnson',
-      unitName: 'Casa Aurea',
-      source: 'Direct',
-      baseAmount: 2800,
-      addons: 200,
-      total: 3000,
-      paymentReceivedBy: 'metrobnb',
-      actualAmountReceived: 3000
-    }
-  ],
-  expenses: [
-    {
-      date: '2025-07-06',
-      unitName: 'Casa Aurea',
-      type: 'laundry',
-      notes: 'towels & sheets',
-      amount: 300
-    },
-    {
-      date: '2025-07-15',
-      unitName: 'Casa Aurea',
-      type: 'cleaning',
-      notes: 'deep cleaning after checkout',
-      amount: 800
-    },
-    {
-      date: '2025-07-25',
-      unitName: 'Casa Aurea',
-      type: 'repair',
-      notes: 'fixed air conditioning',
-      amount: 1500
-    }
-  ]
+  partnerName: 'No Data',
+  period: 'No Data',
+  sharePercentage: 0,
+  bookings: [],
+  expenses: [],
+  journalEntries: []
 }
+
+// Debug: Check if we have actual data
+if (props.invoice) {
+  console.log('✅ Using real invoice data:', props.invoice)
+} else {
+  console.log('❌ No invoice data provided, using empty fallback')
+}
+
+
 
 // Computed values - separate by status and payment receiver
 const confirmedBookings = computed(() => 

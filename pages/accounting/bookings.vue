@@ -265,8 +265,9 @@ import CalendarLegend from '~/components/calendar/CalendarLegend.vue'
 
 const { handleSubmit } = useBookingForm()
 const { deleteBooking } = useAccountingStore()
-const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { getBookings, getBookingSources } = useApi()
+const { extractData, extractPagination, extractSummary } = useApiResponse()
 
 const bookingSources = ref([])
 
@@ -495,19 +496,15 @@ const loadBookings = async () => {
       ...(filters.invoiced && { invoiced: filters.invoiced === 'true' })
     })
     
-    if (result && typeof result === 'object' && 'data' in result) {
-      bookings.value = result.data
-      pagination.value = result.pagination
-      bookingSummary.value = result.summary || null
-      if (result.data.length === 0 && currentPage.value === 1) {
-        notifyInfo('No bookings found')
-      }
-    } else {
-      bookings.value = Array.isArray(result) ? result : []
-      bookingSummary.value = null
-      if (bookings.value.length === 0) {
-        notifyInfo('No bookings found')
-      }
+    // Use standard response handler
+    bookings.value = extractData(result)
+    pagination.value = extractPagination(result)
+    bookingSummary.value = extractSummary(result)
+    
+    console.log('✅ Bookings loaded:', bookings.value.length, 'items')
+    
+    if (bookings.value.length === 0 && currentPage.value === 1) {
+      notifyInfo('No bookings found')
     }
   } catch (error) {
     console.error('Failed to load bookings:', error)

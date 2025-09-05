@@ -2,7 +2,7 @@ interface User {
   id: string
   email: string
   name: string
-  role: 'admin' | 'manager' | 'staff' | 'partner'
+  role: 'owner' | 'admin' | 'staff' | 'partner'
   organization_id: string
   accessible_partners: string[]
   permissions: string[]
@@ -99,7 +99,9 @@ export const useAuth = () => {
   
   const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     const config = useRuntimeConfig()
-    const response = await fetch(`${config.public.apiBaseUrl}/api/auth${endpoint}`, {
+    const apiUrl = `${config.public.apiBaseUrl}/api/auth${endpoint}`
+    console.log('🌐 Making auth request to:', apiUrl)
+    const response = await fetch(apiUrl, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -136,11 +138,11 @@ export const useAuth = () => {
   }
   
   const hasPermission = (permission: string) => {
-    return user.value?.permissions?.includes(permission) || user.value?.role === 'admin' || false
+    return user.value?.permissions?.includes(permission) || ['owner', 'admin'].includes(user.value?.role) || false
   }
   
   const canAccessPartner = (partnerId: string) => {
-    if (user.value?.role === 'admin' || user.value?.role === 'manager') {
+    if (['owner', 'admin'].includes(user.value?.role)) {
       return true
     }
     return user.value?.accessible_partners?.includes(partnerId) || false
@@ -150,6 +152,7 @@ export const useAuth = () => {
   
   const login = async (credentials: LoginData) => {
     loading.value = true
+    console.log('🔐 Attempting login with:', { email: credentials.email, password: '***' })
     try {
       const response = await apiRequest('/login', {
         method: 'POST',
@@ -157,6 +160,7 @@ export const useAuth = () => {
       })
       
       console.log('🔐 Login response:', response)
+      console.log('🔐 Response type:', typeof response, 'Success:', response?.success)
       
       if (response.success && response.data) {
         // Store user and organization data
@@ -296,6 +300,51 @@ export const useAuth = () => {
     })
   }
   
+  const setInitialPassword = async (email: string, currentPassword: string, newPassword: string) => {
+    return await apiRequest('/set-password', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        email, 
+        current_password: currentPassword, 
+        new_password: newPassword 
+      })
+    })
+  }
+  
+  const inviteUser = async (userData: { email: string; name: string; role: string; partner_ids?: string[] }) => {
+    return await apiRequest('/invite-user', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    })
+  }
+  
+  const resetPassword = async (email: string) => {
+    return await apiRequest('/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    })
+  }
+  
+  const getCurrentUser = async () => {
+    if (!authToken.value) {
+      return null
+    }
+    
+    try {
+      const response = await apiRequest('/me')
+      if (response.success && response.data) {
+        user.value = response.data.user
+        organization.value = response.data.organization
+        userCookie.value = response.data.user
+        orgCookie.value = response.data.organization
+      }
+      return response.data
+    } catch (error) {
+      console.log('🔐 Failed to get current user:', error)
+      return null
+    }
+  }
+  
   return {
     user: readonly(user),
     organization: readonly(organization),
@@ -307,6 +356,10 @@ export const useAuth = () => {
     refreshAccessToken,
     initializeAuth,
     changePassword,
+    setInitialPassword,
+    resetPassword,
+    getCurrentUser,
+    inviteUser,
     hasPermission,
     canAccessPartner
   }

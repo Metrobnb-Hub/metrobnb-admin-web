@@ -139,9 +139,10 @@
 <script setup lang="ts">
 import type { JournalEntry } from '~/composables/api'
 
-const { partners, loadPartners } = useDataManager()
+const { partners, loadPartners } = useGlobalCache()
 const { getJournalEntries, deleteJournalEntry } = useApi()
 const { notifySuccess, notifyError } = useNotify()
+const { extractData } = useApiResponse()
 
 const loading = ref(true)
 const entries = ref<JournalEntry[]>([])
@@ -239,12 +240,9 @@ const loadData = async () => {
     
     const entriesResponse = await getJournalEntries()
     
-    // Handle response structure
-    if (entriesResponse && entriesResponse.data) {
-      entries.value = Array.isArray(entriesResponse.data) ? entriesResponse.data : []
-    } else {
-      entries.value = []
-    }
+    // Use standard response handler
+    entries.value = extractData(entriesResponse)
+    console.log('✅ Journal entries loaded:', entries.value.length, 'items')
     
     console.log('Loaded entries:', entries.value.length)
     console.log('First entry full data:', entries.value[0])

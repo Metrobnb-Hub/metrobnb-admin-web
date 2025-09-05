@@ -160,6 +160,7 @@ definePageMeta({
 
 const { user } = useAuth()
 const { getUnits, getPartners } = useApi()
+const { extractData } = useApiResponse()
 
 const loading = ref(false)
 const showCreateModal = ref(false)
@@ -237,9 +238,9 @@ const loadUnits = async () => {
   loading.value = true
   try {
     const response = await getUnits()
-    units.value = Array.isArray(response) ? response : []
+    units.value = extractData(response)
     
-    // Calculate summary (mock data for now)
+    // Calculate summary
     summary.value = {
       total_units: units.value.length,
       active_units: units.value.filter(u => u.status === 'active' || !u.status).length,
@@ -257,7 +258,7 @@ const loadUnits = async () => {
 const loadPartners = async () => {
   try {
     const response = await getPartners()
-    partners.value = Array.isArray(response) ? response : []
+    partners.value = extractData(response)
   } catch (error) {
     console.error('Error loading partners:', error)
     partners.value = []

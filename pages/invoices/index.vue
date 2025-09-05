@@ -55,6 +55,14 @@
         <div class="flex justify-between items-center">
           <div class="flex items-center space-x-4">
             <h3 class="text-lg font-semibold">Invoices</h3>
+            <UButton
+              @click="showDraftModal = true"
+              color="primary"
+              size="sm"
+            >
+              <UIcon name="i-heroicons-plus" class="mr-1" />
+              Create Draft
+            </UButton>
             <div class="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <button 
                 @click="switchToActive"
@@ -196,12 +204,20 @@
         </div>
       </div>
     </UCard>
+
+    <!-- Draft Invoice Modal -->
+    <UModal v-model="showDraftModal">
+      <InvoiceDraftModal
+        @close="showDraftModal = false"
+        @created="handleDraftCreated"
+      />
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
-const { getInvoices, settleInvoice, deleteInvoice, cancelInvoice, regenerateInvoice } = useApi()
-const { partners, loadPartners } = useDataManager()
+const { getInvoices, getArchivedInvoices, settleInvoice, deleteInvoice, cancelInvoice, refreshInvoice, finalizeInvoice, sendInvoice, regenerateInvoice } = useApi()
+const { partners, loadPartners } = useGlobalCache()
 
 const invoices = ref<any[]>([])
 const isLoading = ref(false)
@@ -212,6 +228,7 @@ const itemsPerPage = ref(10)
 const totalItems = ref(0)
 const showArchive = ref(false)
 const archivedCount = ref(0)
+const showDraftModal = ref(false)
 
 const statusOptions = computed(() => {
   if (showArchive.value) {
@@ -221,7 +238,9 @@ const statusOptions = computed(() => {
   }
   return [
     { label: 'All Status', value: 'all' },
-    { label: 'Pending', value: 'pending' },
+    { label: 'Draft', value: 'draft' },
+    { label: 'Finalized', value: 'finalized' },
+    { label: 'Sent', value: 'sent' },
     { label: 'Paid', value: 'paid' }
   ]
 })
@@ -259,9 +278,11 @@ const paidCount = computed(() =>
 
 const getStatusColor = (status: string) => {
   const colors = {
-    'pending': 'orange',
+    'draft': 'gray',
+    'finalized': 'blue',
+    'sent': 'yellow',
     'paid': 'green',
-    'cancelled': 'gray'
+    'cancelled': 'red'
   }
   return colors[status] || 'gray'
 }
@@ -279,29 +300,43 @@ const getInvoiceActions = (invoice: any) => {
     }]
   ]
   
-  if (invoice.status === 'pending') {
+  if (invoice.status === 'draft') {
+    actions.push([
+      {
+        label: 'Refresh Data',
+        icon: 'i-heroicons-arrow-path',
+        click: () => refreshInvoiceAction(invoice)
+      },
+      {
+        label: 'Finalize',
+        icon: 'i-heroicons-lock-closed',
+        click: () => finalizeInvoiceAction(invoice)
+      }
+    ])
+    actions.push([
+      {
+        label: 'Delete Draft',
+        icon: 'i-heroicons-trash',
+        click: () => deleteInvoiceAction(invoice)
+      }
+    ])
+  } else if (invoice.status === 'finalized') {
+    actions.push([
+      {
+        label: 'Send Invoice',
+        icon: 'i-heroicons-paper-airplane',
+        click: () => sendInvoiceAction(invoice)
+      }
+    ])
+  } else if (invoice.status === 'sent') {
     actions.push([
       {
         label: 'Mark as Paid',
         icon: 'i-heroicons-check-circle',
         click: () => markAsPaid(invoice)
-      },
-      {
-        label: 'Regenerate',
-        icon: 'i-heroicons-arrow-path',
-        click: () => regenerateInvoiceAction(invoice)
-      }
-    ])
-    actions.push([
-      {
-        label: 'Cancel',
-        icon: 'i-heroicons-x-circle',
-        click: () => deleteInvoiceAction(invoice) // Now cancels instead of deletes
       }
     ])
   }
-  
-  // No actions for cancelled invoices in archive (read-only)
   
   return actions
 }
@@ -322,15 +357,42 @@ const markAsPaid = async (invoice: any) => {
   }
 }
 
-const regenerateInvoiceAction = async (invoice: any) => {
+const refreshInvoiceAction = async (invoice: any) => {
   const { notifySuccess, notifyError } = useNotify()
   
   try {
-    const result = await regenerateInvoice(invoice.id)
+    const result = await refreshInvoice(invoice.id)
     await loadInvoices()
-    notifySuccess(`Invoice regenerated: ${result.data.invoice_number}`)
+    notifySuccess('Invoice data refreshed successfully')
   } catch (error) {
-    notifyError('Failed to regenerate invoice')
+    notifyError('Failed to refresh invoice data')
+  }
+}
+
+const finalizeInvoiceAction = async (invoice: any) => {
+  const { notifySuccess, notifyError } = useNotify()
+  
+  const confirmed = confirm(`Finalize Invoice ${invoice.invoice_number}?\n\nThis will lock the invoice and prevent further edits.`)
+  if (!confirmed) return
+  
+  try {
+    await finalizeInvoice(invoice.id)
+    await loadInvoices()
+    notifySuccess('Invoice finalized successfully')
+  } catch (error) {
+    notifyError('Failed to finalize invoice')
+  }
+}
+
+const sendInvoiceAction = async (invoice: any) => {
+  const { notifySuccess, notifyError } = useNotify()
+  
+  try {
+    await sendInvoice(invoice.id)
+    await loadInvoices()
+    notifySuccess('Invoice marked as sent')
+  } catch (error) {
+    notifyError('Failed to send invoice')
   }
 }
 
@@ -376,29 +438,46 @@ const deleteInvoiceAction = async (invoice: any) => {
 const loadInvoices = async () => {
   try {
     isLoading.value = true
+    console.log('🔄 Loading invoices...', { showArchive: showArchive.value, filterStatus: filterStatus.value, filterPartner: filterPartner.value })
     
-    const params = {
-      page: currentPage.value,
-      limit: itemsPerPage.value,
+    const filters = {
       ...(filterStatus.value !== 'all' && { status: filterStatus.value }),
-      ...(filterPartner.value !== 'all' && { partner_id: filterPartner.value })
+      ...(filterPartner.value !== 'all' && { partner_id: filterPartner.value }),
+      page: currentPage.value,
+      limit: itemsPerPage.value
     }
     
     // Use archive endpoint if viewing archive
     const result = showArchive.value 
-      ? await getArchivedInvoices(params.partner_id)
-      : await getInvoices(params.partner_id, params.status)
+      ? await getArchivedInvoices(filters)
+      : await getInvoices(filters)
     
-    // Handle both paginated and non-paginated responses
-    if (result.items) {
-      invoices.value = result.items
-      totalItems.value = result.pagination?.total_items || result.items.length
+    console.log('📊 Invoice API result:', result)
+    console.log('📊 Result type:', typeof result, 'Array?', Array.isArray(result))
+    
+    // Handle paginated response from new API
+    if (result && result.success && result.data) {
+      if (result.data.items) {
+        // Paginated response
+        invoices.value = result.data.items
+        totalItems.value = result.data.pagination?.total || result.data.items.length
+      } else if (Array.isArray(result.data)) {
+        // Array response (fallback)
+        invoices.value = result.data
+        totalItems.value = result.data.length
+      } else {
+        invoices.value = []
+        totalItems.value = 0
+      }
     } else {
-      invoices.value = Array.isArray(result) ? result : []
-      totalItems.value = invoices.value.length
+      console.warn('⚠️ Unexpected invoice result format:', result)
+      invoices.value = []
+      totalItems.value = 0
     }
+    
+    console.log('✅ Invoices loaded:', invoices.value.length, 'items')
   } catch (error) {
-    console.error('Failed to load invoices:', error)
+    console.error('❌ Failed to load invoices:', error)
     invoices.value = []
     totalItems.value = 0
     
@@ -442,6 +521,30 @@ const onFilterChange = () => {
   currentPage.value = 1
   loadInvoices()
 }
+
+const handleDraftCreated = (invoice: any) => {
+  console.log('🎯 Draft created response:', invoice)
+  showDraftModal.value = false
+  const { notifySuccess } = useNotify()
+  
+  if (invoice?.id) {
+    notifySuccess(`Draft invoice created: ${invoice.invoice_number || invoice.id}`)
+    // Navigate to the draft invoice preview
+    navigateTo(`/invoices/${invoice.id}`)
+  } else if (invoice?.data?.id) {
+    // Handle nested response structure
+    notifySuccess(`Draft invoice created: ${invoice.data.invoice_number || invoice.data.id}`)
+    navigateTo(`/invoices/${invoice.data.id}`)
+  } else {
+    console.error('❌ No invoice ID in response:', invoice)
+    const { notifyError } = useNotify()
+    notifyError('Draft created but could not navigate to invoice. Check the invoices list.')
+    // Refresh the invoice list instead
+    loadInvoices()
+  }
+}
+
+
 
 onMounted(async () => {
   await Promise.all([

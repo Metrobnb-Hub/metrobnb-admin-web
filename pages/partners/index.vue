@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 
 const showInvoiceModal = ref(false)
 const searchQuery = ref('')

@@ -106,7 +106,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const { getDraftExpenses, completeExpense: completeExpenseApi } = useApi()
-const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { notifySuccess, notifyError } = useNotify()
 
 const expenseId = route.params.id as string

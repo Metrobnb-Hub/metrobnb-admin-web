@@ -81,8 +81,9 @@
 </template>
 
 <script setup lang="ts">
-const { partners, loadPartners } = useDataManager()
+const { partners, loadPartners } = useGlobalCache()
 const { getBookings } = useApi()
+const { extractData } = useApiResponse()
 
 const bookings = ref([])
 const totalEarnings = ref(0)
@@ -125,7 +126,7 @@ const loadData = async () => {
       loadPartners()
     ])
     
-    bookings.value = Array.isArray(apiBookings) ? apiBookings : []
+    bookings.value = extractData(apiBookings)
     totalEarnings.value = bookings.value.reduce((sum, booking) => sum + getBookingTotal(booking), 0)
   } catch (error) {
     console.error('Failed to load data:', error)

@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-const { partners, loadPartners } = useDataManager()
+const { partners, loadPartners } = useGlobalCache()
 const { createPartner } = useApi()
 const { notifySuccess, notifyError } = useNotify()
 const router = useRouter()

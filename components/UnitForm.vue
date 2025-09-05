@@ -341,6 +341,7 @@ import type { Unit } from '~/types/api'
 
 const props = defineProps<{
   unit?: Unit | null
+  preselectedPartner?: string
 }>()
 
 const emit = defineEmits<{
@@ -396,6 +397,11 @@ if (props.unit) {
   amenitiesText.value = props.unit.amenities?.join(', ') || ''
 }
 
+// Set preselected partner if provided
+if (props.preselectedPartner) {
+  form.value.partner_id = props.preselectedPartner
+}
+
 const partnerOptions = computed(() => {
   return partners.value.map(partner => ({
     label: partner.name,
@@ -418,6 +424,10 @@ const statusOptions = [
 ]
 
 const canChangePartner = computed(() => {
+  // If preselected partner, don't allow change unless admin/manager
+  if (props.preselectedPartner && !isEdit.value) {
+    return ['admin', 'manager'].includes(user.value?.role || '')
+  }
   return !isEdit.value || ['admin', 'manager'].includes(user.value?.role || '')
 })
 

@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { createExpense, uploadFile } = useApi()
 const router = useRouter()
 const toast = useToast()

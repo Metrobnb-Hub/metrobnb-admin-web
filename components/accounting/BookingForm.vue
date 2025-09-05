@@ -192,7 +192,7 @@ const state = reactive({
   notes: ''
 })
 
-const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { getBookingSources, getPaymentMethods } = useApi()
 
 const bookingSources = ref([])

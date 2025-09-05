@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-2xl mx-auto">
+  <div class="max-w-6xl mx-auto">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Add Unit</h1>
       <p class="text-gray-600 dark:text-gray-400">
@@ -7,37 +7,13 @@
       </p>
     </div>
 
-    <UCard v-if="partner">
-      <UForm :schema="schema" :state="state" @submit="onSubmit">
-        <div class="space-y-4">
-          <UFormGroup label="Partner" name="partner">
-            <UInput :model-value="partner.name" disabled />
-          </UFormGroup>
-          
-          <UFormGroup label="Unit Name" name="name" required>
-            <UInput 
-              v-model="state.name" 
-              placeholder="e.g., Casa Aurea – Azure Bahamas 945" 
-            />
-          </UFormGroup>
-          
-          <UFormGroup label="Location" name="location">
-            <UInput v-model="state.location" placeholder="Enter location (optional)" />
-          </UFormGroup>
-          
-          <UFormGroup label="Notes" name="notes">
-            <UTextarea v-model="state.notes" placeholder="Additional notes (optional)" />
-          </UFormGroup>
-        </div>
-        
-        <div class="flex justify-end space-x-3 mt-6">
-          <UButton color="gray" variant="ghost" @click="$router.push(`/partners/${partnerId}`)">
-            Skip & View Profile
-          </UButton>
-          <UButton type="submit" color="primary">Add Unit</UButton>
-        </div>
-      </UForm>
-    </UCard>
+    <div v-if="partner">
+      <UnitForm
+        :preselected-partner="partnerId"
+        @close="handleClose"
+        @saved="handleSaved"
+      />
+    </div>
     
     <UCard v-else>
       <div class="text-center py-8">
@@ -49,56 +25,33 @@
 </template>
 
 <script setup lang="ts">
-import { z } from 'zod'
-
 const route = useRoute()
+const router = useRouter()
 const partnerId = route.params.id as string
 
-const { getPartnerByIdSync, loadFromStorage: loadPartners } = usePartnerStore()
-const { addUnit } = useUnitStore()
+const { getPartners } = useApi()
+const partner = ref(null)
 
-const schema = z.object({
-  name: z.string().min(1, 'Unit name is required'),
-  location: z.string().optional(),
-  notes: z.string().optional()
-})
+const handleClose = () => {
+  router.push(`/partners/${partnerId}`)
+}
 
-const state = reactive({
-  name: '',
-  location: '',
-  notes: ''
-})
+const handleSaved = () => {
+  const { notifySuccess } = useNotify()
+  notifySuccess('Unit added successfully')
+  router.push(`/partners/${partnerId}`)
+}
 
-const partner = computed(() => getPartnerByIdSync(partnerId))
-
-const onSubmit = async () => {
+const loadPartner = async () => {
   try {
-    await addUnit({
-      name: state.name,
-      location: state.location || undefined,
-      notes: state.notes || undefined,
-      partnerId
-    })
-    
-    const toast = useToast()
-    toast.add({
-      title: 'Unit added',
-      description: `${state.name} has been added successfully`,
-      color: 'green'
-    })
-    
-    await navigateTo(`/partners/${partnerId}`)
+    const partners = await getPartners()
+    partner.value = partners.find(p => p.id === partnerId)
   } catch (error) {
-    const toast = useToast()
-    toast.add({
-      title: 'Error',
-      description: 'Failed to add unit',
-      color: 'red'
-    })
+    console.error('Error loading partner:', error)
   }
 }
 
 onMounted(() => {
-  loadPartners()
+  loadPartner()
 })
 </script>

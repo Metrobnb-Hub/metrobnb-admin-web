@@ -115,7 +115,7 @@ const csvPreview = ref('')
 const isImporting = ref(false)
 const importResults = ref(null)
 
-const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { importAirbnbBookings } = useApi()
 
 const partnerOptions = computed(() => {

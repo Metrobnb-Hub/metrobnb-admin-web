@@ -53,6 +53,7 @@ definePageMeta({
 })
 
 const { getServices, createService, updateService, deleteService: apiDeleteService } = useApi()
+const { extractData } = useApiResponse()
 const toast = useToast()
 
 const services = ref<Service[]>([])
@@ -64,7 +65,8 @@ const form = ref({
 
 const loadServices = async () => {
   try {
-    services.value = await getServices()
+    const result = await getServices()
+    services.value = extractData(result)
   } catch (error) {
     toast.add({
       title: 'Error',
