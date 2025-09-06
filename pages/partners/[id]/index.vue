@@ -58,6 +58,65 @@
         </div>
       </UCard>
 
+      <!-- Invoices Section -->
+      <UCard>
+        <template #header>
+          <div class="flex justify-between items-center">
+            <h3 class="text-lg font-semibold">Recent Invoices</h3>
+            <UButton to="/invoices" size="sm" color="gray" variant="outline">View All</UButton>
+          </div>
+        </template>
+        
+        <div v-if="partnerInvoices.length" class="space-y-4">
+          <div 
+            v-for="invoice in partnerInvoices.slice(0, 3)" 
+            :key="invoice.id"
+            class="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <div class="flex items-center space-x-3">
+                  <h4 class="font-medium text-gray-900 dark:text-white">{{ invoice.invoice_number }}</h4>
+                  <UBadge :color="getPartnerStatusColor(invoice.status)" size="xs">
+                    {{ getPartnerStatusText(invoice.status) }}
+                  </UBadge>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {{ invoice.period }} • ₱{{ parseFloat(invoice.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                  {{ getPartnerStatusDescription(invoice.status) }}
+                </p>
+              </div>
+              <div class="flex space-x-2">
+                <UButton 
+                  v-if="invoice.status === 'sent'"
+                  @click="viewInvoice(invoice)"
+                  size="sm" 
+                  color="primary"
+                >
+                  Review Now
+                </UButton>
+                <UButton 
+                  v-else
+                  @click="viewInvoice(invoice)"
+                  size="sm" 
+                  color="gray" 
+                  variant="outline"
+                >
+                  View
+                </UButton>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div v-else class="text-center py-8">
+          <p class="text-gray-500 dark:text-gray-400 mb-4">No invoices generated yet</p>
+          <p class="text-sm text-gray-400 dark:text-gray-500">Invoices will appear here once MetroBNB generates them</p>
+        </div>
+      </UCard>
+
       <!-- Units Section -->
       <UCard>
         <template #header>
@@ -155,7 +214,9 @@ const route = useRoute()
 const partnerId = route.params.id as string
 
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
-const { updateUnit: apiUpdateUnit, deleteUnit: apiDeleteUnit } = useApi()
+const { updateUnit: apiUpdateUnit, deleteUnit: apiDeleteUnit, getInvoices } = useApi()
+
+const partnerInvoices = ref([])
 const { notifySuccess, notifyError } = useNotify()
 
 const isLoading = ref(true)
@@ -180,6 +241,42 @@ const partnerUnits = computed(() => {
   return units.value.filter(u => (u.partnerId || u.partner_id) === partnerId) || []
 })
 
+const getPartnerStatusText = (status: string) => {
+  // Always show partner perspective on partner dashboard - action-oriented
+  const statusMap = {
+    'draft': 'Being Prepared',
+    'finalized': 'Almost Ready',
+    'sent': 'For Your Review',
+    'paid': 'All Done ✓'
+  }
+  return statusMap[status] || status
+}
+
+const getPartnerStatusColor = (status: string) => {
+  const colorMap = {
+    'draft': 'gray',
+    'finalized': 'blue', 
+    'sent': 'orange',
+    'paid': 'green'
+  }
+  return colorMap[status] || 'gray'
+}
+
+const getPartnerStatusDescription = (status: string) => {
+  // Partner-focused descriptions with clear actions
+  const descriptionMap = {
+    'draft': 'We\'re working on your invoice - sit tight!',
+    'finalized': 'Your invoice is ready and being finalized',
+    'sent': 'Please review your invoice and let us know if everything looks good',
+    'paid': 'Thank you! This invoice is complete'
+  }
+  return descriptionMap[status] || 'Status unknown'
+}
+
+const viewInvoice = (invoice: any) => {
+  navigateTo(`/invoices/${invoice.id}`)
+}
+
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A'
   try {
@@ -194,12 +291,27 @@ const loadData = async () => {
   try {
     await Promise.all([
       loadPartners(),
-      loadUnits()
+      loadUnits(),
+      loadPartnerInvoices()
     ])
   } catch (error) {
     console.error('Failed to load data:', error)
   } finally {
     isLoading.value = false
+  }
+}
+
+const loadPartnerInvoices = async () => {
+  try {
+    const result = await getInvoices({ partner_id: partnerId, limit: 5 })
+    if (result && result.success && result.data) {
+      partnerInvoices.value = result.data.items || result.data || []
+    } else {
+      partnerInvoices.value = []
+    }
+  } catch (error) {
+    console.error('Failed to load partner invoices:', error)
+    partnerInvoices.value = []
   }
 }
 

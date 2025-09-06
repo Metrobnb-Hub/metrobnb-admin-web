@@ -29,11 +29,11 @@ export interface CreateJournalEntryRequest {
 
 const apiClient = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   try {
-    const { $api } = useNuxtApp()
+    const nuxtApp = useNuxtApp()
     const separator = endpoint.includes('?') ? '&' : '?'
     const url = `${endpoint}${separator}_t=${Date.now()}`
     
-    const response = await $api(url, {
+    const response = await nuxtApp.$api(url, {
       ...options,
       headers: {
         'Cache-Control': 'no-cache',

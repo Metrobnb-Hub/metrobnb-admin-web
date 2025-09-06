@@ -25,7 +25,7 @@
               Back to Invoices
             </UButton>
             <UBadge :color="getStatusColor(invoiceData.status)" size="lg">
-              {{ invoiceData.status || 'draft' }}
+              {{ getStatusText(invoiceData.status || 'draft', isPartnerUser) }}
             </UBadge>
           </div>
           
@@ -129,6 +129,9 @@
 const route = useRoute()
 const { getInvoiceById, refreshInvoice, finalizeInvoice, sendInvoice: sendInvoiceAPI, settleInvoice } = useApi()
 const { notifyError, notifySuccess } = useNotify()
+const { user } = useAuth()
+
+const isPartnerUser = computed(() => user.value?.role === 'partner')
 
 const invoiceData = ref(null)
 const isLoading = ref(true)
@@ -207,11 +210,35 @@ const getStatusColor = (status: string) => {
   const colors = {
     'draft': 'gray',
     'finalized': 'blue', 
-    'sent': 'purple',
+    'sent': 'orange',
     'paid': 'green',
     'cancelled': 'red'
   }
   return colors[status] || 'gray'
+}
+
+const getStatusText = (status: string, isPartnerView = false) => {
+  if (isPartnerView) {
+    // Partner's perspective - action-oriented
+    const partnerStatusMap = {
+      'draft': 'Being Prepared',
+      'finalized': 'Almost Ready',
+      'sent': 'For Your Review',
+      'paid': 'All Done ✓',
+      'cancelled': 'Cancelled'
+    }
+    return partnerStatusMap[status] || status
+  } else {
+    // Admin's perspective
+    const adminStatusMap = {
+      'draft': 'Draft',
+      'finalized': 'Finalized',
+      'sent': 'Sent',
+      'paid': 'Paid',
+      'cancelled': 'Cancelled'
+    }
+    return adminStatusMap[status] || status
+  }
 }
 
 const formatAmount = (amount: number) => {

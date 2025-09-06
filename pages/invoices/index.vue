@@ -56,6 +56,7 @@
           <div class="flex items-center space-x-4">
             <h3 class="text-lg font-semibold">Invoices</h3>
             <UButton
+              v-if="!isPartnerUser"
               @click="showDraftModal = true"
               color="primary"
               size="sm"
@@ -63,7 +64,7 @@
               <UIcon name="i-heroicons-plus" class="mr-1" />
               Create Draft
             </UButton>
-            <div class="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <div v-if="!isPartnerUser" class="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <button 
                 @click="switchToActive"
                 :class="[
@@ -136,7 +137,7 @@
                 <div>
                   <span class="text-gray-500 dark:text-gray-400">Status:</span>
                   <UBadge :color="getStatusColor(invoice.status)" size="xs" class="ml-1">
-                    {{ invoice.status }}
+                    {{ getStatusText(invoice.status, isPartnerUser) }}
                   </UBadge>
                 </div>
                 <div>
@@ -170,7 +171,7 @@
             
             <template #status-data="{ row }">
               <UBadge :color="getStatusColor(row.status)" size="xs">
-                {{ row.status }}
+                {{ getStatusText(row.status, isPartnerUser) }}
               </UBadge>
             </template>
             
@@ -280,12 +281,40 @@ const getStatusColor = (status: string) => {
   const colors = {
     'draft': 'gray',
     'finalized': 'blue',
-    'sent': 'yellow',
+    'sent': 'orange',
     'paid': 'green',
     'cancelled': 'red'
   }
   return colors[status] || 'gray'
 }
+
+const getStatusText = (status: string, isPartnerView = false) => {
+  if (isPartnerView) {
+    // Partner's perspective - action-oriented
+    const partnerStatusMap = {
+      'draft': 'Being Prepared',
+      'finalized': 'Almost Ready',
+      'sent': 'For Your Review',
+      'paid': 'All Done ✓',
+      'cancelled': 'Cancelled'
+    }
+    return partnerStatusMap[status] || status
+  } else {
+    // Admin's perspective
+    const adminStatusMap = {
+      'draft': 'Draft',
+      'finalized': 'Finalized',
+      'sent': 'Sent',
+      'paid': 'Paid',
+      'cancelled': 'Cancelled'
+    }
+    return adminStatusMap[status] || status
+  }
+}
+
+// Check if current user is a partner
+const { user } = useAuth()
+const isPartnerUser = computed(() => user.value?.role === 'partner')
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
