@@ -45,9 +45,9 @@
           
           <!-- Receipt Preview/Upload -->
           <UFormGroup label="Receipt" name="receipt" class="md:col-span-2">
-            <div v-if="state.receiptUrl" class="space-y-3">
+            <div v-if="state.receiptUrl || state.receiptFullUrl" class="space-y-3">
               <div class="relative inline-block">
-                <img :src="state.receiptUrl" alt="Receipt" class="w-32 h-32 object-cover rounded-lg border" />
+                <img :src="state.receiptFullUrl || state.receiptUrl" alt="Receipt" class="w-32 h-32 object-cover rounded-lg border" />
                 <UButton 
                   @click="removeReceipt" 
                   color="red" 
@@ -140,6 +140,7 @@ const state = reactive({
   paidDate: '',
   paidBy: 'metrobnb',
   receiptUrl: '',
+  receiptFullUrl: '',
   receiptPublicId: '',
   notes: ''
 })
@@ -174,7 +175,7 @@ const paidByOptions = [
   { label: 'Owner', value: 'owner' }
 ]
 
-const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { updateExpense, uploadFile } = useApi()
 
 const partnerOptions = computed(() => {
@@ -229,6 +230,7 @@ const handleFileUpload = async (event: Event) => {
 
 const removeReceipt = () => {
   state.receiptUrl = ''
+  state.receiptFullUrl = ''
   state.receiptPublicId = ''
 }
 
@@ -288,8 +290,9 @@ watch(() => props.expense, (expense) => {
       paid: expense.paid ? 'true' : 'false',
       paidDate: expense.paidDate || '',
       receiptUrl: expense.receipt_url || '',
+      receiptFullUrl: expense.receipt_full_url || '',
       receiptPublicId: expense.receipt_public_id || '',
-      notes: expense.notes || ''
+      notes: expense.notes || expense.note || ''
     })
     
     console.log('State after assignment:', state)

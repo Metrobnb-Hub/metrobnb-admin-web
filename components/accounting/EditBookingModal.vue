@@ -154,7 +154,7 @@ const isOpen = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const { partners, units, loadPartners, loadUnits } = useDataManager()
+const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { updateBooking, getBookingSources, getPaymentMethods } = useApi()
 
 const paymentMethods = ref([])
@@ -174,7 +174,9 @@ watch(() => props.modelValue, async (isOpen) => {
 
 const loadBookingSources = async () => {
   try {
-    bookingSources.value = await getBookingSources()
+    const { $api } = useNuxtApp()
+    const result = await $api('/api/booking-sources')
+    bookingSources.value = result.data || []
   } catch (error) {
     console.error('Failed to load booking sources:', error)
     bookingSources.value = []
@@ -183,7 +185,9 @@ const loadBookingSources = async () => {
 
 const loadPaymentMethods = async () => {
   try {
-    paymentMethods.value = await getPaymentMethods()
+    const { $api } = useNuxtApp()
+    const result = await $api('/api/payment-methods')
+    paymentMethods.value = result.data || []
   } catch (error) {
     console.error('Failed to load payment methods:', error)
     paymentMethods.value = []
@@ -355,20 +359,20 @@ watch(() => props.booking, (booking) => {
     isInitializing.value = true
     
     Object.assign(state, {
-      guestName: booking.guest_name || booking.guestName || '',
-      bookingDate: booking.booking_date || booking.bookingDate || '',
-      startDate: booking.start_date || booking.startDate || '',
-      endDate: booking.end_date || booking.endDate || '',
-      amount: parseFloat(booking.base_amount || booking.baseAmount) || 0,
-      paymentMethod: booking.payment_method_id || booking.paymentMethodId || booking.paymentMethod?.id || '',
-      partner: booking.partner_id || booking.partnerId || '',
-      unitId: booking.unit_id || booking.unitId || '',
-      bookingSource: booking.booking_source_id || booking.bookingSourceId || '',
+      guestName: booking.guest_name || '',
+      bookingDate: booking.booking_date || '',
+      startDate: booking.start_date || '',
+      endDate: booking.end_date || '',
+      amount: parseFloat(booking.base_amount) || 0,
+      paymentMethod: booking.payment_method_id || booking.payment_method?.id || '',
+      partner: booking.partner_id || '',
+      unitId: booking.unit_id || '',
+      bookingSource: booking.booking_source_id || '',
       addons: Array.isArray(booking.addons) ? booking.addons : [],
-      bookingStatus: booking.booking_status || booking.bookingStatus || 'confirmed',
-      paymentStatus: booking.payment_status || booking.paymentStatus || 'unpaid',
-      amountPaid: parseFloat(booking.amount_paid || booking.amountPaid) || 0,
-      paymentReceivedBy: booking.payment_received_by || booking.paymentReceivedBy || 'partner',
+      bookingStatus: booking.booking_status || 'confirmed',
+      paymentStatus: booking.payment_status || 'unpaid',
+      amountPaid: parseFloat(booking.amount_paid) || 0,
+      paymentReceivedBy: booking.payment_received_by || 'partner',
       invoiced: booking.invoiced || false,
       notes: booking.notes || ''
     })

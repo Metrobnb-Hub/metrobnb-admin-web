@@ -778,8 +778,8 @@ const togglePayment = async (expense: any) => {
 }
 
 const viewReceipt = (expense: any) => {
-  if (expense.receipt_url) {
-    window.open(expense.receipt_url, '_blank')
+  if (expense.receipt_full_url) {
+    window.open(expense.receipt_full_url, '_blank')
   }
 }
 

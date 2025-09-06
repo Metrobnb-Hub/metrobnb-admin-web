@@ -288,14 +288,10 @@
         <p class="text-sm text-gray-600 dark:text-gray-400">
           {{ (partnerBookings?.length || 0) + (metrobnbBookings?.length || 0) }} bookings, {{ invoice?.expenses?.length || 0 }} expenses
         </p>
-        <div class="flex justify-center gap-4">
+        <div class="flex justify-center">
           <UButton @click="printInvoice" color="primary" size="lg">
             <UIcon name="i-heroicons-printer" class="mr-2" />
             Print Invoice
-          </UButton>
-          <UButton @click="downloadInvoice" color="green" size="lg">
-            <UIcon name="i-heroicons-arrow-down-tray" class="mr-2" />
-            Download PDF
           </UButton>
         </div>
       </div>
@@ -386,9 +382,12 @@ const metrobnbBookings = computed(() =>
   confirmedBookings.value.filter(booking => booking.paymentReceivedBy === 'metrobnb')
 )
 
-const totalGrossEarnings = computed(() => 
-  confirmedBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
-)
+const totalGrossEarnings = computed(() => {
+  if (invoice?.summary?.total_gross_earnings !== undefined) {
+    return parseFloat(invoice.summary.total_gross_earnings)
+  }
+  return confirmedBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
+})
 
 const totalRefunds = computed(() => 
   canceledRefundedBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
@@ -398,21 +397,33 @@ const partnerPaymentsTotal = computed(() =>
   partnerBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
 )
 
-const totalReceivedByMetroBNB = computed(() => 
-  metrobnbBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
-)
+const totalReceivedByMetroBNB = computed(() => {
+  if (invoice?.summary?.total_received_by_metrobnb !== undefined) {
+    return parseFloat(invoice.summary.total_received_by_metrobnb)
+  }
+  return metrobnbBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
+})
 
-const totalExpenses = computed(() => 
-  invoice?.expenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0
-)
+const totalExpenses = computed(() => {
+  if (invoice?.summary?.total_expenses !== undefined) {
+    return parseFloat(invoice.summary.total_expenses)
+  }
+  return invoice?.expenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0
+})
 
-const metroBNBShare = computed(() => 
-  Math.round(totalGrossEarnings.value * (invoice.sharePercentage / 100))
-)
+const metroBNBShare = computed(() => {
+  if (invoice?.summary?.metrobnb_share !== undefined) {
+    return parseFloat(invoice.summary.metrobnb_share)
+  }
+  return Math.round(totalGrossEarnings.value * (invoice.sharePercentage / 100))
+})
 
 const netDue = computed(() => {
-  // Total Income × Share % + Expenses - Adjustments - MetroBNB Payments
-  // Credits reduce what partner owes, Debits increase what partner owes
+  // Use backend's calculated net_due if available, otherwise calculate
+  if (invoice?.summary?.net_due !== undefined) {
+    return parseFloat(invoice.summary.net_due)
+  }
+  // Fallback calculation
   return metroBNBShare.value + totalExpenses.value - netJournalEntries.value - totalReceivedByMetroBNB.value
 })
 
@@ -448,6 +459,9 @@ const sortedJournalEntries = computed(() =>
 )
 
 const netJournalEntries = computed(() => {
+  if (invoice?.summary?.net_journal_entries !== undefined) {
+    return parseFloat(invoice.summary.net_journal_entries)
+  }
   if (!invoice?.journalEntries) return 0
   return invoice.journalEntries.reduce((sum, entry) => {
     return entry.type === 'credit' ? sum + entry.amount : sum - entry.amount

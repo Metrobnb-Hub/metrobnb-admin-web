@@ -40,7 +40,8 @@
         
         <!-- Receipt Upload -->
         <UFormGroup label="Receipt" name="receipt">
-          <div v-if="!form.receiptUrl" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6">
+          <!-- No file selected -->
+          <div v-if="!selectedFile" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6">
             <div class="text-center">
               <UIcon name="i-heroicons-photo" class="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <div class="space-y-2">
@@ -49,28 +50,28 @@
                   type="file"
                   accept="image/*"
                   class="hidden"
-                  @change="handleFileUpload"
+                  @change="handleFileSelect"
                 />
-                <UButton @click="$refs.fileInput.click()" variant="outline" :loading="uploading">
+                <UButton @click="$refs.fileInput.click()" variant="outline">
                   <UIcon name="i-heroicons-camera" class="mr-2" />
-                  Upload Receipt
+                  Select Receipt
                 </UButton>
                 <p class="text-sm text-gray-500">PNG, JPG up to 10MB</p>
               </div>
             </div>
           </div>
           
+          <!-- File selected -->
           <div v-else class="relative">
-            <img :src="form.receiptUrl" alt="Receipt" class="w-full h-48 object-cover rounded-lg" />
-            <UButton 
-              @click="removeReceipt" 
-              color="red" 
-              variant="solid" 
-              size="sm"
-              class="absolute top-2 right-2"
-            >
-              <UIcon name="i-heroicons-x-mark" />
-            </UButton>
+            <img :src="previewUrl" alt="Receipt Preview" class="w-full h-48 object-cover rounded-lg" />
+            <div class="absolute top-2 right-2 flex gap-2">
+              <UButton @click="removeReceipt" color="red" variant="solid" size="sm">
+                <UIcon name="i-heroicons-x-mark" />
+              </UButton>
+            </div>
+            <div class="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-sm">
+              {{ selectedFile.name }}
+            </div>
           </div>
         </UFormGroup>
         
@@ -91,7 +92,8 @@ const router = useRouter()
 const toast = useToast()
 
 const loading = ref(false)
-const uploading = ref(false)
+const selectedFile = ref<File | null>(null)
+const previewUrl = ref('')
 const form = ref({
   partnerId: '',
   unitId: '',
@@ -100,8 +102,6 @@ const form = ref({
   amount: 0,
   paidBy: 'metrobnb',
   billable: true,
-  receiptUrl: '',
-  receiptPublicId: '',
   notes: ''
 })
 
@@ -135,32 +135,29 @@ const paidByOptions = [
   { label: 'Owner', value: 'owner' }
 ]
 
-const handleFileUpload = async (event: Event) => {
-  const { notifySuccess, notifyError } = useNotify()
+const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
   if (!file) return
 
-  uploading.value = true
-  try {
-    const result = await uploadFile(file, 'receipts')
-    form.value.receiptUrl = result.public_url
-    form.value.receiptPublicId = result.file_id
-    notifySuccess('Receipt uploaded successfully')
-  } catch (error) {
-    console.error('Upload failed:', error)
-    notifyError('Failed to upload receipt')
-  } finally {
-    uploading.value = false
-  }
+  selectedFile.value = file
+  previewUrl.value = URL.createObjectURL(file)
 }
 
 const removeReceipt = () => {
-  form.value.receiptUrl = ''
-  form.value.receiptPublicId = ''
+  selectedFile.value = null
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+  // Reset file input
+  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+  if (fileInput) fileInput.value = ''
 }
 
-const handleSubmit = async () => {
+const handleSubmit = async (event: any) => {
+  console.log('🔥 handleSubmit called!', event)
+  event.preventDefault()
   const { notifySuccess, notifyError } = useNotify()
   
   if (!form.value.partnerId || !form.value.unitId || !form.value.type || !form.value.amount) {
@@ -170,23 +167,47 @@ const handleSubmit = async () => {
 
   loading.value = true
   try {
-    await createExpense({
+    const formData = new FormData()
+    formData.append('partner_id', form.value.partnerId)
+    formData.append('unit_id', form.value.unitId)
+    formData.append('amount', form.value.amount.toString())
+    formData.append('type', form.value.type)
+    formData.append('date', form.value.date)
+    
+    if (selectedFile.value) {
+      formData.append('receipt_file', selectedFile.value)
+    }
+    
+    console.log('📤 Submitting expense with data:', {
       partner_id: form.value.partnerId,
       unit_id: form.value.unitId,
+      amount: form.value.amount,
+      type: form.value.type,
       date: form.value.date,
-      type: form.value.type as any,
-      amount: Number(form.value.amount),
-      paid_by: form.value.paidBy,
-      billable: form.value.billable,
-      receipt_url: form.value.receiptUrl || undefined,
-      receipt_public_id: form.value.receiptPublicId || undefined,
-      notes: form.value.notes
+      hasFile: !!selectedFile.value
     })
     
+    const { $api } = useNuxtApp()
+    
+    const response = await $api('/api/expenses', {
+      method: 'POST',
+      body: formData
+    })
+    
+    console.log('✅ Expense created successfully:', response)
     notifySuccess('Expense added successfully')
     router.push('/expenses')
-  } catch (error) {
-    notifyError('Failed to add expense')
+  } catch (error: any) {
+    console.error('❌ Error creating expense:', error)
+    console.error('Error details:', {
+      message: error.message,
+      status: error.status,
+      statusText: error.statusText,
+      data: error.data
+    })
+    
+    const errorMessage = error.data?.error?.message || error.message || 'Failed to add expense'
+    notifyError(errorMessage)
   } finally {
     loading.value = false
   }
