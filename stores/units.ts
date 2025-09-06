@@ -23,7 +23,6 @@ export const useUnitStore = defineStore('units', () => {
       const unitsData = await getUnits()
       units.value = Array.isArray(unitsData) ? unitsData : []
     } catch (error) {
-      console.error('Failed to load units:', error)
       units.value = []
     }
   }

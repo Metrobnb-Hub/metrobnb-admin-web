@@ -28,5 +28,4 @@
 
 const { user } = useAuth()
 
-console.log('Dashboard loaded, user:', user.value)
 </script>

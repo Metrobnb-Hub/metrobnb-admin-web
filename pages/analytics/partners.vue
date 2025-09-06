@@ -286,7 +286,6 @@ const loadData = async () => {
     })
     dashboardData.value = response
   } catch (error) {
-    console.error('Failed to load partner analytics data:', error)
     dashboardData.value = null
   }
 }
@@ -299,7 +298,6 @@ onMounted(async () => {
       loadData()
     ])
   } catch (error) {
-    console.error('Failed to load data:', error)
   }
 })
 </script>

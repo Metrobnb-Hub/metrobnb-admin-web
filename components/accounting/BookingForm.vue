@@ -300,7 +300,6 @@ onMounted(async () => {
     bookingSources.value = sources || []
     paymentMethods.value = methods || []
   } catch (error) {
-    console.error('Failed to load dropdown data:', error)
     bookingSources.value = []
     paymentMethods.value = []
   }

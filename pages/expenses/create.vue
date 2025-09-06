@@ -156,7 +156,6 @@ const removeReceipt = () => {
 }
 
 const handleSubmit = async (event: any) => {
-  console.log('🔥 handleSubmit called!', event)
   event.preventDefault()
   const { notifySuccess, notifyError } = useNotify()
   
@@ -178,7 +177,6 @@ const handleSubmit = async (event: any) => {
       formData.append('receipt_file', selectedFile.value)
     }
     
-    console.log('📤 Submitting expense with data:', {
       partner_id: form.value.partnerId,
       unit_id: form.value.unitId,
       amount: form.value.amount,
@@ -194,12 +192,9 @@ const handleSubmit = async (event: any) => {
       body: formData
     })
     
-    console.log('✅ Expense created successfully:', response)
     notifySuccess('Expense added successfully')
     router.push('/expenses')
   } catch (error: any) {
-    console.error('❌ Error creating expense:', error)
-    console.error('Error details:', {
       message: error.message,
       status: error.status,
       statusText: error.statusText,

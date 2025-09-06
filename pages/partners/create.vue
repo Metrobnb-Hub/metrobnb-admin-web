@@ -88,7 +88,6 @@ onMounted(async () => {
       { id: '3', name: 'Maintenance', description: 'Property maintenance and repairs' }
     ]
   } catch (error) {
-    console.error('Failed to load data:', error)
   }
 })
 </script>

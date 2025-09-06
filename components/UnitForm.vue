@@ -445,7 +445,6 @@ const loadPartners = async () => {
     const response = await getPartners()
     partners.value = Array.isArray(response) ? response : []
   } catch (error) {
-    console.error('Error loading partners:', error)
     partners.value = []
   }
 }
@@ -466,7 +465,6 @@ const handleSubmit = async () => {
       emit('saved')
     }
   } catch (error) {
-    console.error('Error saving unit:', error)
     alert('Failed to save unit')
   } finally {
     saving.value = false

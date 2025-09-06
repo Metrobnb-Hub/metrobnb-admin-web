@@ -33,7 +33,6 @@ onMounted(() => {
     try {
       invoiceData.value = JSON.parse(saved)
     } catch (error) {
-      console.error('Failed to parse invoice data:', error)
     }
   }
 })

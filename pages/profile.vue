@@ -207,7 +207,6 @@ const updateProfile = async () => {
   
   try {
     // TODO: Implement profile update API call
-    console.log('Update profile:', profileForm.value)
     
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -216,7 +215,6 @@ const updateProfile = async () => {
     // TODO: Add toast notification
     alert('Profile updated successfully')
   } catch (error) {
-    console.error('Error updating profile:', error)
     alert('Failed to update profile')
   } finally {
     updatingProfile.value = false
@@ -243,7 +241,6 @@ const handleChangePassword = async () => {
       confirm_password: ''
     }
   } catch (error) {
-    console.error('Error changing password:', error)
     alert('Failed to change password')
   } finally {
     changingPassword.value = false

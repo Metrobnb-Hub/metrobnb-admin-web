@@ -73,11 +73,8 @@ const loadEvents = async (start: Date, end: Date) => {
     
     // Handle both paginated and non-paginated responses
     const bookings = Array.isArray(result) ? result : result.data || []
-    console.log('Calendar: Loaded bookings:', bookings.length)
     events.value = await transformBookingsToEvents(bookings)
-    console.log('Calendar: Transformed events:', events.value.length)
   } catch (error) {
-    console.error('Failed to load calendar events:', error)
   } finally {
     loading.value = false
   }

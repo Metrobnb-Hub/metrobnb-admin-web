@@ -365,8 +365,6 @@ const onSubmit = async () => {
     const partner = mockPartners.find(p => p.id === state.partnerId)
     if (!partner) throw new Error('Partner not found')
     
-    console.log('Form state:', state)
-    console.log('Selected partner:', partner)
     
     // Determine date range based on toggle
     let startDate, endDate
@@ -397,7 +395,6 @@ const onSubmit = async () => {
       const matchesUnit = !state.unitId || booking.unitId === state.unitId
       const inDateRange = bookingDate >= startDate && bookingDate <= endDate
       
-      console.log('Booking filter:', {
         booking: booking.guestName,
         bookingDate: booking.date,
         partnerId: booking.partnerId,
@@ -416,7 +413,6 @@ const onSubmit = async () => {
       const matchesUnit = !state.unitId || expense.unitId === state.unitId
       const inDateRange = expenseDate >= startDate && expenseDate <= endDate
       
-      console.log('Expense filter:', {
         expense: expense.type,
         expenseDate: expense.date,
         partnerId: expense.partnerId,
@@ -429,7 +425,6 @@ const onSubmit = async () => {
       return matchesPartner && matchesUnit && inDateRange
     })
     
-    console.log('Filtered results:', { filteredBookings, filteredExpenses })
     
     const startMonth = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     const endMonth = endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })

@@ -80,13 +80,11 @@ export const useCache = () => {
     }
 
     // Fetch fresh data
-    console.log('🌐 cachedFetch making API call to:', endpoint)
     const { useApi } = await import('./api')
     const api = useApi()
     
     let result: T
     if (endpoint === '/api/partners') {
-      console.log('📞 Calling api.getPartners()')
       result = await api.getPartners() as T
     } else if (endpoint === '/api/units') {
       result = await api.getUnits() as T
@@ -100,7 +98,6 @@ export const useCache = () => {
       throw new Error(`Unsupported cached endpoint: ${endpoint}`)
     }
     
-    console.log('📊 cachedFetch result:', result)
 
     // Cache the result
     globalCache.set(cacheKey, result, options?.ttl)

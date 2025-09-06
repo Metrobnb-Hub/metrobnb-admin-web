@@ -106,7 +106,6 @@ const handleFileSelect = async (event: Event) => {
     receiptData.value = result
     notifySuccess('Receipt uploaded successfully')
   } catch (error) {
-    console.error('Upload failed:', error)
     notifyError('Failed to upload receipt')
   } finally {
     uploading.value = false
@@ -133,7 +132,6 @@ const processReceipt = async () => {
       await navigateTo(`/expenses/review/${result.id}`)
     }
   } catch (error) {
-    console.error('Processing failed:', error)
     notifyError('Failed to process receipt')
   }
 }

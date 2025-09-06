@@ -152,7 +152,6 @@ export const useAccountingStore = defineStore('accounting', () => {
       })
       partnerEarnings.value = earnings
     } catch (error) {
-      console.error('Failed to load bookings:', error)
       bookings.value = []
       partnerEarnings.value = {}
     }

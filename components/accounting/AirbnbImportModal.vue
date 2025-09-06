@@ -47,12 +47,7 @@
           <UButton type="submit" color="primary" :loading="isImporting" :disabled="isButtonDisabled">
             Import Bookings
           </UButton>
-          <!-- Debug info -->
-          <div class="text-xs text-gray-500 mt-2">
-            Partner: {{ state.partnerId ? '✓' : '✗' }} | 
-            Unit: {{ state.unitId ? '✓' : '✗' }} | 
-            CSV: {{ csvData ? '✓' : '✗' }}
-          </div>
+
         </div>
       </UForm>
       
@@ -131,21 +126,12 @@ const availableUnits = computed(() => {
 })
 
 const isButtonDisabled = computed(() => {
-  const disabled = !state.partnerId || !state.unitId || !csvData.value
-  console.log('Button disabled:', disabled, {
-    partnerId: state.partnerId,
-    unitId: state.unitId,
-    csvData: csvData.value ? 'has data' : 'no data'
-  })
-  return disabled
+  return !state.partnerId || !state.unitId || !csvData.value
 })
 
 const handleFileChange = (event: any) => {
-  console.log('File change event:', event)
   const input = event.target || event.currentTarget
   const file = input?.files?.[0]
-  
-  console.log('Selected file:', file)
   
   if (!file) {
     csvData.value = ''
@@ -157,14 +143,13 @@ const handleFileChange = (event: any) => {
   reader.onload = (e) => {
     const content = e.target?.result as string
     csvData.value = content
-    console.log('CSV loaded, length:', content?.length)
     
     // Show first 3 lines as preview
     const lines = content.split('\n').slice(0, 3)
     csvPreview.value = lines.join('\n')
   }
   reader.onerror = (e) => {
-    console.error('File read error:', e)
+    // File read error - silently handle
   }
   reader.readAsText(file)
 }
@@ -199,7 +184,6 @@ const onSubmit = async () => {
     }
 
   } catch (error) {
-    console.error('Import error:', error)
     const { notifyError } = useNotify()
     notifyError(`Failed to import Airbnb bookings: ${error.message || error}`)
   } finally {

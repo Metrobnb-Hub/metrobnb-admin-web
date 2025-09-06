@@ -221,15 +221,12 @@ const handleSubmit = async () => {
       endDate
     )
     
-    console.log('📊 Draft invoice API result:', result)
     
     // Extract the invoice data from the API response
     const invoiceData = result?.success ? result.data : result
-    console.log('📊 Extracted invoice data:', invoiceData)
     
     emit('created', invoiceData)
   } catch (error) {
-    console.error('Error creating draft invoice:', error)
     const { notifyError } = useNotify()
     notifyError('Failed to create draft invoice')
   } finally {

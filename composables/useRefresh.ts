@@ -12,7 +12,6 @@ export const useRefresh = () => {
     try {
       await dataLoader()
     } catch (error) {
-      console.error('Error refreshing data:', error)
     }
   }
   

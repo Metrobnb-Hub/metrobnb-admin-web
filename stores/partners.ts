@@ -37,7 +37,6 @@ export const usePartnerStore = defineStore('partners', () => {
       partners.value = Array.isArray(partnersData) ? partnersData : []
       services.value = Array.isArray(servicesData) ? servicesData : []
     } catch (error) {
-      console.error('Failed to load partners and services:', error)
       partners.value = []
       services.value = []
     }

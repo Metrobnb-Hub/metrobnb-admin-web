@@ -170,14 +170,7 @@ const { units: dataUnits, partners: dataPartners } = useGlobalCache()
 const units = computed(() => props.units || dataUnits.value || [])
 const partners = computed(() => props.partners || dataPartners.value || [])
 
-// Debug first booking to see field names
-watch(() => props.bookings, (bookings) => {
-  if (bookings && bookings.length > 0) {
-    console.log('First booking structure:', bookings[0])
-    console.log('Partner ID from booking:', bookings[0].partnerId || bookings[0].partner_id)
-    console.log('Unit ID from booking:', bookings[0].unitId || bookings[0].unit_id)
-  }
-}, { immediate: true })
+
 
 const emit = defineEmits<{
   edit: [booking: Booking]

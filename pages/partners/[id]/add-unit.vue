@@ -47,7 +47,6 @@ const loadPartner = async () => {
     const partners = await getPartners()
     partner.value = partners.find(p => p.id === partnerId)
   } catch (error) {
-    console.error('Error loading partner:', error)
   }
 }
 

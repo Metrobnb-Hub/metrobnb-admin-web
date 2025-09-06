@@ -39,7 +39,6 @@ export const useExpenseStore = defineStore('expenses', () => {
       const expensesData = await getExpenses()
       expenses.value = Array.isArray(expensesData) ? expensesData : []
     } catch (error) {
-      console.error('Failed to load expenses:', error)
       expenses.value = []
     }
   }

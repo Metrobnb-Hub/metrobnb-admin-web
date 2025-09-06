@@ -356,12 +356,7 @@ const invoice: PartnerInvoice = props.invoice || {
   journalEntries: []
 }
 
-// Debug: Check if we have actual data
-if (props.invoice) {
-  console.log('✅ Using real invoice data:', props.invoice)
-} else {
-  console.log('❌ No invoice data provided, using empty fallback')
-}
+
 
 
 

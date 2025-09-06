@@ -283,7 +283,6 @@ const viewTabs = [
 
 // Debug tab switching
 watch(activeView, (newView) => {
-  console.log('Active view changed to:', newView)
 })
 const bookings = ref([])
 const bookingSummary = ref(null)
@@ -501,13 +500,11 @@ const loadBookings = async () => {
     pagination.value = extractPagination(result)
     bookingSummary.value = extractSummary(result)
     
-    console.log('✅ Bookings loaded:', bookings.value.length, 'items')
     
     if (bookings.value.length === 0 && currentPage.value === 1) {
       notifyInfo('No bookings found')
     }
   } catch (error) {
-    console.error('Failed to load bookings:', error)
     bookings.value = []
     notifyError('Failed to load bookings')
   }
@@ -553,14 +550,10 @@ onMounted(async () => {
     
     bookingSources.value = sources || []
     
-    console.log('Loaded partners:', partners.value?.length || 0)
-    console.log('Loaded units:', units.value?.length || 0)
-    console.log('Loaded booking sources:', bookingSources.value?.length || 0)
     
     await loadBookings()
     isLoading.value = false
   } catch (error) {
-    console.error('Failed to load data:', error)
     isLoading.value = false
   }
 })

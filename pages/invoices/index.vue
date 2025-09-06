@@ -467,7 +467,6 @@ const deleteInvoiceAction = async (invoice: any) => {
 const loadInvoices = async () => {
   try {
     isLoading.value = true
-    console.log('🔄 Loading invoices...', { showArchive: showArchive.value, filterStatus: filterStatus.value, filterPartner: filterPartner.value })
     
     const filters = {
       ...(filterStatus.value !== 'all' && { status: filterStatus.value }),
@@ -481,8 +480,6 @@ const loadInvoices = async () => {
       ? await getArchivedInvoices(filters)
       : await getInvoices(filters)
     
-    console.log('📊 Invoice API result:', result)
-    console.log('📊 Result type:', typeof result, 'Array?', Array.isArray(result))
     
     // Handle paginated response from new API
     if (result && result.success && result.data) {
@@ -499,14 +496,11 @@ const loadInvoices = async () => {
         totalItems.value = 0
       }
     } else {
-      console.warn('⚠️ Unexpected invoice result format:', result)
       invoices.value = []
       totalItems.value = 0
     }
     
-    console.log('✅ Invoices loaded:', invoices.value.length, 'items')
   } catch (error) {
-    console.error('❌ Failed to load invoices:', error)
     invoices.value = []
     totalItems.value = 0
     
@@ -522,7 +516,6 @@ const loadArchivedCount = async () => {
     const result = await getArchivedInvoices()
     archivedCount.value = result.items?.length || (Array.isArray(result) ? result.length : 0)
   } catch (error) {
-    console.error('Failed to load archived count:', error)
     archivedCount.value = 0
   }
 }
@@ -552,7 +545,6 @@ const onFilterChange = () => {
 }
 
 const handleDraftCreated = (invoice: any) => {
-  console.log('🎯 Draft created response:', invoice)
   showDraftModal.value = false
   const { notifySuccess } = useNotify()
   
@@ -565,7 +557,6 @@ const handleDraftCreated = (invoice: any) => {
     notifySuccess(`Draft invoice created: ${invoice.data.invoice_number || invoice.data.id}`)
     navigateTo(`/invoices/${invoice.data.id}`)
   } else {
-    console.error('❌ No invoice ID in response:', invoice)
     const { notifyError } = useNotify()
     notifyError('Draft created but could not navigate to invoice. Check the invoices list.')
     // Refresh the invoice list instead

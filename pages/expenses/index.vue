@@ -590,9 +590,7 @@ const loadExpensesData = async () => {
     pagination.value = extractPagination(result)
     totalItems.value = pagination.value?.total_items || expenses.value.length
     
-    console.log('✅ Expenses loaded:', expenses.value.length, 'items')
   } catch (error) {
-    console.error('Failed to load expenses:', error)
     expenses.value = []
     pagination.value = null
     
@@ -1003,7 +1001,6 @@ onMounted(async () => {
       loadExpensesData()
     ])
   } catch (error) {
-    console.error('❌ Error loading data:', error)
   }
 })
 </script>

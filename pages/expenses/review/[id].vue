@@ -163,7 +163,6 @@ const loadExpense = async () => {
       await navigateTo('/expenses')
     }
   } catch (error) {
-    console.error('Failed to load expense:', error)
     notifyError('Failed to load expense')
   } finally {
     loading.value = false
@@ -189,7 +188,6 @@ const completeExpense = async () => {
     notifySuccess('Expense completed successfully')
     await navigateTo('/expenses')
   } catch (error) {
-    console.error('Failed to complete expense:', error)
     notifyError('Failed to complete expense')
   } finally {
     completing.value = false

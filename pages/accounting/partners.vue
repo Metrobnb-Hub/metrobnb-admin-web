@@ -129,7 +129,6 @@ const loadData = async () => {
     bookings.value = extractData(apiBookings)
     totalEarnings.value = bookings.value.reduce((sum, booking) => sum + getBookingTotal(booking), 0)
   } catch (error) {
-    console.error('Failed to load data:', error)
   }
 }
 

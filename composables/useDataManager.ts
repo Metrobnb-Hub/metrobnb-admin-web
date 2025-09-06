@@ -62,18 +62,14 @@ export const useDataManager = () => {
   }
 
   const loadPartners = async (force = false) => {
-    console.log('🔍 loadPartners - force:', force, 'cache length:', globalDataCache.partners.length, 'cache valid:', isCacheValid('partners'))
     if (!force && globalDataCache.partners.length > 0 && isCacheValid('partners')) {
-      console.log('✅ Using cached partners')
       return globalDataCache.partners
     }
     
     // If cache is valid but empty, invalidate it
     if (globalDataCache.partners.length === 0 && isCacheValid('partners')) {
-      console.log('🗑️ Cache valid but empty - invalidating')
       globalLastLoaded.partners = 0
     }
-    console.log('🌐 Fetching fresh partners from API')
 
     if (globalLoadingState.partners) {
       while (globalLoadingState.partners) {
@@ -88,10 +84,7 @@ export const useDataManager = () => {
         skipCache: force,
         ttl: 10 * 60 * 1000
       })
-      console.log('📊 Raw API response:', data)
-      console.log('📊 Is array?', Array.isArray(data))
       globalDataCache.partners = Array.isArray(data) ? data : []
-      console.log('💾 Cached partners count:', globalDataCache.partners.length)
       globalLastLoaded.partners = Date.now()
       return globalDataCache.partners
     } finally {

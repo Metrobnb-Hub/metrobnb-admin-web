@@ -7,7 +7,6 @@ export default defineNuxtPlugin(() => {
       // Get fresh token cookie on each request
       const tokenCookie = useCookie('auth_token')
       
-      console.log('🔍 API Request - Token check:', {
         hasToken: !!tokenCookie.value,
         tokenLength: tokenCookie.value?.length || 0
       })
@@ -17,9 +16,7 @@ export default defineNuxtPlugin(() => {
           ...options.headers,
           Authorization: `Bearer ${tokenCookie.value}`
         }
-        console.log('✅ Token added to request headers')
       } else {
-        console.warn('❌ No token found in cookie')
       }
     },
     async onResponseError({ response, options }) {
@@ -28,7 +25,6 @@ export default defineNuxtPlugin(() => {
         
         if (refreshCookie.value) {
           try {
-            console.log('🔄 Attempting token refresh...')
             const refreshResponse = await $fetch('/api/auth/refresh', {
               method: 'POST',
               baseURL: config.public.apiBaseUrl,
@@ -40,7 +36,6 @@ export default defineNuxtPlugin(() => {
               tokenCookie.value = refreshResponse.data.access_token
               refreshCookie.value = refreshResponse.data.refresh_token
               
-              console.log('✅ Token refreshed, retrying request')
               // Retry original request with new token
               return $fetch(response.url, {
                 ...options,
@@ -51,7 +46,6 @@ export default defineNuxtPlugin(() => {
               })
             }
           } catch (error) {
-            console.log('❌ Token refresh failed:', error)
           }
         }
         
@@ -63,7 +57,6 @@ export default defineNuxtPlugin(() => {
         try {
           navigateTo('/login')
         } catch (error) {
-          console.error('Navigation failed:', error)
           if (process.client) {
             window.location.href = '/login'
           }

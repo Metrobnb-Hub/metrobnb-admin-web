@@ -236,20 +236,13 @@ const loadData = async () => {
     
     // Load partners first, then entries
     await loadPartners()
-    console.log('Loaded partners:', partners.value.map(p => ({ id: p.id, name: p.name })))
     
     const entriesResponse = await getJournalEntries()
     
     // Use standard response handler
     entries.value = extractData(entriesResponse)
-    console.log('✅ Journal entries loaded:', entries.value.length, 'items')
     
-    console.log('Loaded entries:', entries.value.length)
-    console.log('First entry full data:', entries.value[0])
-    console.log('First entry partner_id:', entries.value[0]?.partner_id)
-    console.log('Partner lookup result:', getPartnerName(entries.value[0]?.partner_id))
   } catch (error) {
-    console.error('Failed to load journal entries:', error)
     notifyError('Failed to load journal entries')
     entries.value = []
   } finally {

@@ -248,7 +248,6 @@ const loadUnits = async () => {
       avg_revenue_per_unit: 1200 // Mock data
     }
   } catch (error) {
-    console.error('Error loading units:', error)
     units.value = []
   } finally {
     loading.value = false
@@ -260,7 +259,6 @@ const loadPartners = async () => {
     const response = await getPartners()
     partners.value = extractData(response)
   } catch (error) {
-    console.error('Error loading partners:', error)
     partners.value = []
   }
 }

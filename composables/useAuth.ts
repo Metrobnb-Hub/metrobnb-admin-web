@@ -28,21 +28,7 @@ interface RegisterData {
   plan?: string
 }
 
-// Sanitize data for logging to prevent log injection
-const sanitizeForLog = (data: any) => {
-  if (typeof data === 'string') {
-    return data.replace(/[\r\n]/g, ' ').substring(0, 100)
-  }
-  if (typeof data === 'object' && data !== null) {
-    const sanitized = { ...data }
-    // Remove sensitive fields from logs
-    delete sanitized.password
-    delete sanitized.access_token
-    delete sanitized.refresh_token
-    return JSON.stringify(sanitized).replace(/[\r\n]/g, ' ').substring(0, 200)
-  }
-  return String(data).replace(/[\r\n]/g, ' ').substring(0, 100)
-}
+
 
 export const useAuth = () => {
   const user = ref<User | null>(null)
@@ -90,17 +76,11 @@ export const useAuth = () => {
   if (authToken.value && userCookie.value) {
     user.value = userCookie.value
     organization.value = orgCookie.value
-    console.log('🔐 Restored user from cookie:', {
-      id: sanitizeForLog(user.value.id),
-      email: sanitizeForLog(user.value.email),
-      role: sanitizeForLog(user.value.role)
-    })
   }
   
   const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     const config = useRuntimeConfig()
     const apiUrl = `${config.public.apiBaseUrl}/api/auth${endpoint}`
-    console.log('🌐 Making auth request to:', apiUrl)
     const response = await fetch(apiUrl, {
       ...options,
       headers: {
@@ -111,13 +91,6 @@ export const useAuth = () => {
     })
     
     const data = await response.json()
-    console.log('🔐 Auth API Response:', { 
-      endpoint: sanitizeForLog(endpoint), 
-      status: response.status, 
-      success: data.success,
-      hasUser: !!data.data?.user,
-      hasTokens: !!(data.data?.access_token && data.data?.refresh_token)
-    })
     
     if (response.status === 401) {
       authToken.value = null
@@ -152,15 +125,11 @@ export const useAuth = () => {
   
   const login = async (credentials: LoginData) => {
     loading.value = true
-    console.log('🔐 Attempting login with:', { email: credentials.email, password: '***' })
     try {
       const response = await apiRequest('/login', {
         method: 'POST',
         body: JSON.stringify(credentials)
       })
-      
-      console.log('🔐 Login response:', response)
-      console.log('🔐 Response type:', typeof response, 'Success:', response?.success)
       
       if (response.success && response.data) {
         // Store user and organization data
@@ -173,23 +142,8 @@ export const useAuth = () => {
         userCookie.value = response.data.user
         orgCookie.value = response.data.organization
         
-        console.log('🔐 User set:', {
-          id: sanitizeForLog(user.value.id),
-          email: sanitizeForLog(user.value.email),
-          role: sanitizeForLog(user.value.role),
-          hasAccessiblePartners: !!user.value.accessible_partners?.length
-        })
-        console.log('🔐 Organization set:', {
-          id: sanitizeForLog(organization.value?.id),
-          name: sanitizeForLog(organization.value?.name)
-        })
-        console.log('🔐 Tokens set - Access:', !!authToken.value, 'Refresh:', !!refreshToken.value)
-        console.log('🔐 Expires in:', response.data.expires_in, 'seconds')
-        console.log('🔐 User role:', sanitizeForLog(user.value.role))
-        console.log('🔐 Permissions count:', user.value.permissions?.length || 0)
-        console.log('🔐 Accessible partners count:', user.value.accessible_partners?.length || 0)
+
       } else {
-        console.error('Unexpected login response structure:', response)
         throw new Error('Invalid login response')
       }
       
@@ -226,9 +180,8 @@ export const useAuth = () => {
   const logout = async () => {
     try {
       await apiRequest('/logout', { method: 'POST' })
-      console.log('🔐 Server logout successful (stateless)')
     } catch (error) {
-      console.log('🔐 Server logout failed, continuing with client logout:', error)
+      // Continue with client logout even if server logout fails
     }
     
     // Clear all data
@@ -256,11 +209,9 @@ export const useAuth = () => {
       if (response.success && response.data) {
         authToken.value = response.data.access_token
         refreshToken.value = response.data.refresh_token
-        console.log('🔐 Token refreshed successfully')
         return response.data
       }
     } catch (error) {
-      console.log('🔐 Token refresh failed:', error)
       // Clear tokens and redirect to login
       authToken.value = null
       refreshToken.value = null
@@ -276,17 +227,10 @@ export const useAuth = () => {
   const initializeAuth = () => {
     // If we have tokens but no user, we lost the user data
     if (authToken.value && !user.value) {
-      console.log('🔐 Token exists but no user data - checking cookies')
       if (userCookie.value) {
         user.value = userCookie.value
         organization.value = orgCookie.value
-        console.log('🔐 Restored user from cookies:', {
-          id: sanitizeForLog(user.value.id),
-          email: sanitizeForLog(user.value.email),
-          role: sanitizeForLog(user.value.role)
-        })
       } else {
-        console.log('🔐 No user data in cookies - user needs to login again')
         authToken.value = null
         refreshToken.value = null
       }
@@ -340,7 +284,6 @@ export const useAuth = () => {
       }
       return response.data
     } catch (error) {
-      console.log('🔐 Failed to get current user:', error)
       return null
     }
   }

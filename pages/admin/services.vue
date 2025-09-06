@@ -104,7 +104,6 @@ const handleSubmit = async () => {
 
 const editService = (service: Service) => {
   // TODO: Implement edit modal
-  console.log('Edit service:', service)
 }
 
 const deleteService = async (id: string) => {

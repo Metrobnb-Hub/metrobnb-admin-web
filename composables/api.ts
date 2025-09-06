@@ -42,12 +42,9 @@ const apiClient = async <T>(endpoint: string, options: RequestInit = {}): Promis
       }
     })
     
-    console.log('🔍 API Response for', endpoint, ':', response)
-    
     // Return the full response for proper handling
     return response as T
   } catch (error) {
-    console.error('❌ API Error for', endpoint, ':', error)
     return (endpoint.includes('dashboard') ? { 
       success: false,
       data: {

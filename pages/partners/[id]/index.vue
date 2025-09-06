@@ -232,7 +232,6 @@ const editForm = reactive({
 const partner = computed(() => {
   if (isLoading.value || !partnerId || !Array.isArray(partners.value)) return null
   const found = partners.value.find(p => p.id === partnerId) || null
-  console.log('Partner data:', found)
   return found
 })
 
@@ -295,7 +294,6 @@ const loadData = async () => {
       loadPartnerInvoices()
     ])
   } catch (error) {
-    console.error('Failed to load data:', error)
   } finally {
     isLoading.value = false
   }
@@ -310,7 +308,6 @@ const loadPartnerInvoices = async () => {
       partnerInvoices.value = []
     }
   } catch (error) {
-    console.error('Failed to load partner invoices:', error)
     partnerInvoices.value = []
   }
 }

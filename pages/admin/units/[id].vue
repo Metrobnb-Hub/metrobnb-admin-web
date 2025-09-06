@@ -305,7 +305,6 @@ const loadUnit = async () => {
     const unitArray = Array.isArray(units) ? units : []
     unit.value = unitArray.find(u => u.id === route.params.id) || null
   } catch (error) {
-    console.error('Error loading unit:', error)
     unit.value = null
   } finally {
     loading.value = false

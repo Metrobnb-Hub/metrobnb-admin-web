@@ -22,14 +22,12 @@ test.describe('Simple Login Test', () => {
     const testLoginButton = page.getByRole('button', { name: /Test Login/ })
     
     if (await testLoginButton.isVisible()) {
-      console.log('Using test login button')
       await testLoginButton.click()
       
       // Wait for navigation to dashboard
       await page.waitForURL('**/dashboard', { timeout: 15000 })
       expect(page.url()).toContain('/dashboard')
     } else {
-      console.log('Test login button not visible, using manual login')
       
       // Fill credentials and login manually
       await page.fill('input[placeholder="Email address"]', 'tonynini1998@gmail.com')
@@ -42,15 +40,12 @@ test.describe('Simple Login Test', () => {
       // Check if we got redirected to dashboard or if there's an error
       const currentUrl = page.url()
       if (currentUrl.includes('/dashboard')) {
-        console.log('Login successful - redirected to dashboard')
       } else {
         // Check for error message
         const errorElement = page.locator('.bg-red-50, .text-red-600')
         if (await errorElement.isVisible()) {
           const errorText = await errorElement.textContent()
-          console.log('Login failed with error:', errorText)
         } else {
-          console.log('Login attempt completed, current URL:', currentUrl)
         }
       }
     }

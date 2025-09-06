@@ -178,7 +178,6 @@ const loadBookingSources = async () => {
     const result = await $api('/api/booking-sources')
     bookingSources.value = result.data || []
   } catch (error) {
-    console.error('Failed to load booking sources:', error)
     bookingSources.value = []
   }
 }
@@ -189,7 +188,6 @@ const loadPaymentMethods = async () => {
     const result = await $api('/api/payment-methods')
     paymentMethods.value = result.data || []
   } catch (error) {
-    console.error('Failed to load payment methods:', error)
     paymentMethods.value = []
   }
 }
@@ -336,7 +334,6 @@ const onSubmit = async () => {
     emit('updated')
     isOpen.value = false
   } catch (error) {
-    console.error('Update booking error:', error)
     notifyError('Failed to update booking')
   }
 }
@@ -355,7 +352,6 @@ watch(() => state.partner, (newPartnerId, oldPartnerId) => {
 
 watch(() => props.booking, (booking) => {
   if (booking) {
-    console.log('Booking data:', booking) // Debug log
     isInitializing.value = true
     
     Object.assign(state, {
@@ -382,7 +378,6 @@ watch(() => props.booking, (booking) => {
       isInitializing.value = false
     })
     
-    console.log('State after assignment:', state) // Debug log
   }
 }, { immediate: true })
 </script>

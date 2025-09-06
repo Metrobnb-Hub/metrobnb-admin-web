@@ -147,8 +147,6 @@ const loadInvoice = async () => {
     const response = await getInvoiceById(route.params.id as string)
     const invoice = response.data // Extract data from API response
     
-    console.log('📊 Raw invoice data from API:', response)
-    console.log('📊 Extracted invoice data:', invoice)
     
     // Convert to format expected by PartnerInvoice component
     invoiceData.value = {
@@ -196,8 +194,6 @@ const loadInvoice = async () => {
       })) || []
     }
     
-    console.log('📊 Mapped invoice data for component:', invoiceData.value)
-    console.log('💸 Expenses array:', invoiceData.value.expenses)
   } catch (err) {
     error.value = 'Failed to load invoice details'
     notifyError('Failed to load invoice')

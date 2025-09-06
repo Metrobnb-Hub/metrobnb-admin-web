@@ -31,7 +31,6 @@ export const useGlobalCache = () => {
       globalCache.partnersLastLoaded = Date.now()
       return globalCache.partners
     } catch (error) {
-      console.error('Error loading partners:', error)
       return []
     }
   }
@@ -56,7 +55,6 @@ export const useGlobalCache = () => {
       globalCache.unitsLastLoaded = Date.now()
       return globalCache.units
     } catch (error) {
-      console.error('Error loading units:', error)
       return []
     }
   }

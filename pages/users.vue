@@ -284,7 +284,6 @@ const getRoleClass = (role) => {
 
 const applyFilters = () => {
   // TODO: Implement filtering logic
-  console.log('Apply filters:', filters.value)
 }
 
 const debouncedSearch = debounce(() => {
@@ -324,7 +323,6 @@ const deleteUserAction = async (user) => {
       const { notifyError } = useNotify()
       notifyError('User deletion not implemented yet')
     } catch (error) {
-      console.error('Error deleting user:', error)
       const { notifyError } = useNotify()
       notifyError('Failed to delete user')
     }
@@ -347,7 +345,6 @@ const loadPartners = async () => {
     const result = await getPartners()
     partners.value = extractData(result)
   } catch (error) {
-    console.error('Error loading partners:', error)
     partners.value = []
   }
 }
@@ -367,7 +364,6 @@ const loadUsers = async () => {
       }
     ]
   } catch (error) {
-    console.error('Error loading users:', error)
     users.value = []
   } finally {
     loading.value = false
@@ -416,7 +412,6 @@ const handleUserSubmit = async () => {
       }
     }
   } catch (error) {
-    console.error('Error saving user:', error)
     const { notifyError } = useNotify()
     
     // Handle specific error cases

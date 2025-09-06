@@ -66,7 +66,6 @@ try {
   const { data } = await useGlobalCache('partners')
   partners = data
 } catch (error) {
-  console.log('Failed to load partners:', error)
 }
 
 const form = ref({
@@ -97,11 +96,9 @@ const handleInvite = async () => {
   tempPassword.value = ''
   loading.value = true
   
-  console.log('🔐 Inviting user with data:', form.value)
   
   try {
     const response = await inviteUser(form.value)
-    console.log('🔐 Invite response:', response)
     
     if (response.success) {
       success.value = `Invitation sent to ${form.value.email}`
@@ -118,7 +115,6 @@ const handleInvite = async () => {
       error.value = response.error?.message || 'Failed to send invitation'
     }
   } catch (err: any) {
-    console.error('🔐 Invite error:', err)
     error.value = err.message || 'Failed to send invitation'
   } finally {
     loading.value = false

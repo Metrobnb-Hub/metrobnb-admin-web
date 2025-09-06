@@ -185,25 +185,21 @@ const partnerOptions = computed(() => {
 
 const availableUnits = computed(() => {
   if (!state.partnerId || !Array.isArray(units.value)) {
-    console.log('No partnerId or units not loaded:', { partnerId: state.partnerId, unitsLoaded: Array.isArray(units.value) })
     return []
   }
   
   const filtered = units.value.filter(unit => {
     const unitPartnerId = unit.partnerId || unit.partner_id
     const matches = unitPartnerId === state.partnerId
-    console.log('Unit filter check:', { unitName: unit.name, unitPartnerId, selectedPartnerId: state.partnerId, matches })
     return matches
   })
   
-  console.log('Available units for partner:', filtered)
   return filtered.map(unit => ({ label: unit.name, value: unit.id }))
 })
 
 watch(() => state.partnerId, (newPartnerId, oldPartnerId) => {
   // Only clear unit if partner is manually changed, not during initial load
   if (oldPartnerId && newPartnerId !== oldPartnerId) {
-    console.log('Partner changed manually, clearing unit')
     state.unitId = ''
   }
 })
@@ -221,7 +217,6 @@ const handleFileUpload = async (event: Event) => {
     state.receiptPublicId = result.file_id
     notifySuccess('Receipt uploaded successfully')
   } catch (error) {
-    console.error('Upload failed:', error)
     notifyError('Failed to upload receipt')
   } finally {
     uploading.value = false
@@ -273,11 +268,9 @@ const onSubmit = async () => {
 
 watch(() => props.expense, (expense) => {
   if (expense) {
-    console.log('Loading expense data:', expense)
     const partnerId = expense.partnerId || expense.partner_id
     const unitId = expense.unitId || expense.unit_id
     
-    console.log('Extracted IDs:', { partnerId, unitId })
     
     Object.assign(state, {
       partnerId,
@@ -295,7 +288,6 @@ watch(() => props.expense, (expense) => {
       notes: expense.notes || expense.note || ''
     })
     
-    console.log('State after assignment:', state)
   }
 }, { immediate: true })
 
