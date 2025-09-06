@@ -177,14 +177,6 @@ const handleSubmit = async (event: any) => {
       formData.append('receipt_file', selectedFile.value)
     }
     
-      partner_id: form.value.partnerId,
-      unit_id: form.value.unitId,
-      amount: form.value.amount,
-      type: form.value.type,
-      date: form.value.date,
-      hasFile: !!selectedFile.value
-    })
-    
     const { $api } = useNuxtApp()
     
     const response = await $api('/api/expenses', {
@@ -195,11 +187,6 @@ const handleSubmit = async (event: any) => {
     notifySuccess('Expense added successfully')
     router.push('/expenses')
   } catch (error: any) {
-      message: error.message,
-      status: error.status,
-      statusText: error.statusText,
-      data: error.data
-    })
     
     const errorMessage = error.data?.error?.message || error.message || 'Failed to add expense'
     notifyError(errorMessage)

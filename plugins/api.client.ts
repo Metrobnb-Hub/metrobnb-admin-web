@@ -7,16 +7,11 @@ export default defineNuxtPlugin(() => {
       // Get fresh token cookie on each request
       const tokenCookie = useCookie('auth_token')
       
-        hasToken: !!tokenCookie.value,
-        tokenLength: tokenCookie.value?.length || 0
-      })
-      
       if (tokenCookie.value) {
         options.headers = {
           ...options.headers,
           Authorization: `Bearer ${tokenCookie.value}`
         }
-      } else {
       }
     },
     async onResponseError({ response, options }) {
