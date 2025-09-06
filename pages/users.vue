@@ -214,7 +214,7 @@ definePageMeta({
 })
 
 const { user: currentUser, inviteUser } = useAuth()
-const { getPartners } = useApi()
+const { getPartners, getUserList } = useApi()
 const { extractData } = useApiResponse()
 
 const loading = ref(false)
@@ -352,17 +352,8 @@ const loadPartners = async () => {
 const loadUsers = async () => {
   try {
     loading.value = true
-    // For now, show mock users since there's no users API endpoint
-    // In a real app, you'd have a /api/users endpoint
-    users.value = [
-      {
-        id: currentUser.value?.id,
-        name: currentUser.value?.name,
-        email: currentUser.value?.email,
-        role: currentUser.value?.role,
-        accessible_partners: currentUser.value?.accessible_partners || []
-      }
-    ]
+    const result = await getUserList()
+    users.value = extractData(result)
   } catch (error) {
     users.value = []
   } finally {

@@ -521,6 +521,11 @@ export const useApi = () => {
       })
     },
     
+    // Users
+    getUserList: async () => {
+      return await apiClient<any>('/api/users/list')
+    },
+    
     // Helpers
     getBookingTotal: (booking: Booking): number => {
       if (!booking) return 0
