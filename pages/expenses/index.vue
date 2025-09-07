@@ -7,7 +7,7 @@
           <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">Expenses</h1>
           <p class="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">Manage partner expenses and charges</p>
         </div>
-        <UButton to="/expenses/create" color="primary" size="xs" class="sm:size-sm">
+        <UButton v-if="!isPartner" to="/expenses/create" color="primary" size="xs" class="sm:size-sm">
           <UIcon name="i-heroicons-plus" class="sm:mr-1" />
           <span class="hidden sm:inline">Add Expense</span>
         </UButton>
@@ -407,9 +407,12 @@
 </template>
 
 <script setup lang="ts">
+const { user } = useAuth()
 const { getExpenses, deleteExpense } = useApi()
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { extractData, extractPagination } = useApiResponse()
+
+const isPartner = computed(() => user.value?.role === 'partner')
 
 const showEditModal = ref(false)
 const selectedExpense = ref(null)
@@ -715,23 +718,25 @@ const getExpenseActions = (expense: any) => {
     }])
   }
   
-  actions.push([{
-    label: expense.paid ? 'Mark Unpaid' : 'Mark Paid',
-    icon: expense.paid ? 'i-heroicons-x-circle' : 'i-heroicons-check-circle',
-    click: () => togglePayment(expense)
-  }])
-  
-  actions.push([{
-    label: 'Edit',
-    icon: 'i-heroicons-pencil-square',
-    click: () => handleEdit(expense)
-  }])
-  
-  actions.push([{
-    label: 'Delete',
-    icon: 'i-heroicons-trash',
-    click: () => handleDelete(expense.id)
-  }])
+  if (!isPartner.value) {
+    actions.push([{
+      label: expense.paid ? 'Mark Unpaid' : 'Mark Paid',
+      icon: expense.paid ? 'i-heroicons-x-circle' : 'i-heroicons-check-circle',
+      click: () => togglePayment(expense)
+    }])
+    
+    actions.push([{
+      label: 'Edit',
+      icon: 'i-heroicons-pencil-square',
+      click: () => handleEdit(expense)
+    }])
+    
+    actions.push([{
+      label: 'Delete',
+      icon: 'i-heroicons-trash',
+      click: () => handleDelete(expense.id)
+    }])
+  }
   
   return actions
 }

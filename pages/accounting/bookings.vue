@@ -7,7 +7,7 @@
           <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">Bookings</h1>
           <p class="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">Manage booking payments and records</p>
         </div>
-        <div class="flex gap-2">
+        <div v-if="!isPartner" class="flex gap-2">
           <UButton @click="showImportModal = true" color="green" variant="outline" size="xs" class="sm:size-sm">
             <UIcon name="i-heroicons-arrow-up-tray" class="sm:mr-1" />
             <span class="hidden sm:inline">Import</span>
@@ -228,6 +228,7 @@
         :bookings="bookings" 
         :partners="partners"
         :units="units"
+        :read-only="isPartner"
         @edit="handleEdit" 
         @delete="handleDelete" 
       />
@@ -263,11 +264,14 @@
 import BookingCalendar from '~/components/calendar/BookingCalendar.vue'
 import CalendarLegend from '~/components/calendar/CalendarLegend.vue'
 
+const { user } = useAuth()
 const { handleSubmit } = useBookingForm()
 const { deleteBooking } = useAccountingStore()
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { getBookings, getBookingSources } = useApi()
 const { extractData, extractPagination, extractSummary } = useApiResponse()
+
+const isPartner = computed(() => user.value?.role === 'partner')
 
 const bookingSources = ref([])
 

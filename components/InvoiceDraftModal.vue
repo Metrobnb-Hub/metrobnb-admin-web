@@ -221,14 +221,18 @@ const handleSubmit = async () => {
       endDate
     )
     
-    
-    // Extract the invoice data from the API response
-    const invoiceData = result?.success ? result.data : result
-    
-    emit('created', invoiceData)
-  } catch (error) {
+    // Handle the new API response format
+    if (result?.success && result.data) {
+      const { notifySuccess } = useNotify()
+      notifySuccess(result.message || 'Draft invoice created successfully')
+      emit('created', result.data)
+    } else {
+      throw new Error(result?.message || 'Failed to create draft invoice')
+    }
+  } catch (error: any) {
     const { notifyError } = useNotify()
-    notifyError('Failed to create draft invoice')
+    const errorMessage = error.message || 'Failed to create draft invoice'
+    notifyError(errorMessage)
   } finally {
     creating.value = false
   }

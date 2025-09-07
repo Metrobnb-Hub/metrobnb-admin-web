@@ -120,7 +120,13 @@
                   <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ invoice.invoice_number }}</h3>
                   <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ invoice.partner_name }}</p>
                 </div>
-                <UDropdown :items="getInvoiceActions(invoice)">
+                <div v-if="isPartnerUser">
+                  <UButton @click="viewInvoice(invoice)" color="primary" variant="soft" size="xs">
+                    <UIcon name="i-heroicons-eye" class="mr-1" />
+                    View
+                  </UButton>
+                </div>
+                <UDropdown v-else :items="getInvoiceActionsForDropdown(invoice)">
                   <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" size="xs" />
                 </UDropdown>
               </div>
@@ -132,12 +138,13 @@
                 </div>
                 <div>
                   <span class="text-gray-500 dark:text-gray-400">Amount:</span>
-                  <p class="font-medium text-red-600 dark:text-red-400">₱{{ parseFloat(invoice.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</p>
+                  <p v-if="!invoice.total_amount || parseFloat(invoice.total_amount) === 0" class="font-medium text-gray-400 dark:text-gray-500">—</p>
+                  <p v-else class="font-medium text-red-600 dark:text-red-400">₱{{ parseFloat(invoice.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</p>
                 </div>
                 <div>
                   <span class="text-gray-500 dark:text-gray-400">Status:</span>
                   <UBadge :color="getStatusColor(invoice.status)" size="xs" class="ml-1">
-                    {{ getStatusText(invoice.status, isPartnerUser) }}
+                    {{ getStatusText(invoice.status) }}
                   </UBadge>
                 </div>
                 <div>
@@ -164,14 +171,17 @@
             </template>
             
             <template #amount-data="{ row }">
-              <span class="font-semibold text-red-600 dark:text-red-400">
-                ₱{{ parseFloat(row.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+              <span v-if="!row.total_amount || parseFloat(row.total_amount) === 0" class="text-gray-400 dark:text-gray-500">
+                —
+              </span>
+              <span v-else class="font-semibold text-red-600 dark:text-red-400">
+                ₱{{ parseFloat(row.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
               </span>
             </template>
             
             <template #status-data="{ row }">
               <UBadge :color="getStatusColor(row.status)" size="xs">
-                {{ getStatusText(row.status, isPartnerUser) }}
+                {{ getStatusText(row.status) }}
               </UBadge>
             </template>
             
@@ -180,7 +190,13 @@
             </template>
             
             <template #actions-data="{ row }">
-              <UDropdown :items="getInvoiceActions(row)">
+              <div v-if="isPartnerUser">
+                <UButton @click="viewInvoice(row)" color="primary" variant="soft" size="sm">
+                  <UIcon name="i-heroicons-eye" class="mr-1" />
+                  View
+                </UButton>
+              </div>
+              <UDropdown v-else :items="getInvoiceActionsForDropdown(row)">
                 <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" size="sm" />
               </UDropdown>
             </template>
@@ -217,8 +233,12 @@
 </template>
 
 <script setup lang="ts">
-const { getInvoices, getArchivedInvoices, settleInvoice, deleteInvoice, cancelInvoice, refreshInvoice, finalizeInvoice, sendInvoice, regenerateInvoice } = useApi()
+const { getInvoices, getArchivedInvoices, settleInvoice, deleteInvoice, cancelInvoice, refreshInvoice, approveInvoice, finalizeInvoice, sendInvoice } = useApi()
 const { partners, loadPartners } = useGlobalCache()
+const { getInvoiceActions, getStatusText, getStatusColor, validateTransition } = useInvoiceWorkflow()
+const { user } = useAuth()
+
+const isPartnerUser = computed(() => user.value?.role === 'partner')
 
 const invoices = ref<any[]>([])
 const isLoading = ref(false)
@@ -277,50 +297,70 @@ const paidCount = computed(() =>
   Array.isArray(invoices.value) ? invoices.value.filter(invoice => invoice.status === 'paid').length : 0
 )
 
-const getStatusColor = (status: string) => {
-  const colors = {
-    'draft': 'gray',
-    'finalized': 'blue',
-    'sent': 'orange',
-    'paid': 'green',
-    'cancelled': 'red'
+const executeInvoiceAction = async (invoice: any, action: string) => {
+  const { notifySuccess, notifyError } = useNotify()
+  
+  // Validate action
+  const validation = validateTransition(invoice, action)
+  if (!validation.valid) {
+    notifyError(validation.error || 'Invalid action')
+    return
   }
-  return colors[status] || 'gray'
-}
-
-const getStatusText = (status: string, isPartnerView = false) => {
-  if (isPartnerView) {
-    // Partner's perspective - action-oriented
-    const partnerStatusMap = {
-      'draft': 'Being Prepared',
-      'finalized': 'Almost Ready',
-      'sent': 'For Your Review',
-      'paid': 'All Done ✓',
-      'cancelled': 'Cancelled'
+  
+  try {
+    switch (action) {
+      case 'refresh':
+        await refreshInvoice(invoice.id)
+        notifySuccess('Invoice data refreshed successfully')
+        break
+      case 'approve':
+        await approveInvoice(invoice.id)
+        notifySuccess('Invoice approved successfully')
+        break
+      case 'finalize':
+        const confirmed = confirm(`Finalize Invoice ${invoice.invoice_number}?\n\nThis will lock the invoice and prevent further edits.`)
+        if (!confirmed) return
+        await finalizeInvoice(invoice.id)
+        notifySuccess('Invoice finalized successfully')
+        break
+      case 'send':
+        await sendInvoice(invoice.id)
+        notifySuccess('Invoice marked as sent')
+        break
+      case 'settle':
+        await settleInvoice(invoice.id, new Date().toISOString().split('T')[0])
+        notifySuccess('Invoice marked as paid successfully')
+        break
+      default:
+        notifyError('Unknown action')
+        return
     }
-    return partnerStatusMap[status] || status
-  } else {
-    // Admin's perspective
-    const adminStatusMap = {
-      'draft': 'Draft',
-      'finalized': 'Finalized',
-      'sent': 'Sent',
-      'paid': 'Paid',
-      'cancelled': 'Cancelled'
-    }
-    return adminStatusMap[status] || status
+    
+    await loadInvoices()
+  } catch (error: any) {
+    const errorMessage = error.message || `Failed to ${action} invoice`
+    notifyError(errorMessage)
   }
 }
-
-// Check if current user is a partner
-const { user } = useAuth()
-const isPartnerUser = computed(() => user.value?.role === 'partner')
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
 }
 
-const getInvoiceActions = (invoice: any) => {
+const getInvoiceActionsForDropdown = (invoice: any) => {
+  const amount = parseFloat(invoice.total_amount || 0)
+  
+  // For partner users with 0, null, or empty amounts, only show View action
+  if (isPartnerUser.value && (amount === 0 || !invoice.total_amount)) {
+    return [
+      [{
+        label: 'View',
+        icon: 'i-heroicons-eye',
+        click: () => viewInvoice(invoice)
+      }]
+    ]
+  }
+  
   const actions = [
     [{
       label: 'View Invoice',
@@ -329,42 +369,24 @@ const getInvoiceActions = (invoice: any) => {
     }]
   ]
   
-  if (invoice.status === 'draft') {
-    actions.push([
-      {
-        label: 'Refresh Data',
-        icon: 'i-heroicons-arrow-path',
-        click: () => refreshInvoiceAction(invoice)
-      },
-      {
-        label: 'Finalize',
-        icon: 'i-heroicons-lock-closed',
-        click: () => finalizeInvoiceAction(invoice)
-      }
-    ])
-    actions.push([
-      {
-        label: 'Delete Draft',
-        icon: 'i-heroicons-trash',
-        click: () => deleteInvoiceAction(invoice)
-      }
-    ])
-  } else if (invoice.status === 'finalized') {
-    actions.push([
-      {
-        label: 'Send Invoice',
-        icon: 'i-heroicons-paper-airplane',
-        click: () => sendInvoiceAction(invoice)
-      }
-    ])
-  } else if (invoice.status === 'sent') {
-    actions.push([
-      {
-        label: 'Mark as Paid',
-        icon: 'i-heroicons-check-circle',
-        click: () => markAsPaid(invoice)
-      }
-    ])
+  // Get workflow actions and convert to dropdown format
+  const workflowActions = getInvoiceActions(invoice)
+  if (workflowActions.length > 0) {
+    const actionItems = workflowActions.map(action => ({
+      label: action.label,
+      icon: action.icon,
+      click: () => executeInvoiceAction(invoice, action.action)
+    }))
+    actions.push(actionItems)
+  }
+  
+  // Add delete action for drafts (admin only)
+  if (invoice.status === 'draft' && !isPartnerUser.value) {
+    actions.push([{
+      label: 'Delete Draft',
+      icon: 'i-heroicons-trash',
+      click: () => deleteInvoiceAction(invoice)
+    }])
   }
   
   return actions
@@ -374,68 +396,7 @@ const viewInvoice = (invoice: any) => {
   navigateTo(`/invoices/${invoice.id}`)
 }
 
-const markAsPaid = async (invoice: any) => {
-  const { notifySuccess, notifyError } = useNotify()
-  
-  try {
-    await settleInvoice(invoice.id, new Date().toISOString().split('T')[0])
-    await loadInvoices()
-    notifySuccess('Invoice marked as paid successfully')
-  } catch (error) {
-    notifyError('Failed to mark invoice as paid')
-  }
-}
 
-const refreshInvoiceAction = async (invoice: any) => {
-  const { notifySuccess, notifyError } = useNotify()
-  
-  try {
-    const result = await refreshInvoice(invoice.id)
-    await loadInvoices()
-    notifySuccess('Invoice data refreshed successfully')
-  } catch (error) {
-    notifyError('Failed to refresh invoice data')
-  }
-}
-
-const finalizeInvoiceAction = async (invoice: any) => {
-  const { notifySuccess, notifyError } = useNotify()
-  
-  const confirmed = confirm(`Finalize Invoice ${invoice.invoice_number}?\n\nThis will lock the invoice and prevent further edits.`)
-  if (!confirmed) return
-  
-  try {
-    await finalizeInvoice(invoice.id)
-    await loadInvoices()
-    notifySuccess('Invoice finalized successfully')
-  } catch (error) {
-    notifyError('Failed to finalize invoice')
-  }
-}
-
-const sendInvoiceAction = async (invoice: any) => {
-  const { notifySuccess, notifyError } = useNotify()
-  
-  try {
-    await sendInvoice(invoice.id)
-    await loadInvoices()
-    notifySuccess('Invoice marked as sent')
-  } catch (error) {
-    notifyError('Failed to send invoice')
-  }
-}
-
-const cancelInvoiceAction = async (invoice: any) => {
-  const { notifySuccess, notifyError } = useNotify()
-  
-  try {
-    await cancelInvoice(invoice.id)
-    await loadInvoices()
-    notifySuccess('Invoice cancelled successfully')
-  } catch (error) {
-    notifyError('Failed to cancel invoice')
-  }
-}
 
 const deleteInvoiceAction = async (invoice: any) => {
   const { notifySuccess, notifyError } = useNotify()

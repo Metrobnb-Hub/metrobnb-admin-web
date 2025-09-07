@@ -33,6 +33,7 @@
         :bookings="bookings" 
         :partners="partners"
         :units="units"
+        :read-only="readOnly"
         @edit="$emit('edit', $event)" 
         @delete="$emit('delete', $event)" 
       />
@@ -68,6 +69,7 @@
             :bookings="group.bookings" 
             :partners="partners"
             :units="units"
+            :read-only="readOnly"
             @edit="$emit('edit', $event)" 
             @delete="$emit('delete', $event)" 
           />
@@ -96,6 +98,7 @@ const props = defineProps<{
   bookings: Booking[]
   partners?: any[]
   units?: any[]
+  readOnly?: boolean
 }>()
 
 const emit = defineEmits<{

@@ -25,39 +25,23 @@
               Back to Invoices
             </UButton>
             <UBadge :color="getStatusColor(invoiceData.status)" size="lg">
-              {{ getStatusText(invoiceData.status || 'draft', isPartnerUser) }}
+              {{ getStatusText(invoiceData.status || 'draft') }}
             </UBadge>
           </div>
           
           <!-- Workflow Actions -->
           <div class="flex space-x-2">
-            <!-- Draft Actions -->
-            <template v-if="invoiceData.status === 'draft'">
-              <UButton @click="refreshDraft" :loading="loading" variant="outline" size="sm">
-                <UIcon name="i-heroicons-arrow-path" class="mr-1" />
-                Refresh Data
-              </UButton>
-              <UButton @click="finalizeDraft" :loading="loading" color="blue" size="sm">
-                <UIcon name="i-heroicons-lock-closed" class="mr-1" />
-                Finalize
-              </UButton>
-            </template>
-            
-            <!-- Finalized Actions -->
-            <template v-if="invoiceData.status === 'finalized'">
-              <UButton @click="sendInvoice" :loading="loading" color="purple" size="sm">
-                <UIcon name="i-heroicons-paper-airplane" class="mr-1" />
-                Send Invoice
-              </UButton>
-            </template>
-            
-            <!-- Sent Actions -->
-            <template v-if="invoiceData.status === 'sent'">
-              <UButton @click="showSettleModal = true" :loading="loading" color="green" size="sm">
-                <UIcon name="i-heroicons-check-circle" class="mr-1" />
-                Mark as Paid
-              </UButton>
-            </template>
+            <UButton 
+              v-for="action in availableActions" 
+              :key="action.action"
+              @click="handleAction(action)"
+              :loading="loading"
+              :color="action.color"
+              size="sm"
+            >
+              <UIcon :name="action.icon" class="mr-1" />
+              {{ action.label }}
+            </UButton>
           </div>
         </div>
         
@@ -127,11 +111,9 @@
 
 <script setup lang="ts">
 const route = useRoute()
-const { getInvoiceById, refreshInvoice, finalizeInvoice, sendInvoice: sendInvoiceAPI, settleInvoice } = useApi()
+const { getInvoiceById, refreshInvoice, approveInvoice, finalizeInvoice, sendInvoice: sendInvoiceAPI, settleInvoice } = useApi()
 const { notifyError, notifySuccess } = useNotify()
-const { user } = useAuth()
-
-const isPartnerUser = computed(() => user.value?.role === 'partner')
+const { getInvoiceActions, getStatusText, getStatusColor, validateTransition } = useInvoiceWorkflow()
 
 const invoiceData = ref(null)
 const isLoading = ref(true)
@@ -140,6 +122,10 @@ const error = ref('')
 const showSettleModal = ref(false)
 const paidDate = ref(new Date().toISOString().split('T')[0])
 const today = new Date().toISOString().split('T')[0]
+
+const availableActions = computed(() => {
+  return invoiceData.value ? getInvoiceActions(invoiceData.value) : []
+})
 
 const loadInvoice = async () => {
   try {
@@ -202,38 +188,57 @@ const loadInvoice = async () => {
   }
 }
 
-const getStatusColor = (status: string) => {
-  const colors = {
-    'draft': 'gray',
-    'finalized': 'blue', 
-    'sent': 'orange',
-    'paid': 'green',
-    'cancelled': 'red'
+const handleAction = async (action: any) => {
+  // Validate action
+  const validation = validateTransition(invoiceData.value, action.action)
+  if (!validation.valid) {
+    notifyError(validation.error || 'Invalid action')
+    return
   }
-  return colors[status] || 'gray'
-}
-
-const getStatusText = (status: string, isPartnerView = false) => {
-  if (isPartnerView) {
-    // Partner's perspective - action-oriented
-    const partnerStatusMap = {
-      'draft': 'Being Prepared',
-      'finalized': 'Almost Ready',
-      'sent': 'For Your Review',
-      'paid': 'All Done ✓',
-      'cancelled': 'Cancelled'
+  
+  // Show confirmation if required
+  if (action.requiresConfirmation) {
+    const confirmed = confirm(action.confirmationMessage || `Are you sure you want to ${action.label.toLowerCase()}?`)
+    if (!confirmed) return
+  }
+  
+  // Handle special cases
+  if (action.action === 'settle') {
+    showSettleModal.value = true
+    return
+  }
+  
+  // Execute action
+  loading.value = true
+  try {
+    switch (action.action) {
+      case 'refresh':
+        await refreshInvoice(route.params.id as string)
+        notifySuccess('Invoice data refreshed successfully')
+        break
+      case 'approve':
+        await approveInvoice(route.params.id as string)
+        notifySuccess('Invoice approved successfully')
+        break
+      case 'finalize':
+        await finalizeInvoice(route.params.id as string)
+        notifySuccess('Invoice finalized successfully')
+        break
+      case 'send':
+        await sendInvoiceAPI(route.params.id as string)
+        notifySuccess('Invoice marked as sent')
+        break
+      default:
+        notifyError('Unknown action')
+        return
     }
-    return partnerStatusMap[status] || status
-  } else {
-    // Admin's perspective
-    const adminStatusMap = {
-      'draft': 'Draft',
-      'finalized': 'Finalized',
-      'sent': 'Sent',
-      'paid': 'Paid',
-      'cancelled': 'Cancelled'
-    }
-    return adminStatusMap[status] || status
+    
+    await loadInvoice()
+  } catch (err: any) {
+    const errorMessage = err.message || `Failed to ${action.label.toLowerCase()}`
+    notifyError(errorMessage)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -244,47 +249,7 @@ const formatAmount = (amount: number) => {
   })
 }
 
-const refreshDraft = async () => {
-  loading.value = true
-  try {
-    await refreshInvoice(route.params.id as string)
-    await loadInvoice()
-    notifySuccess('Invoice data refreshed successfully')
-  } catch (err) {
-    notifyError('Failed to refresh invoice')
-  } finally {
-    loading.value = false
-  }
-}
 
-const finalizeDraft = async () => {
-  const confirmed = confirm('Finalize this invoice? This will lock the invoice and prevent further edits.')
-  if (!confirmed) return
-  
-  loading.value = true
-  try {
-    await finalizeInvoice(route.params.id as string)
-    await loadInvoice()
-    notifySuccess('Invoice finalized successfully')
-  } catch (err) {
-    notifyError('Failed to finalize invoice')
-  } finally {
-    loading.value = false
-  }
-}
-
-const sendInvoice = async () => {
-  loading.value = true
-  try {
-    await sendInvoiceAPI(route.params.id as string)
-    await loadInvoice()
-    notifySuccess('Invoice marked as sent')
-  } catch (err) {
-    notifyError('Failed to send invoice')
-  } finally {
-    loading.value = false
-  }
-}
 
 const confirmSettle = async () => {
   loading.value = true

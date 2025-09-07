@@ -311,18 +311,8 @@ export const useApi = () => {
       return await apiClient<any>(`/api/analytics/dashboard${query ? `?${query}` : ''}`)
     },
     
-    // Invoices
-    generateInvoice: async (partnerId: string, startDate: string, endDate: string) => {
-      return await apiClient<any>('/api/invoices/generate', {
-        method: 'POST',
-        body: JSON.stringify({
-          partner_id: partnerId,
-          start_date: startDate,
-          end_date: endDate
-        })
-      })
-    },
-    
+    // Invoices - New Workflow
+    // Admin only: Create draft invoice
     createDraftInvoice: async (partnerId: string, startDate: string, endDate: string) => {
       return await apiClient<any>('/api/invoices/draft', {
         method: 'POST',
@@ -334,20 +324,24 @@ export const useApi = () => {
       })
     },
     
+    // Admin only: Refresh draft data
     refreshInvoice: async (invoiceId: string) => {
       return await apiClient<any>(`/api/invoices/${invoiceId}/refresh`, { method: 'PUT' })
     },
     
+    // Partner only: Approve draft invoice
+    approveInvoice: async (invoiceId: string) => {
+      return await apiClient<any>(`/api/invoices/${invoiceId}/approve`, { method: 'PATCH' })
+    },
+    
+    // Admin only: Finalize invoice (bypass partner approval)
     finalizeInvoice: async (invoiceId: string) => {
       return await apiClient<any>(`/api/invoices/${invoiceId}/finalize`, { method: 'PUT' })
     },
     
+    // Admin only: Send invoice
     sendInvoice: async (invoiceId: string) => {
       return await apiClient<any>(`/api/invoices/${invoiceId}/send`, { method: 'PUT' })
-    },
-    
-    regenerateInvoice: async (invoiceId: string) => {
-      return await apiClient<any>(`/api/invoices/${invoiceId}/regenerate`, { method: 'POST' })
     },
     
     getInvoices: async (filters: any = {}) => {
@@ -382,6 +376,7 @@ export const useApi = () => {
       return await apiClient<any>(`/api/invoices/${invoiceId}`)
     },
     
+    // Admin only: Mark as paid
     settleInvoice: async (invoiceId: string, paidDate: string) => {
       return await apiClient<any>(`/api/invoices/${invoiceId}/settle`, {
         method: 'PATCH',
@@ -524,6 +519,26 @@ export const useApi = () => {
     // Users
     getUserList: async () => {
       return await apiClient<any>('/api/users/list')
+    },
+    
+    createUser: async (userData: {
+      email: string
+      name: string
+      role: string
+      accessible_partners?: string[]
+    }) => {
+      return await apiClient<any>('/api/users', {
+        method: 'POST',
+        body: JSON.stringify(userData)
+      })
+    },
+    
+    regeneratePassword: async (userId: string) => {
+      return await apiClient<any>(`/api/users/${userId}/regenerate-password`, { method: 'POST' })
+    },
+    
+    deleteUser: async (userId: string) => {
+      return await apiClient<any>(`/api/users/${userId}`, { method: 'DELETE' })
     },
     
     // Helpers

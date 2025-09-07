@@ -323,7 +323,7 @@ const yearOptions = computed(() => {
   const currentYear = new Date().getFullYear()
   
   for (let i = currentYear - 5; i <= currentYear + 2; i++) {
-    years.push({ label: i.toString(), value: i.toString() })
+    years.push({ label: i.toString(), value: i.toString() });
   }
   
   return years.reverse()
@@ -395,15 +395,6 @@ const onSubmit = async () => {
       const matchesUnit = !state.unitId || booking.unitId === state.unitId
       const inDateRange = bookingDate >= startDate && bookingDate <= endDate
       
-        booking: booking.guestName,
-        bookingDate: booking.date,
-        partnerId: booking.partnerId,
-        selectedPartnerId: state.partnerId,
-        matchesPartner,
-        matchesUnit,
-        inDateRange
-      })
-      
       return matchesPartner && matchesUnit && inDateRange
     })
     
@@ -412,15 +403,6 @@ const onSubmit = async () => {
       const matchesPartner = expense.partnerId === state.partnerId
       const matchesUnit = !state.unitId || expense.unitId === state.unitId
       const inDateRange = expenseDate >= startDate && expenseDate <= endDate
-      
-        expense: expense.type,
-        expenseDate: expense.date,
-        partnerId: expense.partnerId,
-        selectedPartnerId: state.partnerId,
-        matchesPartner,
-        matchesUnit,
-        inDateRange
-      })
       
       return matchesPartner && matchesUnit && inDateRange
     })
