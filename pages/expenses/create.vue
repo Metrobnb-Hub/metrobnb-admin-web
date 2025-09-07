@@ -79,7 +79,7 @@
           <UTextarea v-model="form.notes" placeholder="Optional notes" />
         </UFormGroup>
         
-        <UButton type="submit" :loading="loading">Add Expense</UButton>
+        <UButton type="submit" :loading="loading" color="primary">Add Expense</UButton>
       </UForm>
     </UCard>
   </div>

@@ -92,6 +92,11 @@ export const useAuth = () => {
     
     const data = await response.json()
     
+    if (response.status === 403 && data.error?.code === 'PASSWORD_CHANGE_REQUIRED') {
+      await navigateTo('/change-password')
+      return
+    }
+    
     if (response.status === 401) {
       authToken.value = null
       refreshToken.value = null
@@ -132,17 +137,22 @@ export const useAuth = () => {
       })
       
       if (response.success && response.data) {
-        // Store user and organization data
+        // Check if password change is required
+        if (response.data.requires_password_change) {
+          // Store minimal data for password change flow
+          authToken.value = response.data.access_token
+          userCookie.value = { email: credentials.email }
+          return response
+        }
+        
+        // Normal login - store all data
         user.value = response.data.user
         organization.value = response.data.organization
         authToken.value = response.data.access_token
         refreshToken.value = response.data.refresh_token
         
-        // Also store in cookies to persist across page reloads
         userCookie.value = response.data.user
         orgCookie.value = response.data.organization
-        
-
       } else {
         throw new Error('Invalid login response')
       }

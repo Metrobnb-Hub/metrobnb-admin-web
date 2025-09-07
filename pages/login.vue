@@ -3,14 +3,14 @@
     <!-- Mobile-First Design -->
     <div class="min-h-screen flex flex-col lg:flex-row">
       <!-- Mobile Header / Desktop Left Side -->
-      <div class="lg:w-1/2 bg-gradient-to-br from-blue-600 to-purple-700 relative overflow-hidden">
+      <div class="lg:w-1/2 bg-gradient-to-br from-metrobnb-600 to-metrobnb-700 relative overflow-hidden">
         <!-- Mobile: Compact header -->
         <div class="lg:hidden p-6 text-center text-white">
           <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <UIcon name="i-heroicons-home-modern" class="h-8 w-8" />
           </div>
           <h1 class="text-3xl font-bold mb-2">MetroBNB</h1>
-          <p class="text-blue-100 mb-4">Property Management Made Simple</p>
+          <p class="text-white/80 mb-4">Property Management Made Simple</p>
           
           <div class="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 inline-flex items-center space-x-2">
             <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -27,7 +27,7 @@
                 <UIcon name="i-heroicons-home-modern" class="h-8 w-8" />
               </div>
               <h1 class="text-4xl font-bold mb-4">MetroBNB</h1>
-              <p class="text-xl text-blue-100">Property Management Made Simple</p>
+              <p class="text-xl text-white/80">Property Management Made Simple</p>
             </div>
             
             <div class="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 inline-flex items-center space-x-2 mb-6">
@@ -38,15 +38,15 @@
             <div class="space-y-4">
               <div class="flex items-center space-x-3">
                 <div class="w-2 h-2 bg-white rounded-full"></div>
-                <span class="text-blue-100">Manage multiple properties effortlessly</span>
+                <span class="text-white/80">Manage multiple properties effortlessly</span>
               </div>
               <div class="flex items-center space-x-3">
                 <div class="w-2 h-2 bg-white rounded-full"></div>
-                <span class="text-blue-100">Track bookings and expenses in real-time</span>
+                <span class="text-white/80">Track bookings and expenses in real-time</span>
               </div>
               <div class="flex items-center space-x-3">
                 <div class="w-2 h-2 bg-white rounded-full"></div>
-                <span class="text-blue-100">Generate invoices automatically</span>
+                <span class="text-white/80">Generate invoices automatically</span>
               </div>
             </div>
           </div>
@@ -135,13 +135,13 @@
             
             <div class="mt-6 text-center space-y-3">
               <p class="text-gray-600 dark:text-gray-400 text-sm">
-                <NuxtLink to="/reset-password" class="font-semibold text-blue-600 hover:text-blue-500">
+                <NuxtLink to="/reset-password" class="font-semibold text-metrobnb-600 hover:text-metrobnb-500">
                   Forgot your password?
                 </NuxtLink>
               </p>
               <p class="text-gray-600 dark:text-gray-400 text-sm">
                 New to MetroBNB?
-                <NuxtLink to="/register" class="font-semibold text-blue-600 hover:text-blue-500 ml-1">
+                <NuxtLink to="/register" class="font-semibold text-metrobnb-600 hover:text-metrobnb-500 ml-1">
                   Create account
                 </NuxtLink>
               </p>
@@ -186,7 +186,7 @@ const handleLogin = async () => {
     
     // Check if user needs to change password (new user flow)
     if (response.data?.requires_password_change) {
-      await router.push(`/set-password?email=${encodeURIComponent(credentials.value.email)}&temp_login=true`)
+      await router.push('/change-password')
       return
     }
     

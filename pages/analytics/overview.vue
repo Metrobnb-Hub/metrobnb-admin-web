@@ -40,31 +40,31 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="text-center p-6 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <UIcon name="i-heroicons-arrow-trending-up" class="h-10 w-10 text-green-600 dark:text-green-400 mx-auto mb-3" />
+        <div class="text-center p-6 bg-metrobnb-50 dark:bg-metrobnb-900/20 rounded-lg">
+          <UIcon name="i-heroicons-arrow-trending-up" class="h-10 w-10 text-metrobnb-600 dark:text-metrobnb-400 mx-auto mb-3" />
           <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Revenue</p>
-          <p class="text-3xl font-bold text-green-600 dark:text-green-400">₱{{ totalRevenue.toLocaleString() }}</p>
+          <p class="text-3xl font-bold text-metrobnb-600 dark:text-metrobnb-400">₱{{ totalRevenue.toLocaleString() }}</p>
           <p class="text-xs text-gray-500 mt-1">Own + Partner Units</p>
         </div>
         
-        <div class="text-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <UIcon name="i-heroicons-building-office-2" class="h-10 w-10 text-blue-600 dark:text-blue-400 mx-auto mb-3" />
+        <div class="text-center p-6 bg-metrobnb-100 dark:bg-metrobnb-800/20 rounded-lg">
+          <UIcon name="i-heroicons-building-office-2" class="h-10 w-10 text-metrobnb-700 dark:text-metrobnb-300 mx-auto mb-3" />
           <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">MetroBNB Revenue</p>
-          <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">₱{{ metroBNBRevenue.toLocaleString() }}</p>
+          <p class="text-3xl font-bold text-metrobnb-700 dark:text-metrobnb-300">₱{{ metroBNBRevenue.toLocaleString() }}</p>
           <p class="text-xs text-gray-500 mt-1">Direct + Commission</p>
         </div>
         
-        <div class="text-center p-6 bg-red-50 dark:bg-red-900/20 rounded-lg">
-          <UIcon name="i-heroicons-receipt-percent" class="h-10 w-10 text-red-600 dark:text-red-400 mx-auto mb-3" />
+        <div class="text-center p-6 bg-gray-50 dark:bg-gray-800/20 rounded-lg">
+          <UIcon name="i-heroicons-receipt-percent" class="h-10 w-10 text-gray-600 dark:text-gray-400 mx-auto mb-3" />
           <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Expenses</p>
-          <p class="text-3xl font-bold text-red-600 dark:text-red-400">₱{{ metroBNBExpenses.toLocaleString() }}</p>
+          <p class="text-3xl font-bold text-gray-700 dark:text-gray-300">₱{{ metroBNBExpenses.toLocaleString() }}</p>
           <p class="text-xs text-gray-500 mt-1">Operating costs</p>
         </div>
         
-        <div class="text-center p-6 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-          <UIcon name="i-heroicons-banknotes" class="h-10 w-10 text-purple-600 dark:text-purple-400 mx-auto mb-3" />
+        <div class="text-center p-6 bg-metrobnb-200 dark:bg-metrobnb-700/20 rounded-lg">
+          <UIcon name="i-heroicons-banknotes" class="h-10 w-10 text-metrobnb-800 dark:text-metrobnb-200 mx-auto mb-3" />
           <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Net Profit</p>
-          <p class="text-3xl font-bold" :class="netProfit >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400'">
+          <p class="text-3xl font-bold" :class="netProfit >= 0 ? 'text-metrobnb-800 dark:text-metrobnb-200' : 'text-red-600 dark:text-red-400'">
             ₱{{ netProfit.toLocaleString() }}
           </p>
           <p class="text-xs text-gray-500 mt-1">After all expenses</p>
@@ -80,26 +80,26 @@
           <h3 class="text-lg font-semibold">Revenue Breakdown</h3>
         </template>
         <div class="space-y-4">
-          <div class="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+          <div class="flex items-center justify-between p-4 bg-metrobnb-50 dark:bg-metrobnb-900/20 rounded-lg">
             <div class="flex items-center">
-              <UIcon name="i-heroicons-home-modern" class="h-6 w-6 text-green-600 dark:text-green-400 mr-3" />
+              <UIcon name="i-heroicons-home-modern" class="h-6 w-6 text-metrobnb-600 dark:text-metrobnb-400 mr-3" />
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">Own Units Revenue</p>
                 <p class="text-sm text-gray-500">Direct bookings</p>
               </div>
             </div>
-            <p class="text-xl font-bold text-green-600 dark:text-green-400">₱{{ ownUnitsRevenue.toLocaleString() }}</p>
+            <p class="text-xl font-bold text-metrobnb-600 dark:text-metrobnb-400">₱{{ ownUnitsRevenue.toLocaleString() }}</p>
           </div>
           
-          <div class="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+          <div class="flex items-center justify-between p-4 bg-metrobnb-100 dark:bg-metrobnb-800/20 rounded-lg">
             <div class="flex items-center">
-              <UIcon name="i-heroicons-users" class="h-6 w-6 text-purple-600 dark:text-purple-400 mr-3" />
+              <UIcon name="i-heroicons-users" class="h-6 w-6 text-metrobnb-700 dark:text-metrobnb-300 mr-3" />
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">Partner Commission</p>
                 <p class="text-sm text-gray-500">Revenue sharing</p>
               </div>
             </div>
-            <p class="text-xl font-bold text-purple-600 dark:text-purple-400">₱{{ partnerCommission.toLocaleString() }}</p>
+            <p class="text-xl font-bold text-metrobnb-700 dark:text-metrobnb-300">₱{{ partnerCommission.toLocaleString() }}</p>
           </div>
         </div>
       </UCard>
@@ -113,8 +113,8 @@
           <div v-for="unit in topUnits" :key="unit.id" 
                class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div class="flex items-center">
-              <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-3">
-                <UIcon name="i-heroicons-home" class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div class="w-10 h-10 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-full flex items-center justify-center mr-3">
+                <UIcon name="i-heroicons-home" class="h-5 w-5 text-metrobnb-600 dark:text-metrobnb-400" />
               </div>
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">{{ unit.name }}</p>
@@ -122,7 +122,7 @@
               </div>
             </div>
             <div class="text-right">
-              <p class="font-semibold text-green-600 dark:text-green-400">₱{{ unit.revenue.toLocaleString() }}</p>
+              <p class="font-semibold text-metrobnb-600 dark:text-metrobnb-400">₱{{ unit.revenue.toLocaleString() }}</p>
               <p class="text-xs text-gray-500">{{ unit.bookings }} bookings</p>
             </div>
           </div>
@@ -139,14 +139,14 @@
         <div v-for="booking in recentBookings.slice(0, 8)" :key="booking.id" 
              class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div class="flex items-center">
-            <UIcon name="i-heroicons-calendar-days" class="h-5 w-5 text-blue-500 mr-3" />
+            <UIcon name="i-heroicons-calendar-days" class="h-5 w-5 text-metrobnb-500 mr-3" />
             <div>
               <p class="font-medium text-gray-900 dark:text-white">{{ booking.guest_name }}</p>
               <p class="text-sm text-gray-500">{{ booking.unit_name }} • {{ formatDate(booking.booking_date) }}</p>
             </div>
           </div>
           <div class="text-right">
-            <p class="font-semibold text-green-600 dark:text-green-400">₱{{ parseFloat(booking.total_amount).toLocaleString() }}</p>
+            <p class="font-semibold text-metrobnb-600 dark:text-metrobnb-400">₱{{ parseFloat(booking.total_amount).toLocaleString() }}</p>
             <p class="text-xs text-gray-500">{{ booking.partner_name || 'Own Unit' }}</p>
           </div>
         </div>

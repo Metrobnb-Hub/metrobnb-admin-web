@@ -16,8 +16,8 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
       <UCard class="p-6">
         <div class="flex items-center">
-          <div class="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
-            <UIcon name="i-heroicons-users" class="h-8 w-8 text-purple-600 dark:text-purple-400" />
+          <div class="p-3 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-lg">
+            <UIcon name="i-heroicons-users" class="h-8 w-8 text-metrobnb-600 dark:text-metrobnb-400" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Active Partners</p>
@@ -28,8 +28,8 @@
       
       <UCard class="p-6">
         <div class="flex items-center">
-          <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-            <UIcon name="i-heroicons-currency-dollar" class="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <div class="p-3 bg-metrobnb-200 dark:bg-metrobnb-800 rounded-lg">
+            <UIcon name="i-heroicons-currency-dollar" class="h-8 w-8 text-metrobnb-700 dark:text-metrobnb-300" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Commission Earned</p>
@@ -40,8 +40,8 @@
       
       <UCard class="p-6">
         <div class="flex items-center">
-          <div class="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-            <UIcon name="i-heroicons-home" class="h-8 w-8 text-green-600 dark:text-green-400" />
+          <div class="p-3 bg-metrobnb-300 dark:bg-metrobnb-700 rounded-lg">
+            <UIcon name="i-heroicons-home" class="h-8 w-8 text-metrobnb-800 dark:text-metrobnb-200" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Partner Units</p>
@@ -75,8 +75,8 @@
         <div v-for="partner in sortedPartners" :key="partner.id" 
              class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div class="flex items-center">
-            <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mr-4">
-              <span class="text-purple-600 dark:text-purple-400 font-semibold">
+            <div class="w-12 h-12 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-full flex items-center justify-center mr-4">
+              <span class="text-metrobnb-600 dark:text-metrobnb-400 font-semibold">
                 {{ partner.name.charAt(0) }}
               </span>
             </div>
@@ -86,7 +86,7 @@
             </div>
           </div>
           <div class="text-right">
-            <p class="text-lg font-semibold text-green-600 dark:text-green-400">₱{{ partner.revenue.toLocaleString() }}</p>
+            <p class="text-lg font-semibold text-metrobnb-600 dark:text-metrobnb-400">₱{{ partner.revenue.toLocaleString() }}</p>
             <p class="text-sm" :class="partner.outstanding > 0 ? 'text-red-500' : 'text-gray-500'">
               {{ partner.outstanding > 0 ? `₱${partner.outstanding.toLocaleString()} due` : 'Settled' }}
             </p>
@@ -107,26 +107,26 @@
           <h3 class="text-lg font-semibold">Revenue Sharing</h3>
         </template>
         <div class="space-y-4">
-          <div class="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <div class="flex items-center justify-between p-4 bg-metrobnb-50 dark:bg-metrobnb-900/20 rounded-lg">
             <div class="flex items-center">
-              <UIcon name="i-heroicons-building-office-2" class="h-6 w-6 text-blue-600 dark:text-blue-400 mr-3" />
+              <UIcon name="i-heroicons-building-office-2" class="h-6 w-6 text-metrobnb-600 dark:text-metrobnb-400 mr-3" />
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">MetroBNB Commission</p>
                 <p class="text-sm text-gray-500">From partner units</p>
               </div>
             </div>
-            <p class="text-xl font-bold text-blue-600 dark:text-blue-400">₱{{ totalCommission.toLocaleString() }}</p>
+            <p class="text-xl font-bold text-metrobnb-600 dark:text-metrobnb-400">₱{{ totalCommission.toLocaleString() }}</p>
           </div>
           
-          <div class="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+          <div class="flex items-center justify-between p-4 bg-metrobnb-100 dark:bg-metrobnb-800/20 rounded-lg">
             <div class="flex items-center">
-              <UIcon name="i-heroicons-users" class="h-6 w-6 text-green-600 dark:text-green-400 mr-3" />
+              <UIcon name="i-heroicons-users" class="h-6 w-6 text-metrobnb-700 dark:text-metrobnb-300 mr-3" />
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">Partner Revenue</p>
                 <p class="text-sm text-gray-500">Total earned by partners</p>
               </div>
             </div>
-            <p class="text-xl font-bold text-green-600 dark:text-green-400">₱{{ totalPartnerRevenue.toLocaleString() }}</p>
+            <p class="text-xl font-bold text-metrobnb-700 dark:text-metrobnb-300">₱{{ totalPartnerRevenue.toLocaleString() }}</p>
           </div>
         </div>
       </UCard>
@@ -171,14 +171,14 @@
         <div v-for="booking in partnerBookings" :key="booking.id" 
              class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div class="flex items-center">
-            <UIcon name="i-heroicons-calendar-days" class="h-5 w-5 text-purple-500 mr-3" />
+            <UIcon name="i-heroicons-calendar-days" class="h-5 w-5 text-metrobnb-500 mr-3" />
             <div>
               <p class="font-medium text-gray-900 dark:text-white">{{ booking.guest_name }}</p>
               <p class="text-sm text-gray-500">{{ booking.unit_name }} • {{ booking.partner_name }}</p>
             </div>
           </div>
           <div class="text-right">
-            <p class="font-semibold text-green-600 dark:text-green-400">₱{{ parseFloat(booking.total_amount).toLocaleString() }}</p>
+            <p class="font-semibold text-metrobnb-600 dark:text-metrobnb-400">₱{{ parseFloat(booking.total_amount).toLocaleString() }}</p>
             <p class="text-xs text-gray-500">{{ formatDate(booking.booking_date) }}</p>
           </div>
         </div>

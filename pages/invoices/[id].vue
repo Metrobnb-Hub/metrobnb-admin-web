@@ -74,7 +74,7 @@
             </div>
             <div>
               <span class="text-gray-600 dark:text-gray-400">Net Due:</span>
-              <div class="font-bold text-lg" :class="invoiceData.summary?.net_due > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
+              <div class="font-bold text-lg" :class="invoiceData.summary?.net_due > 0 ? 'text-red-600 dark:text-red-400' : 'text-metrobnb-600 dark:text-metrobnb-400'">
                 ₱{{ formatAmount(invoiceData.summary?.net_due || 0) }}
               </div>
             </div>
@@ -99,7 +99,7 @@
           
           <div class="flex justify-end gap-3">
             <UButton variant="ghost" @click="showSettleModal = false">Cancel</UButton>
-            <UButton @click="confirmSettle" :loading="loading" color="green">
+            <UButton @click="confirmSettle" :loading="loading" color="primary">
               Confirm Payment
             </UButton>
           </div>

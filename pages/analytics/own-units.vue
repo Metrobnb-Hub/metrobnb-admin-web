@@ -16,8 +16,8 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
       <UCard class="p-6">
         <div class="flex items-center">
-          <div class="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-            <UIcon name="i-heroicons-home-modern" class="h-8 w-8 text-green-600 dark:text-green-400" />
+          <div class="p-3 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-lg">
+            <UIcon name="i-heroicons-home-modern" class="h-8 w-8 text-metrobnb-600 dark:text-metrobnb-400" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Own Units</p>
@@ -28,8 +28,8 @@
       
       <UCard class="p-6">
         <div class="flex items-center">
-          <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-            <UIcon name="i-heroicons-currency-dollar" class="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <div class="p-3 bg-metrobnb-200 dark:bg-metrobnb-800 rounded-lg">
+            <UIcon name="i-heroicons-currency-dollar" class="h-8 w-8 text-metrobnb-700 dark:text-metrobnb-300" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Revenue</p>
@@ -40,8 +40,8 @@
       
       <UCard class="p-6">
         <div class="flex items-center">
-          <div class="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
-            <UIcon name="i-heroicons-calendar-days" class="h-8 w-8 text-purple-600 dark:text-purple-400" />
+          <div class="p-3 bg-metrobnb-300 dark:bg-metrobnb-700 rounded-lg">
+            <UIcon name="i-heroicons-calendar-days" class="h-8 w-8 text-metrobnb-800 dark:text-metrobnb-200" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Bookings</p>
@@ -52,8 +52,8 @@
       
       <UCard class="p-6">
         <div class="flex items-center">
-          <div class="p-3 bg-orange-100 dark:bg-orange-900 rounded-lg">
-            <UIcon name="i-heroicons-chart-bar" class="h-8 w-8 text-orange-600 dark:text-orange-400" />
+          <div class="p-3 bg-metrobnb-400 dark:bg-metrobnb-600 rounded-lg">
+            <UIcon name="i-heroicons-chart-bar" class="h-8 w-8 text-metrobnb-900 dark:text-metrobnb-100" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Avg per Unit</p>
@@ -72,8 +72,8 @@
         <div v-for="unit in ownUnits" :key="unit.id" 
              class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div class="flex items-center">
-            <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mr-4">
-              <UIcon name="i-heroicons-home" class="h-6 w-6 text-green-600 dark:text-green-400" />
+            <div class="w-12 h-12 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-full flex items-center justify-center mr-4">
+              <UIcon name="i-heroicons-home" class="h-6 w-6 text-metrobnb-600 dark:text-metrobnb-400" />
             </div>
             <div>
               <h4 class="font-medium text-gray-900 dark:text-white">{{ unit.name }}</h4>
@@ -81,7 +81,7 @@
             </div>
           </div>
           <div class="text-right">
-            <p class="text-lg font-semibold text-green-600 dark:text-green-400">₱{{ unit.revenue.toLocaleString() }}</p>
+            <p class="text-lg font-semibold text-metrobnb-600 dark:text-metrobnb-400">₱{{ unit.revenue.toLocaleString() }}</p>
             <p class="text-sm text-gray-500">{{ unit.bookings }} bookings</p>
           </div>
         </div>
@@ -101,14 +101,14 @@
         <div v-for="booking in ownUnitBookings" :key="booking.id" 
              class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div class="flex items-center">
-            <UIcon name="i-heroicons-calendar-days" class="h-5 w-5 text-green-500 mr-3" />
+            <UIcon name="i-heroicons-calendar-days" class="h-5 w-5 text-metrobnb-500 mr-3" />
             <div>
               <p class="font-medium text-gray-900 dark:text-white">{{ booking.guest_name }}</p>
               <p class="text-sm text-gray-500">{{ booking.unit_name }} • {{ formatDate(booking.booking_date) }}</p>
             </div>
           </div>
           <div class="text-right">
-            <p class="font-semibold text-green-600 dark:text-green-400">₱{{ parseFloat(booking.total_amount).toLocaleString() }}</p>
+            <p class="font-semibold text-metrobnb-600 dark:text-metrobnb-400">₱{{ parseFloat(booking.total_amount).toLocaleString() }}</p>
             <p class="text-xs text-gray-500">100% to MetroBNB</p>
           </div>
         </div>

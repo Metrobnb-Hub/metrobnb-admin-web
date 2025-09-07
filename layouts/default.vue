@@ -33,14 +33,14 @@
       <nav class="mt-6 px-3 space-y-6 flex-1 overflow-y-auto">
         <!-- User Profile Card -->
         <div v-if="user" class="mx-3 mb-6">
-          <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-4 text-white">
+          <div class="bg-gradient-to-r from-metrobnb-600 to-metrobnb-700 rounded-xl p-4 text-white">
             <div class="flex items-center space-x-3">
               <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                 <UIcon name="i-heroicons-user" class="h-6 w-6" />
               </div>
               <div class="flex-1 min-w-0">
                 <p class="font-semibold truncate">{{ user.name }}</p>
-                <p class="text-blue-100 text-sm truncate">{{ user.email }}</p>
+                <p class="text-white/80 text-sm truncate">{{ user.email }}</p>
               </div>
             </div>
             <div class="mt-3 flex items-center justify-between">

@@ -6,6 +6,9 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@pinia/nuxt'
   ],
+  tailwindcss: {
+    configPath: './tailwind.config.js'
+  },
   experimental: {
     warnOnPageNotFound: false
   },

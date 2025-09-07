@@ -16,8 +16,8 @@
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <UCard>
         <div class="flex items-center">
-          <div class="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-            <UIcon name="i-heroicons-plus-circle" class="h-6 w-6 text-green-600 dark:text-green-400" />
+          <div class="p-3 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-lg">
+            <UIcon name="i-heroicons-plus-circle" class="h-6 w-6 text-metrobnb-600 dark:text-metrobnb-400" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Credits</p>
@@ -40,12 +40,12 @@
       
       <UCard>
         <div class="flex items-center">
-          <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-            <UIcon name="i-heroicons-scale" class="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <div class="p-3 bg-metrobnb-200 dark:bg-metrobnb-800 rounded-lg">
+            <UIcon name="i-heroicons-scale" class="h-6 w-6 text-metrobnb-700 dark:text-metrobnb-300" />
           </div>
           <div class="ml-4">
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Net Balance</p>
-            <p class="text-2xl font-bold" :class="netBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+            <p class="text-2xl font-bold" :class="netBalance >= 0 ? 'text-metrobnb-600 dark:text-metrobnb-400' : 'text-red-600 dark:text-red-400'">
               ₱{{ Math.abs(netBalance).toLocaleString() }}
             </p>
           </div>
@@ -101,7 +101,7 @@
               <td class="px-6 py-4 whitespace-nowrap">
                 <span 
                   class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                  :class="entry.type === 'credit' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
+                  :class="entry.type === 'credit' ? 'bg-metrobnb-100 text-metrobnb-800 dark:bg-metrobnb-900 dark:text-metrobnb-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
                 >
                   {{ entry.type === 'credit' ? 'Credit' : 'Debit' }}
                 </span>
@@ -113,7 +113,7 @@
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium"
-                  :class="entry.type === 'credit' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                  :class="entry.type === 'credit' ? 'text-metrobnb-600 dark:text-metrobnb-400' : 'text-red-600 dark:text-red-400'">
                 {{ entry.type === 'credit' ? '+' : '-' }}₱{{ getAmountValue(entry.amount).toLocaleString() }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

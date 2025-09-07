@@ -8,7 +8,7 @@
           <p class="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">Manage booking payments and records</p>
         </div>
         <div v-if="!isPartner" class="flex gap-2">
-          <UButton @click="showImportModal = true" color="green" variant="outline" size="xs" class="sm:size-sm">
+          <UButton @click="showImportModal = true" color="primary" variant="outline" size="xs" class="sm:size-sm">
             <UIcon name="i-heroicons-arrow-up-tray" class="sm:mr-1" />
             <span class="hidden sm:inline">Import</span>
           </UButton>
@@ -120,7 +120,7 @@
         
         <!-- Grouped by chip - mobile under filters -->
         <div class="sm:hidden">
-          <UBadge color="blue" variant="soft" size="sm">Grouped by Invoice Period</UBadge>
+          <UBadge color="primary" variant="soft" size="sm">Grouped by Invoice Period</UBadge>
         </div>
         
         <!-- Advanced Filters -->

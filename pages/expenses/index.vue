@@ -18,8 +18,8 @@
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
       <UCard class="p-3 sm:p-4">
         <div class="flex items-center">
-          <div class="p-2 sm:p-3 bg-red-100 dark:bg-red-900 rounded-lg">
-            <UIcon name="i-heroicons-minus-circle" class="h-4 w-4 sm:h-6 sm:w-6 text-red-600 dark:text-red-400" />
+          <div class="p-2 sm:p-3 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-lg">
+            <UIcon name="i-heroicons-minus-circle" class="h-4 w-4 sm:h-6 sm:w-6 text-metrobnb-600 dark:text-metrobnb-400" />
           </div>
           <div class="ml-2 sm:ml-4 min-w-0 flex-1">
             <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
@@ -30,8 +30,8 @@
       
       <UCard class="p-3 sm:p-4">
         <div class="flex items-center">
-          <div class="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-            <UIcon name="i-heroicons-document-text" class="h-4 w-4 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
+          <div class="p-2 sm:p-3 bg-metrobnb-200 dark:bg-metrobnb-800 rounded-lg">
+            <UIcon name="i-heroicons-document-text" class="h-4 w-4 sm:h-6 sm:w-6 text-metrobnb-700 dark:text-metrobnb-300" />
           </div>
           <div class="ml-2 sm:ml-4 min-w-0 flex-1">
             <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Records</p>
@@ -42,8 +42,8 @@
       
       <UCard class="p-3 sm:p-4 col-span-2 sm:col-span-1">
         <div class="flex items-center">
-          <div class="p-2 sm:p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-            <UIcon name="i-heroicons-calendar" class="h-4 w-4 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" />
+          <div class="p-2 sm:p-3 bg-metrobnb-300 dark:bg-metrobnb-700 rounded-lg">
+            <UIcon name="i-heroicons-calendar" class="h-4 w-4 sm:h-6 sm:w-6 text-metrobnb-800 dark:text-metrobnb-200" />
           </div>
           <div class="ml-2 sm:ml-4 min-w-0 flex-1">
             <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">This Month</p>
@@ -254,7 +254,7 @@
               </div>
               <div>
                 <span class="text-gray-500 dark:text-gray-400">Amount:</span>
-                <p class="font-medium text-red-600 dark:text-red-400">₱{{ parseFloat(expense.amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</p>
+                <p class="font-medium text-metrobnb-600 dark:text-metrobnb-400">₱{{ parseFloat(expense.amount).toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</p>
               </div>
               <div>
                 <span class="text-gray-500 dark:text-gray-400">Status:</span>
@@ -306,7 +306,7 @@
             
             <template #amount-data="{ row }">
               <div class="flex items-center space-x-2">
-                <span class="font-semibold text-red-600 dark:text-red-400">
+                <span class="font-semibold text-metrobnb-600 dark:text-metrobnb-400">
                   ₱{{ parseFloat(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                 </span>
                 <UIcon v-if="row.receipt_url" name="i-heroicons-photo" class="h-4 w-4 text-gray-400" title="Has receipt" />
@@ -341,7 +341,7 @@
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No expenses yet</h3>
           <p class="text-gray-600 dark:text-gray-400 mb-6">Start by recording your first expense</p>
           <div class="flex space-x-3">
-          <UButton to="/expenses/capture" color="green">
+          <UButton to="/expenses/capture" color="primary" variant="outline">
             <UIcon name="i-heroicons-camera" class="mr-2" />
             Capture Receipt
           </UButton>
