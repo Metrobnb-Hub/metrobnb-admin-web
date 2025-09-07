@@ -14,44 +14,7 @@
       </div>
     </div>
 
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
-      <UCard class="p-3 sm:p-4">
-        <div class="flex items-center">
-          <div class="p-2 sm:p-3 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-lg">
-            <UIcon name="i-heroicons-minus-circle" class="h-4 w-4 sm:h-6 sm:w-6 text-metrobnb-600 dark:text-metrobnb-400" />
-          </div>
-          <div class="ml-2 sm:ml-4 min-w-0 flex-1">
-            <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
-            <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">₱{{ totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</p>
-          </div>
-        </div>
-      </UCard>
-      
-      <UCard class="p-3 sm:p-4">
-        <div class="flex items-center">
-          <div class="p-2 sm:p-3 bg-metrobnb-200 dark:bg-metrobnb-800 rounded-lg">
-            <UIcon name="i-heroicons-document-text" class="h-4 w-4 sm:h-6 sm:w-6 text-metrobnb-700 dark:text-metrobnb-300" />
-          </div>
-          <div class="ml-2 sm:ml-4 min-w-0 flex-1">
-            <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Records</p>
-            <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ expenses?.length || 0 }}</p>
-          </div>
-        </div>
-      </UCard>
-      
-      <UCard class="p-3 sm:p-4 col-span-2 sm:col-span-1">
-        <div class="flex items-center">
-          <div class="p-2 sm:p-3 bg-metrobnb-300 dark:bg-metrobnb-700 rounded-lg">
-            <UIcon name="i-heroicons-calendar" class="h-4 w-4 sm:h-6 sm:w-6 text-metrobnb-800 dark:text-metrobnb-200" />
-          </div>
-          <div class="ml-2 sm:ml-4 min-w-0 flex-1">
-            <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">This Month</p>
-            <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">₱{{ thisMonthExpenses.toLocaleString('en-US', { minimumFractionDigits: 0 }) }}</p>
-          </div>
-        </div>
-      </UCard>
-    </div>
+
 
     <!-- Expenses List -->
     <UCard>
@@ -351,50 +314,10 @@
       </div>
       
       <!-- Pagination -->
-      <div v-if="pagination && pagination.total_pages > 1" class="flex justify-between items-center mt-6 pt-4 border-t">
-        <div class="text-sm text-gray-600 dark:text-gray-400">
-          Showing {{ ((pagination.current_page - 1) * pagination.per_page) + 1 }} to 
-          {{ Math.min(pagination.current_page * pagination.per_page, pagination.total_items) }} of 
-          {{ pagination.total_items }} results
-        </div>
-        <div class="flex items-center space-x-2">
-          <UButton 
-            :disabled="!pagination.has_prev" 
-            @click="goToPage(currentPage - 1)"
-            color="gray" 
-            variant="outline" 
-            size="sm"
-          >
-            Previous
-          </UButton>
-          
-          <div class="flex items-center space-x-1">
-            <template v-for="page in getVisiblePages()" :key="page">
-              <UButton 
-                v-if="page !== '...'"
-                :color="page === currentPage ? 'primary' : 'gray'"
-                :variant="page === currentPage ? 'solid' : 'outline'"
-                @click="goToPage(page)"
-                size="sm"
-                class="min-w-[2rem]"
-              >
-                {{ page }}
-              </UButton>
-              <span v-else class="px-2 text-gray-400">...</span>
-            </template>
-          </div>
-          
-          <UButton 
-            :disabled="!pagination.has_next" 
-            @click="goToPage(currentPage + 1)"
-            color="gray" 
-            variant="outline" 
-            size="sm"
-          >
-            Next
-          </UButton>
-        </div>
-      </div>
+      <StandardPagination 
+        :pagination="pagination" 
+        @page-change="handlePageChange"
+      />
     </UCard>
 
     <!-- Edit Modal -->
@@ -590,8 +513,11 @@ const loadExpensesData = async () => {
     
     // Use standard response handler
     expenses.value = extractData(result)
-    pagination.value = extractPagination(result)
+    pagination.value = result?.data?.pagination || null
     totalItems.value = pagination.value?.total_items || expenses.value.length
+    
+    console.log('Expenses pagination:', pagination.value)
+    console.log('Total items:', totalItems.value)
     
   } catch (error) {
     expenses.value = []
@@ -912,51 +838,9 @@ const bulkMarkNonBillable = async () => {
   }
 }
 
-// Pagination functions
-const goToPage = (page: number) => {
+const handlePageChange = (page: number) => {
   currentPage.value = page
   loadExpensesData()
-}
-
-const getVisiblePages = () => {
-  if (!pagination.value) return []
-  
-  const total = pagination.value.total_pages
-  const current = currentPage.value
-  const pages = []
-  
-  if (total <= 7) {
-    // Show all pages if 7 or fewer
-    for (let i = 1; i <= total; i++) {
-      pages.push(i)
-    }
-  } else {
-    // Show first page, current page area, and last page with ellipsis
-    pages.push(1)
-    
-    if (current > 3) {
-      pages.push('...')
-    }
-    
-    const start = Math.max(2, current - 1)
-    const end = Math.min(total - 1, current + 1)
-    
-    for (let i = start; i <= end; i++) {
-      if (i !== 1 && i !== total) {
-        pages.push(i)
-      }
-    }
-    
-    if (current < total - 2) {
-      pages.push('...')
-    }
-    
-    if (total > 1) {
-      pages.push(total)
-    }
-  }
-  
-  return pages
 }
 
 const clearFilters = () => {

@@ -65,6 +65,7 @@
                 v-model="filters.partnerId" 
                 :options="partnerOptions"
                 placeholder="All partners"
+                :disabled="isPartner"
               />
             </UFormGroup>
             <UFormGroup label="Unit">
@@ -231,14 +232,10 @@
       />
       
       <!-- Pagination -->
-      <div v-if="pagination.total_pages > 1" class="mt-4 flex justify-center">
-        <UPagination 
-          v-model="currentPage" 
-          :page-count="pagination.total_pages"
-          :total="pagination.total_items"
-          @update:model-value="loadBookings"
-        />
-      </div>
+      <StandardPagination 
+        :pagination="pagination" 
+        @page-change="handlePageChange"
+      />
     </UCard>
 
     <!-- Edit Modal -->
@@ -480,13 +477,14 @@ const loadBookings = async () => {
       }
     }
     
-    const result = await getBookings({
+    const params = {
       page: currentPage.value,
       limit: 15,
       search: searchQuery.value || undefined,
       sort_by: sortField,
       sort_order: sortOrder as 'asc' | 'desc',
-      ...(filters.partnerId && { partner_id: filters.partnerId }),
+      // Only include partner_id for non-partner users
+      ...(!isPartner.value && filters.partnerId && { partner_id: filters.partnerId }),
       ...(filters.unitId && { unit_id: filters.unitId }),
       ...(startDate && { start_date: startDate }),
       ...(endDate && { end_date: endDate }),
@@ -494,11 +492,14 @@ const loadBookings = async () => {
       ...(filters.paymentReceivedBy && { payment_received_by: filters.paymentReceivedBy }),
       ...(filters.bookingSource && { booking_source_id: filters.bookingSource }),
       ...(filters.invoiced && { invoiced: filters.invoiced === 'true' })
-    })
+    }
+    
+    console.log('API request params:', params)
+    const result = await getBookings(params)
     
     // Use standard response handler
     bookings.value = extractData(result)
-    pagination.value = extractPagination(result)
+    pagination.value = result?.data?.pagination || null
     bookingSummary.value = extractSummary(result)
     
     
@@ -540,6 +541,11 @@ const handleSearchInput = () => {
   searchTimeout = setTimeout(debouncedSearch, 300)
 }
 
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+  loadBookings()
+}
+
 onMounted(async () => {
   try {
     isLoading.value = true
@@ -551,6 +557,10 @@ onMounted(async () => {
     
     bookingSources.value = sources || []
     
+    // Pre-fill partner filter for partner users
+    if (isPartner.value && user.value?.id) {
+      filters.partnerId = user.value.id
+    }
     
     await loadBookings()
     isLoading.value = false

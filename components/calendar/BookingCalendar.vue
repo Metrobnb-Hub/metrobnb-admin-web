@@ -68,12 +68,17 @@ const loadEvents = async (start: Date, end: Date) => {
       end_date: endDate,
       partner_id: props.partnerId,
       unit_id: props.unitId,
-      limit: 100 // API limit is 100
+      limit: 100
     })
     
-    // Handle both paginated and non-paginated responses
-    const bookings = Array.isArray(result) ? result : result.data || []
-    events.value = await transformBookingsToEvents(bookings)
+    // Extract bookings from paginated response
+    const bookings = result?.data?.items || result?.items || []
+    
+    if (bookings.length > 0) {
+      events.value = await transformBookingsToEvents(bookings)
+    } else {
+      events.value = []
+    }
   } catch (error) {
   } finally {
     loading.value = false

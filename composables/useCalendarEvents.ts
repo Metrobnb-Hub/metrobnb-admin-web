@@ -49,8 +49,8 @@ export const useCalendarEvents = () => {
       return {
         id: booking.id,
         title: `${booking.guest_name} - ${unit?.name || 'Unknown Unit'}`,
-        start: booking.start_date,
-        end: booking.end_date,
+        start: booking.start_date || booking.startDate,
+        end: booking.end_date || booking.endDate,
         backgroundColor: getStatusColor(booking.booking_status),
         borderColor: getPaymentBorderColor(booking.payment_status),
         textColor: getTextColor(booking.booking_status),

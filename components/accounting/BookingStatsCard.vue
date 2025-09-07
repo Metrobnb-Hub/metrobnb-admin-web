@@ -9,57 +9,51 @@
     <!-- Total Bookings -->
     <UCard class="p-3 sm:p-4">
       <div class="flex items-center">
-        <div class="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-          <UIcon name="i-heroicons-calendar-days" class="h-4 w-4 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
+        <div class="p-2 sm:p-3 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-lg">
+          <UIcon name="i-heroicons-calendar-days" class="h-4 w-4 sm:h-6 sm:w-6 text-metrobnb-600 dark:text-metrobnb-400" />
         </div>
         <div class="ml-2 sm:ml-4 min-w-0 flex-1">
           <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ stats.total_bookings }}</p>
-          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Bookings</p>
+          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Bookings</p>
         </div>
       </div>
     </UCard>
     
-    <!-- Total Amount -->
+    <!-- This Month -->
     <UCard class="p-3 sm:p-4">
       <div class="flex items-center">
-        <div class="p-2 sm:p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-          <UIcon name="i-heroicons-currency-dollar" class="h-4 w-4 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" />
+        <div class="p-2 sm:p-3 bg-metrobnb-200 dark:bg-metrobnb-800 rounded-lg">
+          <UIcon name="i-heroicons-calendar" class="h-4 w-4 sm:h-6 sm:w-6 text-metrobnb-700 dark:text-metrobnb-300" />
         </div>
         <div class="ml-2 sm:ml-4 min-w-0 flex-1">
-          <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
-            ₱{{ parseFloat(stats.total_amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
-          </p>
-          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Amount</p>
+          <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ thisMonthBookings }}</p>
+          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">This Month</p>
         </div>
       </div>
     </UCard>
     
-    <!-- MetroBNB Payments -->
+    <!-- This Year -->
     <UCard class="p-3 sm:p-4">
       <div class="flex items-center">
-        <div class="p-2 sm:p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
-          <UIcon name="i-heroicons-building-office" class="h-4 w-4 sm:h-6 sm:w-6 text-purple-600 dark:text-purple-400" />
+        <div class="p-2 sm:p-3 bg-metrobnb-300 dark:bg-metrobnb-700 rounded-lg">
+          <UIcon name="i-heroicons-chart-bar" class="h-4 w-4 sm:h-6 sm:w-6 text-metrobnb-800 dark:text-metrobnb-200" />
         </div>
         <div class="ml-2 sm:ml-4 min-w-0 flex-1">
-          <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
-            ₱{{ parseFloat(stats.by_payment_receiver.metrobnb.amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
-          </p>
-          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">MetroBNB</p>
+          <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ thisYearBookings }}</p>
+          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">This Year</p>
         </div>
       </div>
     </UCard>
     
-    <!-- Partner Payments -->
+    <!-- Most Active Month -->
     <UCard class="p-3 sm:p-4">
       <div class="flex items-center">
-        <div class="p-2 sm:p-3 bg-orange-100 dark:bg-orange-900 rounded-lg">
-          <UIcon name="i-heroicons-users" class="h-4 w-4 sm:h-6 sm:w-6 text-orange-600 dark:text-orange-400" />
+        <div class="p-2 sm:p-3 bg-metrobnb-400 dark:bg-metrobnb-600 rounded-lg">
+          <UIcon name="i-heroicons-fire" class="h-4 w-4 sm:h-6 sm:w-6 text-metrobnb-900 dark:text-metrobnb-100" />
         </div>
         <div class="ml-2 sm:ml-4 min-w-0 flex-1">
-          <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
-            ₱{{ parseFloat(stats.by_payment_receiver.partner.amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
-          </p>
-          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Partners</p>
+          <p class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{{ mostActiveMonth.count }}</p>
+          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{{ mostActiveMonth.name }}</p>
         </div>
       </div>
     </UCard>
@@ -77,22 +71,8 @@
 <script setup lang="ts">
 interface BookingStats {
   total_bookings: number
-  total_amount: string
-  by_source: Array<{
-    source_name: string
-    count: number
-    amount: string
-  }>
-  by_payment_receiver: {
-    metrobnb: {
-      count: number
-      amount: string
-    }
-    partner: {
-      count: number
-      amount: string
-    }
-  }
+  by_month: Record<string, number>
+  by_year: Record<string, number>
 }
 
 const props = defineProps<{
@@ -101,4 +81,30 @@ const props = defineProps<{
 }>()
 
 const stats = computed(() => props.summary)
+
+const thisMonthBookings = computed(() => {
+  if (!stats.value?.by_month) return 0
+  const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM format
+  return stats.value.by_month[currentMonth] || 0
+})
+
+const thisYearBookings = computed(() => {
+  if (!stats.value?.by_year) return 0
+  const currentYear = new Date().getFullYear().toString()
+  return stats.value.by_year[currentYear] || 0
+})
+
+const mostActiveMonth = computed(() => {
+  if (!stats.value?.by_month) return { count: 0, name: 'No data' }
+  
+  const months = stats.value.by_month
+  const maxEntry = Object.entries(months).reduce((max, [month, count]) => 
+    count > max[1] ? [month, count] : max, ['', 0]
+  )
+  
+  if (maxEntry[1] === 0) return { count: 0, name: 'No data' }
+  
+  const monthName = new Date(maxEntry[0] + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+  return { count: maxEntry[1], name: monthName }
+})
 </script>
