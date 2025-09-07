@@ -79,8 +79,9 @@
         <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 sm:p-4">
           <h3 class="font-semibold mb-3 text-sm sm:text-base">Invoice Summary</h3>
           
+
           <!-- Draft Invoice Notice -->
-          <div v-if="invoiceData.status === 'draft'" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
+          <div v-if="invoiceData.status === 'draft' && !isPartner" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
             <div class="flex items-start">
               <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5 flex-shrink-0" />
               <p class="text-xs sm:text-sm text-yellow-700 dark:text-yellow-300">
@@ -213,6 +214,7 @@
 
 <script setup lang="ts">
 const route = useRoute()
+const { user } = useAuth()
 const { getInvoiceById, refreshInvoice, approveInvoice, rejectInvoice, finalizeInvoice, sendInvoice: sendInvoiceAPI, settleInvoice } = useApi()
 const { notifyError, notifySuccess } = useNotify()
 const { getInvoiceActions, getStatusText, getStatusColor, validateTransition } = useInvoiceWorkflow()
@@ -226,6 +228,8 @@ const showRejectModal = ref(false)
 const rejectNotes = ref('')
 const paidDate = ref(new Date().toISOString().split('T')[0])
 const today = new Date().toISOString().split('T')[0]
+
+const isPartner = computed(() => user.value?.role === 'partner')
 
 const availableActions = computed(() => {
   return invoiceData.value ? getInvoiceActions(invoiceData.value) : []
