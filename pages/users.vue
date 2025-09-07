@@ -567,10 +567,15 @@ const handleUserSubmit = async () => {
       })
       
       if (response.success) {
-        const { notifySuccess } = useNotify()
-        notifySuccess(`User ${response.data.name} created successfully!`)
+        // Show success modal with credentials
+        createdUserData.value = {
+          email: response.data.email,
+          temporaryPassword: response.data.temporary_password,
+          message: response.data.message || 'User must change password on first login.'
+        }
         
         closeModal()
+        showSuccessModal.value = true
         await loadUsers()
       } else {
         throw new Error(response.message || 'Failed to create user')

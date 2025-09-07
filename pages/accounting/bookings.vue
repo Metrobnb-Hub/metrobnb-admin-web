@@ -477,24 +477,28 @@ const loadBookings = async () => {
       }
     }
     
-    const params = {
+    const params: any = {
       page: currentPage.value,
       limit: 15,
-      search: searchQuery.value || undefined,
       sort_by: sortField,
-      sort_order: sortOrder as 'asc' | 'desc',
-      // Only include partner_id for non-partner users
-      ...(!isPartner.value && filters.partnerId && { partner_id: filters.partnerId }),
-      ...(filters.unitId && { unit_id: filters.unitId }),
-      ...(startDate && { start_date: startDate }),
-      ...(endDate && { end_date: endDate }),
-      ...(filters.paymentStatus && { payment_status: filters.paymentStatus }),
-      ...(filters.paymentReceivedBy && { payment_received_by: filters.paymentReceivedBy }),
-      ...(filters.bookingSource && { booking_source_id: filters.bookingSource }),
-      ...(filters.invoiced && { invoiced: filters.invoiced === 'true' })
+      sort_order: sortOrder as 'asc' | 'desc'
     }
     
+    // Add optional parameters
+    if (searchQuery.value) params.search = searchQuery.value
+    if (!isPartner.value && filters.partnerId) params.partner_id = filters.partnerId
+    if (filters.unitId) params.unit_id = filters.unitId
+    if (startDate) params.start_date = startDate
+    if (endDate) params.end_date = endDate
+    if (filters.paymentStatus) params.payment_status = filters.paymentStatus
+    if (filters.paymentReceivedBy) params.payment_received_by = filters.paymentReceivedBy
+    if (filters.bookingSource) params.booking_source_id = filters.bookingSource
+    if (filters.invoiced) params.invoiced = filters.invoiced === 'true'
+    
     console.log('API request params:', params)
+    console.log('Current filters state:', filters)
+    console.log('Payment Received By:', filters.paymentReceivedBy, 'Type:', typeof filters.paymentReceivedBy)
+    console.log('Booking Source:', filters.bookingSource, 'Type:', typeof filters.bookingSource)
     const result = await getBookings(params)
     
     // Use standard response handler
@@ -528,6 +532,7 @@ const clearFilters = () => {
 
 const applyFilters = () => {
   currentPage.value = 1
+  console.log('Applying filters:', filters) // Debug log
   loadBookings()
 }
 
@@ -549,13 +554,14 @@ const handlePageChange = (page: number) => {
 onMounted(async () => {
   try {
     isLoading.value = true
-    const [, , sources] = await Promise.all([
+    const [, , sourcesResponse] = await Promise.all([
       loadPartners(),
       loadUnits(),
       getBookingSources()
     ])
     
-    bookingSources.value = sources || []
+    // Extract booking sources from API response
+    bookingSources.value = extractData(sourcesResponse) || []
     
     // Pre-fill partner filter for partner users
     if (isPartner.value && user.value?.id) {
@@ -565,6 +571,7 @@ onMounted(async () => {
     await loadBookings()
     isLoading.value = false
   } catch (error) {
+    console.error('Error loading booking data:', error)
     isLoading.value = false
   }
 })

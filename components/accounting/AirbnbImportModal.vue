@@ -161,31 +161,55 @@ const onSubmit = async () => {
     isImporting.value = true
     importResults.value = null
 
-    const result = await importAirbnbBookings({
+    const response = await importAirbnbBookings({
       partner_id: state.partnerId,
       unit_id: state.unitId,
       csv_data: csvData.value
     })
 
+    console.log('CSV Import Response:', response)
+    
+    // Handle different response structures
+    const result = response.data || response
     importResults.value = result
     
+    console.log('Processed Result:', result)
+    
+    const { notifySuccess, notifyWarning } = useNotify()
+    
     if (result.imported_count > 0) {
-      const { notifySuccess } = useNotify()
       notifySuccess(`Successfully imported ${result.imported_count} bookings`)
       emit('imported')
       
-      // Auto-close modal after 3 seconds on success
+      // Auto-close modal after 2 seconds on success
       setTimeout(() => {
         isOpen.value = false
-      }, 3000)
+        // Reset form
+        state.partnerId = ''
+        state.unitId = ''
+        csvData.value = ''
+        csvPreview.value = ''
+        importResults.value = null
+      }, 2000)
     } else {
-      const { notifyWarning } = useNotify()
       notifyWarning('No bookings were imported. Please check your CSV format.')
     }
 
   } catch (error) {
+    console.error('CSV Import Error:', error)
     const { notifyError } = useNotify()
-    notifyError(`Failed to import Airbnb bookings: ${error.message || error}`)
+    
+    // Handle different error structures
+    let errorMessage = 'Failed to import Airbnb bookings'
+    if (error.data?.error?.message) {
+      errorMessage = error.data.error.message
+    } else if (error.message) {
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    }
+    
+    notifyError(errorMessage)
   } finally {
     isImporting.value = false
   }

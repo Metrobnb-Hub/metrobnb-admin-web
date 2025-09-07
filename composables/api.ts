@@ -198,6 +198,9 @@ export const useApi = () => {
       if (filters.search) params.append('search', filters.search)
       if (filters.sort_by) params.append('sort_by', filters.sort_by)
       if (filters.sort_order) params.append('sort_order', filters.sort_order)
+      if (filters.payment_status) params.append('payment_status', filters.payment_status)
+      if (filters.payment_received_by) params.append('payment_received_by', filters.payment_received_by)
+      if (filters.booking_source_id) params.append('booking_source_id', filters.booking_source_id)
       if (filters.invoiced !== undefined) params.append('invoiced', filters.invoiced.toString())
       
       const query = params.toString()
@@ -332,6 +335,14 @@ export const useApi = () => {
     // Partner only: Approve draft invoice
     approveInvoice: async (invoiceId: string) => {
       return await apiClient<any>(`/api/invoices/${invoiceId}/approve`, { method: 'PATCH' })
+    },
+    
+    // Partner only: Reject draft invoice with notes
+    rejectInvoice: async (invoiceId: string, notes: string) => {
+      return await apiClient<any>(`/api/invoices/${invoiceId}/reject`, {
+        method: 'PATCH',
+        body: JSON.stringify({ notes })
+      })
     },
     
     // Admin only: Finalize invoice (bypass partner approval)

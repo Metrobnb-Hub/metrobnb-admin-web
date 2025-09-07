@@ -20,6 +20,7 @@ interface BookingFormData {
   paymentStatus: PaymentStatus
   amountPaid: number
   paymentReceivedBy: 'partner' | 'metrobnb'
+  payoutDate: string
   bookingSourceId: string
   notes: string
 }
@@ -42,6 +43,7 @@ export const useBookingForm = () => {
       amount_paid: booking.amountPaid,
       payment_method_id: booking.paymentMethod,
       payment_received_by: booking.paymentReceivedBy,
+      payout_date: booking.payoutDate || null,
       booking_source_id: booking.bookingSourceId,
       notes: booking.notes
     }

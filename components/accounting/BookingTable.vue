@@ -271,32 +271,13 @@ const getFieldValue = (row: any, camelField: string, snakeField: string) => {
   return row[camelField] || row[snakeField]
 }
 
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return 'N/A'
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: '2-digit'
-  })
-}
+const { formatDate, formatDateShort } = useDateFormat()
 
 const formatDateRange = (startDate: string, endDate: string) => {
   if (!startDate || !endDate) return 'N/A'
-  const start = new Date(startDate)
-  const end = new Date(endDate)
-  
-  const startFormatted = start.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric'
-  })
-  
-  const endFormatted = end.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  })
-  
-  return `${startFormatted} - ${endFormatted}`
+  const start = formatDateShort(startDate)
+  const end = formatDate(endDate)
+  return `${start} - ${end}`
 }
 
 const getActions = (row: Booking) => [

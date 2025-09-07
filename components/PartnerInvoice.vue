@@ -422,17 +422,12 @@ const netDue = computed(() => {
   return metroBNBShare.value + totalExpenses.value - netJournalEntries.value - totalReceivedByMetroBNB.value
 })
 
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric'
-  })
-}
+const { formatDate, formatDateShort } = useDateFormat()
 
 const formatDateRange = (startDate: string, endDate?: string) => {
-  const start = formatDate(startDate)
+  const start = formatDateShort(startDate)
   if (!endDate) return start
-  const end = formatDate(endDate)
+  const end = formatDateShort(endDate)
   return start === end ? start : `${start} - ${end}`
 }
 

@@ -1,80 +1,120 @@
 <template>
   <UForm :schema="schema" :state="state" @submit="onSubmit">
-    <div class="space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0">
-      <UFormGroup label="Guest Name" name="guestName">
-        <UInput v-model="state.guestName" />
-      </UFormGroup>
-      
-      <UFormGroup label="Booking Date" name="bookingDate">
-        <UInput v-model="state.bookingDate" type="date" />
-      </UFormGroup>
-      
-      <UFormGroup label="Check-in Date" name="startDate">
-        <UInput v-model="state.startDate" type="date" />
-      </UFormGroup>
-      
-      <UFormGroup label="Check-out Date" name="endDate">
-        <UInput v-model="state.endDate" type="date" />
-      </UFormGroup>
-      
-      <UFormGroup label="Base Amount" name="amount">
-        <UInput v-model="state.amount" type="number" step="0.01" />
-      </UFormGroup>
-      
-      <UFormGroup label="Payment Method" name="paymentMethod">
-        <USelect v-model="state.paymentMethod" :options="paymentMethodOptions" />
-      </UFormGroup>
-      
-      <UFormGroup label="Partner" name="partner">
-        <USelect v-model="state.partner" :options="partnerOptions" />
-      </UFormGroup>
-      
-      <UFormGroup label="Unit" name="unitId">
-        <USelect 
-          v-model="state.unitId" 
-          :options="availableUnits" 
-          :disabled="!state.partner"
-          placeholder="Select a partner first"
-        />
-      </UFormGroup>
-      
-      <UFormGroup label="Booking Status" name="bookingStatus">
-        <USelect v-model="state.bookingStatus" :options="bookingStatusOptions" />
-      </UFormGroup>
-      
-      <UFormGroup label="Payment Status" name="paymentStatus">
-        <USelect v-model="state.paymentStatus" :options="paymentStatusOptions" />
-      </UFormGroup>
-      
-      <UFormGroup label="Amount Paid" name="amountPaid">
-        <UInput v-model="state.amountPaid" type="number" step="0.01" />
-      </UFormGroup>
-      
-      <UFormGroup label="Payment Received By" name="paymentReceivedBy">
-        <UToggle 
-          v-model="isMetroBNBPayment" 
-          :ui="{ active: 'bg-blue-500 dark:bg-blue-400' }"
-        />
-        <span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">
-          {{ isMetroBNBPayment ? 'MetroBNB' : 'Partner' }}
-        </span>
-      </UFormGroup>
-      
-      <UFormGroup label="Booking Source" name="bookingSourceId">
-        <USelect v-model="state.bookingSourceId" :options="bookingSourceOptions" />
-      </UFormGroup>
-      
-      <UFormGroup label="Notes" name="notes" class="sm:col-span-2">
-        <UTextarea 
-          v-model="state.notes" 
-          placeholder="Additional notes (max 100 characters)" 
-          :maxlength="100"
-          :rows="2"
-        />
-        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          {{ state.notes.length }}/100 characters
+    <div class="space-y-6">
+      <!-- Guest & Booking Information -->
+      <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+          <UIcon name="i-heroicons-user" class="mr-2 h-4 w-4" />
+          Guest & Booking Details
+        </h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <UFormGroup label="Guest Name" name="guestName">
+            <UInput v-model="state.guestName" />
+          </UFormGroup>
+          
+          <UFormGroup label="Booking Date" name="bookingDate">
+            <UInput v-model="state.bookingDate" type="date" />
+          </UFormGroup>
+          
+          <UFormGroup label="Check-in Date" name="startDate">
+            <UInput v-model="state.startDate" type="date" />
+          </UFormGroup>
+          
+          <UFormGroup label="Check-out Date" name="endDate">
+            <UInput v-model="state.endDate" type="date" />
+          </UFormGroup>
         </div>
-      </UFormGroup>
+      </div>
+      
+      <!-- Property Information -->
+      <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+          <UIcon name="i-heroicons-building-office" class="mr-2 h-4 w-4" />
+          Property & Source
+        </h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <UFormGroup label="Partner" name="partner">
+            <USelect v-model="state.partner" :options="partnerOptions" />
+          </UFormGroup>
+          
+          <UFormGroup label="Unit" name="unitId">
+            <USelect 
+              v-model="state.unitId" 
+              :options="availableUnits" 
+              :disabled="!state.partner"
+              placeholder="Select a partner first"
+            />
+          </UFormGroup>
+          
+          <UFormGroup label="Booking Source" name="bookingSourceId">
+            <USelect v-model="state.bookingSourceId" :options="bookingSourceOptions" />
+          </UFormGroup>
+          
+          <UFormGroup label="Booking Status" name="bookingStatus">
+            <USelect v-model="state.bookingStatus" :options="bookingStatusOptions" />
+          </UFormGroup>
+        </div>
+      </div>
+      
+      <!-- Payment Information -->
+      <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+          <UIcon name="i-heroicons-credit-card" class="mr-2 h-4 w-4" />
+          Payment Details
+        </h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <UFormGroup label="Base Amount" name="amount">
+            <UInput v-model="state.amount" type="number" step="0.01" />
+          </UFormGroup>
+          
+          <UFormGroup label="Amount Paid" name="amountPaid">
+            <UInput v-model="state.amountPaid" type="number" step="0.01" />
+          </UFormGroup>
+          
+          <UFormGroup label="Payment Method" name="paymentMethod">
+            <USelect v-model="state.paymentMethod" :options="paymentMethodOptions" />
+          </UFormGroup>
+          
+          <UFormGroup label="Payment Status" name="paymentStatus">
+            <USelect v-model="state.paymentStatus" :options="paymentStatusOptions" />
+          </UFormGroup>
+          
+          <UFormGroup label="Payment Received By" name="paymentReceivedBy">
+            <UToggle 
+              v-model="isMetroBNBPayment" 
+              :ui="{ active: 'bg-blue-500 dark:bg-blue-400' }"
+            />
+            <span class="ml-3 text-sm font-medium text-gray-900 dark:text-white">
+              {{ isMetroBNBPayment ? 'MetroBNB' : 'Partner' }}
+            </span>
+          </UFormGroup>
+          
+          <UFormGroup label="Payout Date" name="payoutDate">
+            <UInput v-model="state.payoutDate" type="date" />
+          </UFormGroup>
+        </div>
+      </div>
+      
+      <!-- Administrative -->
+      <div>
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+          <UIcon name="i-heroicons-document-text" class="mr-2 h-4 w-4" />
+          Administrative
+        </h4>
+        <div class="grid grid-cols-1 gap-4">
+          <UFormGroup label="Notes" name="notes">
+            <UTextarea 
+              v-model="state.notes" 
+              placeholder="Additional notes (max 100 characters)" 
+              :maxlength="100"
+              :rows="2"
+            />
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {{ state.notes.length }}/100 characters
+            </div>
+          </UFormGroup>
+        </div>
+      </div>
     </div>
     
     <!-- Add-ons Section -->
@@ -170,6 +210,7 @@ const schema = z.object({
   paymentStatus: z.string().min(1, 'Payment status is required'),
   amountPaid: z.coerce.number().min(0, 'Amount paid must be 0 or greater'),
   paymentReceivedBy: z.enum(['partner', 'metrobnb']),
+  payoutDate: z.string().optional(),
   bookingSourceId: z.string().min(1, 'Booking source is required'),
   notes: z.string().max(100, 'Notes must be 100 characters or less').optional()
 })
@@ -188,6 +229,7 @@ const state = reactive({
   paymentStatus: 'unpaid',
   amountPaid: 0,
   paymentReceivedBy: 'partner' as 'partner' | 'metrobnb',
+  payoutDate: '',
   bookingSourceId: '',
   notes: ''
 })
@@ -284,6 +326,7 @@ const onSubmit = () => {
     paymentStatus: 'unpaid',
     amountPaid: 0,
     paymentReceivedBy: 'partner',
+    payoutDate: '',
     bookingSourceId: '',
     notes: ''
   })

@@ -81,16 +81,50 @@ export const useAuth = () => {
   const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     const config = useRuntimeConfig()
     const apiUrl = `${config.public.apiBaseUrl}/api/auth${endpoint}`
-    const response = await fetch(apiUrl, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authToken.value && { Authorization: `Bearer ${authToken.value}` }),
-        ...options.headers
-      }
-    })
     
-    const data = await response.json()
+    let response
+    let data
+    
+    try {
+      response = await fetch(apiUrl, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken.value && { Authorization: `Bearer ${authToken.value}` }),
+          ...options.headers
+        }
+      })
+      
+      data = await response.json()
+    } catch (error) {
+      // Handle network/CORS errors that might indicate token expiry
+      if (authToken.value && (error.message?.includes('CORS') || error.message?.includes('fetch') || error.name === 'TypeError')) {
+        if (process.client) {
+          const toast = useToast()
+          toast.add({
+            title: 'Connection Issue',
+            description: 'Session may have expired. Please log in again to continue.',
+            color: 'yellow',
+            timeout: 5000,
+            icon: 'i-heroicons-exclamation-triangle'
+          })
+        }
+        
+        // Clear session data
+        authToken.value = null
+        refreshToken.value = null
+        userCookie.value = null
+        orgCookie.value = null
+        user.value = null
+        organization.value = null
+        
+        setTimeout(async () => {
+          await navigateTo('/login')
+        }, 1000)
+        return
+      }
+      throw error
+    }
     
     if (response.status === 403 && data.error?.code === 'PASSWORD_CHANGE_REQUIRED') {
       await navigateTo('/change-password')
@@ -98,13 +132,34 @@ export const useAuth = () => {
     }
     
     if (response.status === 401) {
+      // For login endpoint, don't redirect - just throw the error
+      if (endpoint === '/login') {
+        throw { data, status: response.status }
+      }
+      
+      // Show session expired warning for other endpoints
+      if (process.client) {
+        const toast = useToast()
+        toast.add({
+          title: 'Session Expired',
+          description: 'Your session has expired. Please log in again to continue.',
+          color: 'yellow',
+          timeout: 5000,
+          icon: 'i-heroicons-exclamation-triangle'
+        })
+      }
+      
       authToken.value = null
       refreshToken.value = null
       userCookie.value = null
       orgCookie.value = null
       user.value = null
       organization.value = null
-      await navigateTo('/login')
+      
+      // Delay redirect slightly to show the toast
+      setTimeout(async () => {
+        await navigateTo('/login')
+      }, 1000)
       return
     }
     

@@ -24,7 +24,7 @@ export const useInvoiceWorkflow = () => {
     switch (invoice.status) {
       case 'draft':
         if (isPartner.value) {
-          // Partner can only approve drafts
+          // Partner can approve or reject drafts
           actions.push({
             label: 'Approve Invoice',
             action: 'approve',
@@ -32,6 +32,14 @@ export const useInvoiceWorkflow = () => {
             icon: 'i-heroicons-check-circle',
             requiresConfirmation: true,
             confirmationMessage: 'Approve this invoice? Once approved, it will be finalized and ready to send.'
+          })
+          actions.push({
+            label: 'Reject Invoice',
+            action: 'reject',
+            color: 'red',
+            icon: 'i-heroicons-x-circle',
+            requiresConfirmation: true,
+            confirmationMessage: 'Reject this invoice? Please provide a reason for rejection.'
           })
         } else if (isAdmin.value) {
           // Admin can refresh data or finalize (bypass approval)
@@ -82,6 +90,20 @@ export const useInvoiceWorkflow = () => {
         // No actions available for paid invoices
         break
         
+      case 'rejected':
+        if (isAdmin.value) {
+          // Admin can refresh rejected invoices to create new draft
+          actions.push({
+            label: 'Create New Draft',
+            action: 'refresh',
+            color: 'blue',
+            icon: 'i-heroicons-arrow-path',
+            requiresConfirmation: true,
+            confirmationMessage: 'Create a new draft based on this rejected invoice?'
+          })
+        }
+        break
+        
       case 'cancelled':
         // No actions available for cancelled invoices
         break
@@ -101,6 +123,7 @@ export const useInvoiceWorkflow = () => {
         'finalized': 'Approved & Ready',
         'sent': 'Invoice Sent',
         'paid': 'Payment Complete ✓',
+        'rejected': 'Rejected by You',
         'cancelled': 'Cancelled'
       }
       return partnerStatusMap[status] || status
@@ -111,6 +134,7 @@ export const useInvoiceWorkflow = () => {
         'finalized': 'Finalized',
         'sent': 'Sent',
         'paid': 'Paid',
+        'rejected': 'Rejected',
         'cancelled': 'Cancelled'
       }
       return adminStatusMap[status] || status
@@ -126,6 +150,7 @@ export const useInvoiceWorkflow = () => {
       'finalized': 'blue',
       'sent': 'purple',
       'paid': 'green',
+      'rejected': 'orange',
       'cancelled': 'red'
     }
     return colors[status] || 'gray'
@@ -171,8 +196,8 @@ export const useInvoiceWorkflow = () => {
     const userRole = user.value?.role
     
     // Check role permissions
-    if (action === 'approve' && userRole !== 'partner') {
-      return { valid: false, error: 'Only partners can approve invoices' }
+    if ((action === 'approve' || action === 'reject') && userRole !== 'partner') {
+      return { valid: false, error: 'Only partners can approve or reject invoices' }
     }
     
     if (['refresh', 'finalize', 'send', 'settle'].includes(action) && !['owner', 'admin'].includes(userRole || '')) {
@@ -180,8 +205,8 @@ export const useInvoiceWorkflow = () => {
     }
     
     // Check status transitions
-    if (action === 'approve' && invoice.status !== 'draft') {
-      return { valid: false, error: 'Can only approve draft invoices' }
+    if ((action === 'approve' || action === 'reject') && invoice.status !== 'draft') {
+      return { valid: false, error: 'Can only approve or reject draft invoices' }
     }
     
     if (action === 'finalize' && invoice.status !== 'draft') {

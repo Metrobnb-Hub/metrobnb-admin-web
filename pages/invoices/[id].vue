@@ -89,6 +89,24 @@
             </div>
           </div>
           
+          <!-- Rejected Invoice Notice -->
+          <div v-if="invoiceData.status === 'rejected'" class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mb-4">
+            <div class="flex items-start">
+              <UIcon name="i-heroicons-x-circle" class="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 dark:text-orange-400 mr-2 mt-0.5 flex-shrink-0" />
+              <div class="flex-1">
+                <p class="text-xs sm:text-sm font-medium text-orange-700 dark:text-orange-300 mb-1">
+                  Invoice Rejected
+                </p>
+                <p class="text-xs sm:text-sm text-orange-700 dark:text-orange-300">
+                  <strong>Reason:</strong> {{ invoiceData.rejection_notes || 'No reason provided' }}
+                </p>
+                <p v-if="invoiceData.rejected_at" class="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                  Rejected on {{ formatDateTime(invoiceData.rejected_at) }}
+                </p>
+              </div>
+            </div>
+          </div>
+          
           <!-- Mobile Summary -->
           <div class="sm:hidden space-y-3">
             <div class="flex justify-between items-center">
@@ -159,12 +177,43 @@
         </div>
       </UCard>
     </UModal>
+    
+    <!-- Reject Modal -->
+    <UModal v-model="showRejectModal">
+      <UCard>
+        <template #header>
+          <h3 class="text-lg font-semibold">Reject Invoice</h3>
+        </template>
+        
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-400">
+            Please provide a reason for rejecting this invoice. This will help the admin understand your concerns.
+          </p>
+          
+          <UFormGroup label="Rejection Notes" name="rejectNotes">
+            <UTextarea 
+              v-model="rejectNotes" 
+              placeholder="Please explain why you're rejecting this invoice..."
+              :rows="4"
+              required
+            />
+          </UFormGroup>
+          
+          <div class="flex justify-end gap-3">
+            <UButton variant="ghost" @click="showRejectModal = false">Cancel</UButton>
+            <UButton @click="confirmReject" :loading="loading" color="red">
+              Reject Invoice
+            </UButton>
+          </div>
+        </div>
+      </UCard>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
 const route = useRoute()
-const { getInvoiceById, refreshInvoice, approveInvoice, finalizeInvoice, sendInvoice: sendInvoiceAPI, settleInvoice } = useApi()
+const { getInvoiceById, refreshInvoice, approveInvoice, rejectInvoice, finalizeInvoice, sendInvoice: sendInvoiceAPI, settleInvoice } = useApi()
 const { notifyError, notifySuccess } = useNotify()
 const { getInvoiceActions, getStatusText, getStatusColor, validateTransition } = useInvoiceWorkflow()
 
@@ -173,6 +222,8 @@ const isLoading = ref(true)
 const loading = ref(false)
 const error = ref('')
 const showSettleModal = ref(false)
+const showRejectModal = ref(false)
+const rejectNotes = ref('')
 const paidDate = ref(new Date().toISOString().split('T')[0])
 const today = new Date().toISOString().split('T')[0]
 
@@ -195,6 +246,8 @@ const loadInvoice = async () => {
       partnerName: invoice.partner_name || 'Unknown Partner',
       period: invoice.period || 'Unknown Period',
       sharePercentage: parseFloat(invoice.share_percentage) || 0,
+      rejection_notes: invoice.rejection_notes,
+      rejected_at: invoice.rejected_at,
       summary: {
         total_gross_earnings: parseFloat(invoice.summary?.total_gross_earnings || 0),
         metrobnb_share: parseFloat(invoice.summary?.metrobnb_share || 0),
@@ -261,6 +314,11 @@ const handleAction = async (action: any) => {
     return
   }
   
+  if (action.action === 'reject') {
+    showRejectModal.value = true
+    return
+  }
+  
   // Execute action
   loading.value = true
   try {
@@ -280,6 +338,10 @@ const handleAction = async (action: any) => {
       case 'send':
         await sendInvoiceAPI(route.params.id as string)
         notifySuccess('Invoice marked as sent')
+        break
+      case 'reject':
+        await rejectInvoice(route.params.id as string, rejectNotes.value)
+        notifySuccess('Invoice rejected successfully')
         break
       default:
         notifyError('Unknown action')
@@ -302,6 +364,8 @@ const formatAmount = (amount: number) => {
   })
 }
 
+const { formatDateTime } = useDateFormat()
+
 
 
 const confirmSettle = async () => {
@@ -313,6 +377,26 @@ const confirmSettle = async () => {
     notifySuccess('Invoice marked as paid successfully')
   } catch (err) {
     notifyError('Failed to mark invoice as paid')
+  } finally {
+    loading.value = false
+  }
+}
+
+const confirmReject = async () => {
+  if (!rejectNotes.value.trim()) {
+    notifyError('Please provide a reason for rejection')
+    return
+  }
+  
+  loading.value = true
+  try {
+    await rejectInvoice(route.params.id as string, rejectNotes.value)
+    await loadInvoice()
+    showRejectModal.value = false
+    rejectNotes.value = ''
+    notifySuccess('Invoice rejected successfully')
+  } catch (err) {
+    notifyError('Failed to reject invoice')
   } finally {
     loading.value = false
   }

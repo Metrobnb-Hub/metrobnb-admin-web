@@ -193,7 +193,21 @@ const handleLogin = async () => {
     handleSuccess('login')
     await router.push('/dashboard')
   } catch (err: any) {
-    error.value = handleError(err)
+    // Show actual API error message instead of generic error
+    console.log('Login error:', err) // Debug log
+    
+    // Try different error message paths
+    if (err.data?.error?.message) {
+      error.value = err.data.error.message
+    } else if (err.error?.message) {
+      error.value = err.error.message
+    } else if (err.message) {
+      error.value = err.message
+    } else if (typeof err === 'string') {
+      error.value = err
+    } else {
+      error.value = 'Login failed. Please try again.'
+    }
   }
 }
 </script>
