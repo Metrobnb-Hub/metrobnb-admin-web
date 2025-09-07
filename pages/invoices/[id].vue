@@ -16,12 +16,42 @@
   
   <div v-else-if="invoiceData">
     <!-- Invoice Status & Actions -->
-    <div class="max-w-4xl mx-auto mb-6">
+    <div class="max-w-4xl mx-auto mb-3 sm:mb-6 px-3 sm:px-0">
       <UCard>
-        <div class="flex justify-between items-center mb-4">
+        <!-- Mobile Header -->
+        <div class="sm:hidden mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <UButton to="/invoices" variant="ghost" size="sm">
+              <UIcon name="i-heroicons-arrow-left" class="mr-1 text-gray-600 dark:text-gray-400" />
+              Back
+            </UButton>
+            <UBadge :color="getStatusColor(invoiceData.status)" size="sm">
+              {{ getStatusText(invoiceData.status || 'draft') }}
+            </UBadge>
+          </div>
+          
+          <!-- Mobile Actions -->
+          <div v-if="availableActions.length" class="flex flex-wrap gap-2">
+            <UButton 
+              v-for="action in availableActions" 
+              :key="action.action"
+              @click="handleAction(action)"
+              :loading="loading"
+              :color="action.color"
+              size="xs"
+              class="flex-1 min-w-0"
+            >
+              <UIcon :name="action.icon" class="mr-1" />
+              <span class="truncate">{{ action.label }}</span>
+            </UButton>
+          </div>
+        </div>
+        
+        <!-- Desktop Header -->
+        <div class="hidden sm:flex justify-between items-center mb-4">
           <div class="flex items-center space-x-3">
             <UButton to="/invoices" variant="ghost" size="sm">
-              <UIcon name="i-heroicons-arrow-left" class="mr-1" />
+              <UIcon name="i-heroicons-arrow-left" class="mr-1 text-gray-600 dark:text-gray-400" />
               Back to Invoices
             </UButton>
             <UBadge :color="getStatusColor(invoiceData.status)" size="lg">
@@ -29,7 +59,7 @@
             </UBadge>
           </div>
           
-          <!-- Workflow Actions -->
+          <!-- Desktop Actions -->
           <div class="flex space-x-2">
             <UButton 
               v-for="action in availableActions" 
@@ -46,20 +76,43 @@
         </div>
         
         <!-- Invoice Summary -->
-        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-          <h3 class="font-semibold mb-3">Invoice Summary</h3>
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 sm:p-4">
+          <h3 class="font-semibold mb-3 text-sm sm:text-base">Invoice Summary</h3>
           
           <!-- Draft Invoice Notice -->
           <div v-if="invoiceData.status === 'draft'" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
-            <div class="flex items-center">
-              <UIcon name="i-heroicons-exclamation-triangle" class="h-5 w-5 text-yellow-600 dark:text-yellow-400 mr-2" />
-              <p class="text-sm text-yellow-700 dark:text-yellow-300">
-                This is a draft invoice. Use "Refresh Data" to calculate the latest amounts from bookings and expenses.
+            <div class="flex items-start">
+              <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5 flex-shrink-0" />
+              <p class="text-xs sm:text-sm text-yellow-700 dark:text-yellow-300">
+                This is a draft invoice. Use "Refresh Data" to calculate the latest amounts.
               </p>
             </div>
           </div>
           
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <!-- Mobile Summary -->
+          <div class="sm:hidden space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-gray-600 dark:text-gray-400">Invoice:</span>
+              <div class="font-medium text-sm">{{ invoiceData.invoice_number }}</div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-gray-600 dark:text-gray-400">Partner:</span>
+              <div class="font-medium text-sm truncate ml-2">{{ invoiceData.partnerName }}</div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-gray-600 dark:text-gray-400">Period:</span>
+              <div class="font-medium text-sm">{{ invoiceData.period }}</div>
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
+              <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Net Due:</span>
+              <div class="font-bold text-lg" :class="invoiceData.summary?.net_due > 0 ? 'text-red-600 dark:text-red-400' : 'text-metrobnb-600 dark:text-metrobnb-400'">
+                ₱{{ formatAmount(invoiceData.summary?.net_due || 0) }}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Desktop Summary -->
+          <div class="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span class="text-gray-600 dark:text-gray-400">Invoice Number:</span>
               <div class="font-medium">{{ invoiceData.invoice_number }}</div>
