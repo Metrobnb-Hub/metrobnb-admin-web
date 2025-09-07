@@ -118,10 +118,7 @@
           </div>
         </div>
         
-        <!-- Grouped by chip - mobile under filters -->
-        <div class="sm:hidden">
-          <UBadge color="primary" variant="soft" size="sm">Grouped by Invoice Period</UBadge>
-        </div>
+
         
         <!-- Advanced Filters -->
         <div v-if="showAdvancedFilters" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
@@ -223,7 +220,7 @@
         <div class="text-gray-500">Loading bookings...</div>
       </div>
       
-      <AccountingGroupedBookingTable 
+      <AccountingBookingTable 
         v-else
         :bookings="bookings" 
         :partners="partners"

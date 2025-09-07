@@ -8,88 +8,94 @@
 
     <!-- Partner Dashboard -->
     <div v-if="isPartner">
-      <!-- Invoice Metrics -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <UCard class="p-4">
+      <!-- Welcome Message -->
+      <UCard class="mb-6">
+        <div class="text-center py-8">
+          <div class="w-16 h-16 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-full flex items-center justify-center mx-auto mb-4">
+            <UIcon name="i-heroicons-heart" class="h-8 w-8 text-metrobnb-600 dark:text-metrobnb-400" />
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome, {{ user?.name }}!</h2>
+          <p class="text-gray-600 dark:text-gray-400 mb-4 max-w-2xl mx-auto">
+            Thank you for being a pioneering partner who believes in us. This web app is made for you and will have more features soon!
+          </p>
+          <div class="inline-flex items-center px-3 py-1 bg-metrobnb-50 dark:bg-metrobnb-900/20 text-metrobnb-700 dark:text-metrobnb-300 rounded-full text-sm font-medium">
+            <UIcon name="i-heroicons-star" class="h-4 w-4 mr-1" />
+            Pioneering Partner
+          </div>
+        </div>
+      </UCard>
+
+      <!-- Latest Invoice Highlight -->
+      <UCard v-if="latestInvoice" class="mb-6">
+        <template #header>
+          <div class="flex items-center">
+            <UIcon name="i-heroicons-document-text" class="h-5 w-5 text-metrobnb-600 dark:text-metrobnb-400 mr-2" />
+            <h3 class="text-lg font-semibold">Your Latest Invoice</h3>
+          </div>
+        </template>
+        <div class="bg-gradient-to-r from-metrobnb-50 to-metrobnb-100 dark:from-metrobnb-900/20 dark:to-metrobnb-800/20 rounded-lg p-4">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h4 class="font-semibold text-gray-900 dark:text-white">{{ latestInvoice.invoice_number }}</h4>
+              <p class="text-sm text-gray-600 dark:text-gray-400">{{ latestInvoice.period }}</p>
+            </div>
+            <UBadge :color="getInvoiceStatusColor(latestInvoice.status)" size="sm">
+              {{ getInvoiceStatusText(latestInvoice.status) }}
+            </UBadge>
+          </div>
+          <div class="flex justify-between items-center">
+            <div v-if="parseFloat(latestInvoice.total_amount || 0) > 0">
+              <p class="text-sm text-gray-600 dark:text-gray-400">Amount</p>
+              <p class="text-xl font-bold text-metrobnb-600 dark:text-metrobnb-400">
+                ₱{{ parseFloat(latestInvoice.total_amount).toLocaleString() }}
+              </p>
+            </div>
+            <UButton :to="`/invoices/${latestInvoice.id}`" color="primary" :class="parseFloat(latestInvoice.total_amount || 0) === 0 ? 'ml-auto' : ''">
+              <UIcon name="i-heroicons-eye" class="mr-2" />
+              Check it out
+            </UButton>
+          </div>
+        </div>
+      </UCard>
+
+      <!-- No Invoice State -->
+      <UCard v-else class="mb-6">
+        <div class="text-center py-8">
+          <UIcon name="i-heroicons-document-plus" class="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No invoices yet</h3>
+          <p class="text-gray-600 dark:text-gray-400 mb-4">Your invoices will appear here once they're generated</p>
+          <UButton to="/invoices" color="primary" variant="outline">
+            View Invoices
+          </UButton>
+        </div>
+      </UCard>
+
+      <!-- Quick Links -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <UCard class="p-4 hover:shadow-md transition-shadow cursor-pointer" @click="$router.push('/invoices')">
           <div class="flex items-center">
             <div class="p-3 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-lg">
               <UIcon name="i-heroicons-document-text" class="h-6 w-6 text-metrobnb-600 dark:text-metrobnb-400" />
             </div>
             <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Amount</p>
-              <p class="text-xl font-bold text-gray-900 dark:text-white">₱{{ pendingAmount.toLocaleString() }}</p>
+              <h4 class="font-medium text-gray-900 dark:text-white">All Invoices</h4>
+              <p class="text-sm text-gray-600 dark:text-gray-400">View your invoice history</p>
             </div>
           </div>
         </UCard>
         
-        <UCard class="p-4">
+        <UCard class="p-4 hover:shadow-md transition-shadow cursor-pointer" @click="$router.push('/expenses')">
           <div class="flex items-center">
             <div class="p-3 bg-metrobnb-200 dark:bg-metrobnb-800 rounded-lg">
-              <UIcon name="i-heroicons-check-circle" class="h-6 w-6 text-metrobnb-700 dark:text-metrobnb-300" />
+              <UIcon name="i-heroicons-receipt-percent" class="h-6 w-6 text-metrobnb-700 dark:text-metrobnb-300" />
             </div>
             <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Paid This Month</p>
-              <p class="text-xl font-bold text-gray-900 dark:text-white">₱{{ paidThisMonth.toLocaleString() }}</p>
-            </div>
-          </div>
-        </UCard>
-        
-        <UCard class="p-4">
-          <div class="flex items-center">
-            <div class="p-3 bg-metrobnb-300 dark:bg-metrobnb-700 rounded-lg">
-              <UIcon name="i-heroicons-clock" class="h-6 w-6 text-metrobnb-800 dark:text-metrobnb-200" />
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Invoices</p>
-              <p class="text-xl font-bold text-gray-900 dark:text-white">{{ totalInvoices }}</p>
+              <h4 class="font-medium text-gray-900 dark:text-white">View Expenses</h4>
+              <p class="text-sm text-gray-600 dark:text-gray-400">See your expense history</p>
             </div>
           </div>
         </UCard>
       </div>
-
-      <!-- Quick Actions -->
-      <UCard class="mb-6">
-        <template #header>
-          <h3 class="text-lg font-semibold">Invoice Actions</h3>
-        </template>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <UButton to="/invoices" color="primary" block>
-            <UIcon name="i-heroicons-document-text" class="mr-2" />
-            View All Invoices
-          </UButton>
-          <UButton v-if="latestInvoice" :to="`/invoices/${latestInvoice.id}`" color="primary" variant="outline" block>
-            <UIcon name="i-heroicons-eye" class="mr-2" />
-            View Latest Invoice
-          </UButton>
-        </div>
-      </UCard>
-
-      <!-- Invoice Activity -->
-      <UCard>
-        <template #header>
-          <div class="flex justify-between items-center">
-            <h3 class="text-lg font-semibold">Recent Invoices</h3>
-            <UButton to="/invoices" variant="ghost" size="sm">
-              View All
-            </UButton>
-          </div>
-        </template>
-        <div v-if="recentInvoices.length" class="space-y-3">
-          <div v-for="invoice in recentInvoices.slice(0, 5)" :key="invoice.id" class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ invoice.invoice_number }}</p>
-              <p class="text-sm text-gray-500">{{ invoice.period }} • {{ formatDate(invoice.generated_at) }}</p>
-            </div>
-            <div class="text-right">
-              <p class="font-semibold text-metrobnb-600 dark:text-metrobnb-400">₱{{ parseFloat(invoice.total_amount || 0).toLocaleString() }}</p>
-              <UBadge :color="getInvoiceStatusColor(invoice.status)" size="xs">{{ getInvoiceStatusText(invoice.status) }}</UBadge>
-            </div>
-          </div>
-        </div>
-        <div v-else class="text-center py-6 text-gray-500">
-          No invoices yet
-        </div>
-      </UCard>
     </div>
 
     <!-- Admin/Staff Dashboard -->
