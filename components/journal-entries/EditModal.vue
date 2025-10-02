@@ -37,7 +37,7 @@
         </div>
         
         <div class="flex justify-end space-x-3 mt-6">
-          <UButton color="gray" variant="ghost" @click="isOpen = false">Cancel</UButton>
+          <UButton color="gray" variant="ghost" @click="isOpen = false" :disabled="saving">Cancel</UButton>
           <UButton type="submit" color="primary" :loading="saving">Update Entry</UButton>
         </div>
       </UForm>

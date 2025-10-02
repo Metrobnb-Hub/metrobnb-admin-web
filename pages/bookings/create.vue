@@ -16,7 +16,7 @@
       <template #header>
         <h3 class="text-lg font-semibold">Booking Details</h3>
       </template>
-      <AccountingBookingForm @submit="handleFormSubmit" />
+      <AccountingBookingForm :loading="loading" @submit="handleFormSubmit" />
     </UCard>
   </div>
 </template>
@@ -24,8 +24,10 @@
 <script setup lang="ts">
 const { handleSubmit } = useBookingForm()
 const router = useRouter()
+const loading = ref(false)
 
 const handleFormSubmit = async (data: any) => {
+  loading.value = true
   try {
     await handleSubmit(data)
     
@@ -44,6 +46,8 @@ const handleFormSubmit = async (data: any) => {
       description: 'Failed to create booking',
       color: 'red'
     })
+  } finally {
+    loading.value = false
   }
 }
 </script>

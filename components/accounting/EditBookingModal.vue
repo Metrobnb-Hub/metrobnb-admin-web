@@ -161,8 +161,8 @@
         </div>
         
         <div class="flex justify-end space-x-3 mt-6">
-          <UButton color="gray" variant="ghost" @click="isOpen = false">Cancel</UButton>
-          <UButton type="submit" color="primary">Update Booking</UButton>
+          <UButton color="gray" variant="ghost" @click="isOpen = false" :disabled="loading">Cancel</UButton>
+          <UButton type="submit" color="primary" :loading="loading">Update Booking</UButton>
         </div>
       </UForm>
     </UCard>
@@ -197,6 +197,7 @@ const isOpen = computed({
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { updateBooking, getBookingSources, getPaymentMethods } = useApi()
 
+const loading = ref(false)
 const paymentMethods = ref([])
 const bookingSources = ref([])
 
@@ -349,6 +350,7 @@ const totalAmount = computed(() =>
 const onSubmit = async () => {
   const { notifySuccess, notifyError } = useNotify()
   
+  loading.value = true
   try {
     const updatedData = {
       guest_name: state.guestName,
@@ -378,6 +380,8 @@ const onSubmit = async () => {
     isOpen.value = false
   } catch (error) {
     notifyError('Failed to update booking')
+  } finally {
+    loading.value = false
   }
 }
 

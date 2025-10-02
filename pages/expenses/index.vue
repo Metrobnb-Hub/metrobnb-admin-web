@@ -340,8 +340,8 @@
         
         <template #footer>
           <div class="flex justify-end gap-3">
-            <UButton color="gray" variant="ghost" @click="showDeleteModal = false">Cancel</UButton>
-            <UButton color="red" @click="confirmDelete">Delete</UButton>
+            <UButton color="gray" variant="ghost" @click="showDeleteModal = false" :disabled="deleteLoading">Cancel</UButton>
+            <UButton color="red" @click="confirmDelete" :loading="deleteLoading">Delete</UButton>
           </div>
         </template>
       </UCard>
@@ -694,6 +694,7 @@ const handleEdit = (expense: any) => {
 
 const showDeleteModal = ref(false)
 const expenseToDelete = ref<string | null>(null)
+const deleteLoading = ref(false)
 
 const handleDelete = (id: string) => {
   expenseToDelete.value = id
@@ -705,6 +706,7 @@ const confirmDelete = async () => {
   
   if (!expenseToDelete.value) return
   
+  deleteLoading.value = true
   try {
     await deleteExpense(expenseToDelete.value)
     await loadExpensesData()
@@ -712,6 +714,7 @@ const confirmDelete = async () => {
   } catch (error) {
     notifyError('Failed to delete expense')
   } finally {
+    deleteLoading.value = false
     showDeleteModal.value = false
     expenseToDelete.value = null
   }

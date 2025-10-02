@@ -165,7 +165,7 @@
     </div>
     
     <div class="flex justify-end mt-6">
-      <UButton type="submit" color="primary">Save Booking</UButton>
+      <UButton type="submit" color="primary" :loading="loading">Save Booking</UButton>
     </div>
   </UForm>
 </template>
@@ -269,9 +269,15 @@ const bookingSourceOptions = computed(() => {
     }))
 })
 
+const props = defineProps<{
+  loading?: boolean
+}>()
+
 const emit = defineEmits<{
   submit: [booking: typeof state]
 }>()
+
+const loading = computed(() => props.loading || false)
 
 const isAddonSelected = (type: string) => {
   return state.addons.some(addon => addon.type === type)

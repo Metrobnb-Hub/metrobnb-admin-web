@@ -268,8 +268,8 @@
         
         <template #footer>
           <div class="flex justify-end gap-3">
-            <UButton color="gray" variant="ghost" @click="showDeleteModal = false">Cancel</UButton>
-            <UButton color="red" @click="confirmDelete">Delete</UButton>
+            <UButton color="gray" variant="ghost" @click="showDeleteModal = false" :disabled="deleteLoading">Cancel</UButton>
+            <UButton color="red" @click="confirmDelete" :loading="deleteLoading">Delete</UButton>
           </div>
         </template>
       </UCard>
@@ -475,6 +475,7 @@ const handleEdit = (booking: any) => {
 
 const showDeleteModal = ref(false)
 const bookingToDelete = ref<string | null>(null)
+const deleteLoading = ref(false)
 
 const handleDelete = (id: string) => {
   bookingToDelete.value = id
@@ -486,6 +487,7 @@ const confirmDelete = async () => {
   
   if (!bookingToDelete.value) return
   
+  deleteLoading.value = true
   try {
     const { deleteBooking: apiDeleteBooking } = useApi()
     await apiDeleteBooking(bookingToDelete.value)
@@ -495,6 +497,7 @@ const confirmDelete = async () => {
     console.error('Delete booking error:', error)
     notifyError(error?.message || 'Failed to delete booking')
   } finally {
+    deleteLoading.value = false
     showDeleteModal.value = false
     bookingToDelete.value = null
   }

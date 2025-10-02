@@ -93,8 +93,8 @@
         </div>
         
         <div class="flex justify-end space-x-3 mt-6">
-          <UButton color="gray" variant="ghost" @click="isOpen = false">Cancel</UButton>
-          <UButton type="submit" color="primary">Update Expense</UButton>
+          <UButton color="gray" variant="ghost" @click="isOpen = false" :disabled="loading">Cancel</UButton>
+          <UButton type="submit" color="primary" :loading="loading">Update Expense</UButton>
         </div>
       </UForm>
     </UCard>
@@ -178,6 +178,8 @@ const paidByOptions = [
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { updateExpense, uploadFile } = useApi()
 
+const loading = ref(false)
+
 const partnerOptions = computed(() => {
   if (!Array.isArray(partners.value)) return []
   return partners.value.map(p => ({ label: p.name, value: p.id }))
@@ -232,6 +234,7 @@ const removeReceipt = () => {
 const onSubmit = async () => {
   const { notifySuccess, notifyError } = useNotify()
   
+  loading.value = true
   try {
     const updateData: any = {
       partner_id: state.partnerId,
@@ -263,6 +266,8 @@ const onSubmit = async () => {
     isOpen.value = false
   } catch (error) {
     notifyError('Failed to update expense')
+  } finally {
+    loading.value = false
   }
 }
 
