@@ -326,6 +326,26 @@
       :expense="selectedExpense" 
       @updated="handleUpdated"
     />
+    
+    <!-- Delete Confirmation Modal -->
+    <UModal v-model="showDeleteModal">
+      <UCard>
+        <template #header>
+          <h3 class="text-lg font-semibold">Delete Expense</h3>
+        </template>
+        
+        <p class="text-gray-600 dark:text-gray-400">
+          Are you sure you want to delete this expense? This action cannot be undone.
+        </p>
+        
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton color="gray" variant="ghost" @click="showDeleteModal = false">Cancel</UButton>
+            <UButton color="red" @click="confirmDelete">Delete</UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
   </div>
 </template>
 
@@ -672,15 +692,28 @@ const handleEdit = (expense: any) => {
   showEditModal.value = true
 }
 
-const handleDelete = async (id: string) => {
+const showDeleteModal = ref(false)
+const expenseToDelete = ref<string | null>(null)
+
+const handleDelete = (id: string) => {
+  expenseToDelete.value = id
+  showDeleteModal.value = true
+}
+
+const confirmDelete = async () => {
   const { notifySuccess, notifyError } = useNotify()
   
+  if (!expenseToDelete.value) return
+  
   try {
-    await deleteExpense(id)
+    await deleteExpense(expenseToDelete.value)
     await loadExpensesData()
     notifySuccess('Expense deleted successfully')
   } catch (error) {
     notifyError('Failed to delete expense')
+  } finally {
+    showDeleteModal.value = false
+    expenseToDelete.value = null
   }
 }
 

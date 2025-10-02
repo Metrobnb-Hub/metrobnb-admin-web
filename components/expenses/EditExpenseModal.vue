@@ -20,7 +20,7 @@
           </UFormGroup>
           
           <UFormGroup label="Date" name="date" required>
-            <UInput v-model="state.date" type="date" />
+            <DateInput v-model="state.date" />
           </UFormGroup>
           
           <UFormGroup label="Expense Type" name="type" required>
@@ -40,7 +40,7 @@
           </UFormGroup>
           
           <UFormGroup label="Payment Date" name="paidDate" v-if="state.paid === 'true'">
-            <UInput v-model="state.paidDate" type="date" />
+            <DateInput v-model="state.paidDate" />
           </UFormGroup>
           
           <!-- Receipt Preview/Upload -->

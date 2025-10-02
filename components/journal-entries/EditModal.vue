@@ -16,7 +16,7 @@
           </UFormGroup>
           
           <UFormGroup label="Date" name="date" required>
-            <UInput v-model="state.date" type="date" />
+            <DateInput v-model="state.date" />
           </UFormGroup>
           
           <UFormGroup label="Amount" name="amount" required>

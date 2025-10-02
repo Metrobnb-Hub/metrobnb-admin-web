@@ -19,15 +19,15 @@
               </UFormGroup>
               
               <UFormGroup label="Booking Date" name="bookingDate">
-                <UInput v-model="state.bookingDate" type="date" name="bookingDate" />
+                <DateInput v-model="state.bookingDate" />
               </UFormGroup>
               
               <UFormGroup label="Check-in Date" name="startDate">
-                <UInput v-model="state.startDate" type="date" name="startDate" />
+                <DateInput v-model="state.startDate" />
               </UFormGroup>
               
               <UFormGroup label="Check-out Date" name="endDate">
-                <UInput v-model="state.endDate" type="date" name="endDate" />
+                <DateInput v-model="state.endDate" />
               </UFormGroup>
             </div>
           </div>
@@ -91,7 +91,7 @@
               </UFormGroup>
               
               <UFormGroup label="Payout Date" name="payoutDate">
-                <UInput v-model="state.payoutDate" type="date" name="payoutDate" />
+                <DateInput v-model="state.payoutDate" />
               </UFormGroup>
             </div>
           </div>

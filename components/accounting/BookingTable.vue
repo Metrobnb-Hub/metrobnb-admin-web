@@ -162,6 +162,7 @@ const props = defineProps<{
   bookings: Booking[]
   partners?: any[]
   units?: any[]
+  readOnly?: boolean
 }>()
 
 // Use props if provided, otherwise fallback to data manager
@@ -280,16 +281,20 @@ const formatDateRange = (startDate: string, endDate: string) => {
   return `${start} - ${end}`
 }
 
-const getActions = (row: Booking) => [
-  [{
-    label: 'Edit',
-    icon: 'i-heroicons-pencil-square',
-    click: () => emit('edit', row)
-  }],
-  [{
-    label: 'Delete',
-    icon: 'i-heroicons-trash',
-    click: () => emit('delete', row.id)
-  }]
-]
+const getActions = (row: Booking) => {
+  if (props.readOnly) return []
+  
+  return [
+    [{
+      label: 'Edit',
+      icon: 'i-heroicons-pencil-square',
+      click: () => emit('edit', row)
+    }],
+    [{
+      label: 'Delete',
+      icon: 'i-heroicons-trash',
+      click: () => emit('delete', row.id)
+    }]
+  ]
+}
 </script>

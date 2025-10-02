@@ -7,15 +7,21 @@
           <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">Bookings</h1>
           <p class="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">Manage booking payments and records</p>
         </div>
-        <div v-if="!isPartner" class="flex gap-2">
-          <UButton @click="showImportModal = true" color="primary" variant="outline" size="xs" class="sm:size-sm">
-            <UIcon name="i-heroicons-arrow-up-tray" class="sm:mr-1" />
-            <span class="hidden sm:inline">Import</span>
+        <div class="flex gap-2">
+          <UButton @click="testLogout" color="red" variant="outline" size="xs" class="sm:size-sm">
+            <UIcon name="i-heroicons-arrow-right-on-rectangle" class="sm:mr-1" />
+            <span class="hidden sm:inline">Logout</span>
           </UButton>
-          <UButton to="/bookings/create" color="primary" size="xs" class="sm:size-sm">
-            <UIcon name="i-heroicons-plus" class="sm:mr-1" />
-            <span class="hidden sm:inline">Add</span>
-          </UButton>
+          <div v-if="!isPartner" class="flex gap-2">
+            <UButton @click="showImportModal = true" color="primary" variant="outline" size="xs" class="sm:size-sm">
+              <UIcon name="i-heroicons-arrow-up-tray" class="sm:mr-1" />
+              <span class="hidden sm:inline">Import</span>
+            </UButton>
+            <UButton to="/bookings/create" color="primary" size="xs" class="sm:size-sm">
+              <UIcon name="i-heroicons-plus" class="sm:mr-1" />
+              <span class="hidden sm:inline">Add</span>
+            </UButton>
+          </div>
         </div>
       </div>
       
@@ -60,12 +66,11 @@
             <h3 class="text-sm font-semibold">Filters</h3>
           </template>
           <div class="space-y-3">
-            <UFormGroup label="Partner">
+            <UFormGroup v-if="!isPartner" label="Partner">
               <USelect 
                 v-model="filters.partnerId" 
                 :options="partnerOptions"
                 placeholder="All partners"
-                :disabled="isPartner"
               />
             </UFormGroup>
             <UFormGroup label="Unit">
@@ -73,7 +78,6 @@
                 v-model="filters.unitId" 
                 :options="unitOptions"
                 placeholder="All units"
-                :disabled="!filters.partnerId"
               />
             </UFormGroup>
           </div>
@@ -250,10 +254,34 @@
       v-model="showImportModal" 
       @imported="handleImported"
     />
+    
+    <!-- Delete Confirmation Modal -->
+    <UModal v-model="showDeleteModal">
+      <UCard>
+        <template #header>
+          <h3 class="text-lg font-semibold">Delete Booking</h3>
+        </template>
+        
+        <p class="text-gray-600 dark:text-gray-400">
+          Are you sure you want to delete this booking? This action cannot be undone.
+        </p>
+        
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton color="gray" variant="ghost" @click="showDeleteModal = false">Cancel</UButton>
+            <UButton color="red" @click="confirmDelete">Delete</UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  middleware: 'auth'
+})
+
 // Import calendar components explicitly
 import BookingCalendar from '~/components/calendar/BookingCalendar.vue'
 import CalendarLegend from '~/components/calendar/CalendarLegend.vue'
@@ -321,7 +349,7 @@ const sortOptions = [
   { label: 'Booking Date Oldest', value: 'booking_date_asc' }
 ]
 
-const totalBookings = computed(() => pagination.value.total_items)
+const totalBookings = computed(() => pagination.value?.total_items || 0)
 
 const statsFilters = computed(() => {
   let startDate = filters.startDate
@@ -356,10 +384,33 @@ const partnerOptions = computed(() => {
 })
 
 const unitOptions = computed(() => {
+  console.log('unitOptions computed:', {
+    isPartner: isPartner.value,
+    userId: user.value?.id,
+    unitsCount: units.value?.length,
+    units: units.value,
+    filtersPartnerId: filters.partnerId
+  })
+  
   if (!Array.isArray(units.value)) return []
-  const filteredUnits = filters.partnerId 
-    ? units.value.filter(u => u.partner_id === filters.partnerId)
-    : units.value
+  
+  let filteredUnits = units.value
+  
+  // For partners, show only their units
+  if (isPartner.value && user.value?.id) {
+    filteredUnits = units.value.filter(u => {
+      const match = u.partner_id === user.value.id || u.partnerId === user.value.id
+      console.log('Unit filter check:', { unitName: u.name, unitPartnerId: u.partner_id, unitPartnerIdAlt: u.partnerId, userId: user.value.id, match })
+      return match
+    })
+  } else if (filters.partnerId) {
+    // For admins with partner filter selected
+    filteredUnits = units.value.filter(u => 
+      u.partner_id === filters.partnerId || u.partnerId === filters.partnerId
+    )
+  }
+  
+  console.log('Filtered units:', filteredUnits)
   return [{ label: 'All Units', value: '' }, ...filteredUnits.map(u => ({ label: u.name, value: u.id }))]
 })
 
@@ -422,15 +473,30 @@ const handleEdit = (booking: any) => {
   showEditModal.value = true
 }
 
-const handleDelete = async (id: string) => {
+const showDeleteModal = ref(false)
+const bookingToDelete = ref<string | null>(null)
+
+const handleDelete = (id: string) => {
+  bookingToDelete.value = id
+  showDeleteModal.value = true
+}
+
+const confirmDelete = async () => {
   const { notifySuccess, notifyError } = useNotify()
   
+  if (!bookingToDelete.value) return
+  
   try {
-    await deleteBooking(id)
+    const { deleteBooking: apiDeleteBooking } = useApi()
+    await apiDeleteBooking(bookingToDelete.value)
     await loadBookings()
     notifySuccess('Booking deleted successfully')
-  } catch (error) {
-    notifyError('Failed to delete booking')
+  } catch (error: any) {
+    console.error('Delete booking error:', error)
+    notifyError(error?.message || 'Failed to delete booking')
+  } finally {
+    showDeleteModal.value = false
+    bookingToDelete.value = null
   }
 }
 
@@ -503,7 +569,14 @@ const loadBookings = async () => {
     
     // Use standard response handler
     bookings.value = extractData(result)
-    pagination.value = result?.data?.pagination || null
+    pagination.value = result?.data?.pagination || {
+      current_page: 1,
+      total_pages: 1,
+      total_items: 0,
+      per_page: 15,
+      has_next: false,
+      has_prev: false
+    }
     bookingSummary.value = extractSummary(result)
     
     
@@ -549,6 +622,12 @@ const handleSearchInput = () => {
 const handlePageChange = (page: number) => {
   currentPage.value = page
   loadBookings()
+}
+
+const testLogout = async () => {
+  const { logout } = useAuth()
+  await logout()
+  await navigateTo('/login')
 }
 
 onMounted(async () => {

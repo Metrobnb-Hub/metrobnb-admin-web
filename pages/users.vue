@@ -300,7 +300,7 @@
 import { debounce } from 'lodash-es'
 
 definePageMeta({
-  middleware: 'auth'
+  middleware: ['auth', 'admin-only']
 })
 
 const { user: currentUser } = useAuth()

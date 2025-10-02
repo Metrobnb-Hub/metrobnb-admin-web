@@ -131,6 +131,33 @@ export const useAuth = () => {
       return
     }
     
+    if (response.status === 403) {
+      const errorCode = data.error?.code
+      const errorMessage = data.error?.message
+      
+      if (process.client) {
+        const toast = useToast()
+        let description = 'You do not have permission to perform this action.'
+        
+        if (errorCode === 'INSUFFICIENT_PERMISSIONS') {
+          description = 'You lack the required permissions for this action.'
+        } else if (errorCode === 'INSUFFICIENT_ROLE') {
+          description = 'Your role is not authorized for this action.'
+        } else if (errorMessage) {
+          description = errorMessage
+        }
+        
+        toast.add({
+          title: 'Access Denied',
+          description,
+          color: 'red',
+          timeout: 4000,
+          icon: 'i-heroicons-shield-exclamation'
+        })
+      }
+      return
+    }
+    
     if (response.status === 401) {
       // For login endpoint, don't redirect - just throw the error
       if (endpoint === '/login') {
@@ -264,11 +291,12 @@ export const useAuth = () => {
     }
     
     try {
-      const response = await apiRequest('/refresh', {
+      const config = useRuntimeConfig()
+      const response = await $fetch('/api/auth/refresh', {
         method: 'POST',
-        body: JSON.stringify({
-          refresh_token: refreshToken.value
-        })
+        baseURL: config.public.apiBaseUrl,
+        body: { refresh_token: refreshToken.value },
+        headers: { 'Content-Type': 'application/json' }
       })
       
       if (response.success && response.data) {
@@ -353,6 +381,33 @@ export const useAuth = () => {
     }
   }
   
+  const validateSession = async () => {
+    if (!authToken.value) {
+      return false
+    }
+    
+    try {
+      const config = useRuntimeConfig()
+      const response = await $fetch('/api/auth/me', {
+        baseURL: config.public.apiBaseUrl,
+        headers: {
+          Authorization: `Bearer ${authToken.value}`
+        }
+      })
+      
+      if (response.success && response.data) {
+        user.value = response.data.user
+        organization.value = response.data.organization
+        userCookie.value = response.data.user
+        orgCookie.value = response.data.organization
+        return true
+      }
+      return false
+    } catch (error) {
+      return false
+    }
+  }
+  
   return {
     user: readonly(user),
     organization: readonly(organization),
@@ -367,6 +422,7 @@ export const useAuth = () => {
     setInitialPassword,
     resetPassword,
     getCurrentUser,
+    validateSession,
     inviteUser,
     hasPermission,
     canAccessPartner

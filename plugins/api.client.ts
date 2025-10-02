@@ -1,10 +1,12 @@
+let isRefreshing = false
+let refreshPromise: Promise<any> | null = null
+
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
   
   const api = $fetch.create({
     baseURL: config.public.apiBaseUrl,
     onRequest({ options }) {
-      // Get fresh token cookie on each request
       const tokenCookie = useCookie('auth_token')
       
       if (tokenCookie.value) {
@@ -14,63 +16,100 @@ export default defineNuxtPlugin(() => {
         }
       }
     },
-    async onResponseError({ response, options, error }) {
-      // Handle CORS errors that might indicate token expiry
-      if (!response && error && (error.message?.includes('CORS') || error.message?.includes('fetch'))) {
+    async onRequestError({ error }) {
+      // Handle network errors (CORS, connection issues)
+      if (process.client && error.message?.includes('fetch')) {
         const tokenCookie = useCookie('auth_token')
-        const refreshCookie = useCookie('refresh_token')
         
-        // If we have tokens but getting CORS errors, likely token expired
+        // If we have a token but getting network errors, likely session expired
         if (tokenCookie.value) {
-          if (process.client) {
-            const toast = useToast()
-            toast.add({
-              title: 'Connection Issue',
-              description: 'Session may have expired. Please log in again to continue.',
-              color: 'yellow',
-              timeout: 5000,
-              icon: 'i-heroicons-exclamation-triangle'
-            })
-          }
+          const toast = useToast()
+          toast.add({
+            title: 'Session Expired',
+            description: 'Your session has expired. Redirecting to login...',
+            color: 'yellow',
+            timeout: 3000,
+            icon: 'i-heroicons-exclamation-triangle'
+          })
           
-          // Clear tokens
+          // Clear all auth data
           tokenCookie.value = null
-          refreshCookie.value = null
+          const refreshCookie = useCookie('refresh_token')
           const userCookie = useCookie('user_data')
           const orgCookie = useCookie('org_data')
+          refreshCookie.value = null
           userCookie.value = null
           orgCookie.value = null
           
           setTimeout(() => {
-            try {
-              navigateTo('/login')
-            } catch (error) {
-              if (process.client) {
-                window.location.href = '/login'
-              }
-            }
+            window.location.href = '/login'
           }, 1000)
-          return
         }
       }
+    },
+    async onResponseError({ response, options }) {
+      const errorData = response?._data || {}
+      const errorCode = errorData.error?.code
+      const errorMessage = errorData.error?.message
       
-      if (response.status === 401) {
+      // Handle 403 Forbidden - Permission denied
+      if (response?.status === 403) {
+        if (process.client) {
+          const toast = useToast()
+          let title = 'Access Denied'
+          let description = 'You do not have permission to perform this action.'
+          
+          if (errorCode === 'INSUFFICIENT_PERMISSIONS') {
+            description = 'You lack the required permissions for this action.'
+          } else if (errorCode === 'INSUFFICIENT_ROLE') {
+            description = 'Your role is not authorized for this action.'
+          } else if (errorMessage) {
+            description = errorMessage
+          }
+          
+          toast.add({
+            title,
+            description,
+            color: 'red',
+            timeout: 4000,
+            icon: 'i-heroicons-shield-exclamation'
+          })
+        }
+        return // Don't clear tokens, just show error
+      }
+      
+      // Handle 401 Unauthorized - Session expired
+      if (response?.status === 401) {
         const refreshCookie = useCookie('refresh_token')
+        const tokenCookie = useCookie('auth_token')
         
-        if (refreshCookie.value) {
-          try {
-            const refreshResponse = await $fetch('/api/auth/refresh', {
+        // Skip refresh for auth endpoints
+        if (options.url?.includes('/api/auth/')) {
+          return
+        }
+        
+        // Only try refresh if we have a refresh token
+        if (refreshCookie.value && !isRefreshing) {
+          // Prevent multiple simultaneous refresh attempts
+          if (!refreshPromise) {
+            isRefreshing = true
+            refreshPromise = $fetch('/api/auth/refresh', {
               method: 'POST',
               baseURL: config.public.apiBaseUrl,
-              body: { refresh_token: refreshCookie.value }
+              body: { refresh_token: refreshCookie.value },
+              headers: { 'Content-Type': 'application/json' }
             })
+          }
+          
+          try {
+            const refreshResponse = await refreshPromise
             
-            if (refreshResponse.success) {
-              const tokenCookie = useCookie('auth_token')
+            if (refreshResponse.success && refreshResponse.data?.access_token) {
+              // Update tokens
               tokenCookie.value = refreshResponse.data.access_token
               refreshCookie.value = refreshResponse.data.refresh_token
               
-              // Retry original request with new token
+              // Retry original request
               return $fetch(response.url, {
                 ...options,
                 headers: {
@@ -79,47 +118,20 @@ export default defineNuxtPlugin(() => {
                 }
               })
             }
-          } catch (error) {
+          } catch (refreshError) {
+            // Refresh failed, clear tokens
+            refreshCookie.value = null
+          } finally {
+            isRefreshing = false
+            refreshPromise = null
           }
         }
         
-        // Handle session expiry with immediate logout
+        // Use centralized session expiry handler
         if (process.client) {
-          const toast = useToast()
-          toast.add({
-            title: 'Session Expired',
-            description: 'Redirecting to login page...',
-            color: 'red',
-            timeout: 3000,
-            icon: 'i-heroicons-exclamation-triangle'
-          })
-          
-          // Force logout and redirect immediately
-          setTimeout(() => {
-            window.location.href = '/login'
-          }, 1500)
+          const { handleSessionExpiry } = useSessionManager()
+          handleSessionExpiry()
         }
-        
-        // Clear tokens and redirect to login
-        const tokenCookie = useCookie('auth_token')
-        const userCookie = useCookie('user_data')
-        const orgCookie = useCookie('org_data')
-        
-        tokenCookie.value = null
-        refreshCookie.value = null
-        userCookie.value = null
-        orgCookie.value = null
-        
-        // Delay redirect slightly to show the toast
-        setTimeout(() => {
-          try {
-            navigateTo('/login')
-          } catch (error) {
-            if (process.client) {
-              window.location.href = '/login'
-            }
-          }
-        }, 1000)
       }
     }
   })

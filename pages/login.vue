@@ -76,6 +76,24 @@
             </p>
           </div>
           
+          <!-- Session Expired Notification -->
+          <div v-if="showSessionExpired" class="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div class="flex items-start">
+              <UIcon name="i-heroicons-exclamation-triangle" class="h-5 w-5 text-red-600 dark:text-red-400 mr-3 mt-0.5 flex-shrink-0" />
+              <div class="flex-1">
+                <h3 class="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
+                  Session Expired
+                </h3>
+                <p class="text-sm text-red-700 dark:text-red-300">
+                  Your session has expired. Please log in again to continue.
+                </p>
+              </div>
+              <button @click="showSessionExpired = false" class="text-red-400 hover:text-red-600 ml-2">
+                <UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          
           <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 lg:p-8">
             <form @submit.prevent="handleLogin" class="space-y-5">
               <div class="space-y-4">
@@ -159,7 +177,6 @@ definePageMeta({
 })
 
 const { login, loading } = useAuth()
-const { handleError, handleSuccess } = useErrorHandler()
 const router = useRouter()
 const config = useRuntimeConfig()
 
@@ -170,6 +187,19 @@ const credentials = ref({
 
 const error = ref('')
 const showPassword = ref(false)
+const route = useRoute()
+const showSessionExpired = ref(false)
+
+onMounted(() => {
+  // Show session expired message if redirected from expired session
+  if (route.query.expired === '1') {
+    showSessionExpired.value = true
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      showSessionExpired.value = false
+    }, 5000)
+  }
+})
 
 const fillCredentials = (role: string) => {
   const testCreds = config.public.testCredentials[role as keyof typeof config.public.testCredentials]
@@ -190,7 +220,6 @@ const handleLogin = async () => {
       return
     }
     
-    handleSuccess('login')
     await router.push('/dashboard')
   } catch (err: any) {
     // Show actual API error message instead of generic error

@@ -5,7 +5,7 @@
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Partners</h1>
         <p class="text-gray-600 dark:text-gray-400">Manage your business partners</p>
       </div>
-      <div class="flex space-x-3">
+      <div v-if="!isPartner" class="flex space-x-3">
         <UButton @click="showInvoiceModal = true" color="gray" variant="outline">
           <UIcon name="i-heroicons-document-text" class="mr-2" />
           Generate Invoice
@@ -88,7 +88,10 @@
 </template>
 
 <script setup lang="ts">
+const { user } = useAuth()
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
+
+const isPartner = computed(() => user.value?.role === 'partner')
 
 const showInvoiceModal = ref(false)
 const searchQuery = ref('')
@@ -175,6 +178,12 @@ const getUnitsByPartnerSync = (partnerId: string) => {
 }
 
 onMounted(async () => {
+  // Redirect partners to dashboard - they shouldn't see partners list
+  if (isPartner.value) {
+    await navigateTo('/dashboard')
+    return
+  }
+  
   await Promise.all([
     loadPartners(),
     loadUnits()

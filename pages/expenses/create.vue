@@ -17,7 +17,7 @@
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <UFormGroup label="Date" name="date">
-            <UInput v-model="form.date" type="date" />
+            <DateInput v-model="form.date" />
           </UFormGroup>
           <UFormGroup label="Type" name="type">
             <USelect v-model="form.type" :options="expenseTypes" placeholder="Select type" />
