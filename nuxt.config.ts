@@ -18,21 +18,21 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.API_BASE_URL || 'https://metrobnb-api.onrender.com',
-      dev: process.env.NODE_ENV === 'development',
-      devMode: process.env.DEV_MODE === 'true',
+      apiBaseUrl: '', // Will be set by NUXT_PUBLIC_API_BASE_URL
+      dev: process.env.NODE_ENV === 'prod',
+      devMode: false, // Will be set by NUXT_PUBLIC_DEV_MODE
       testCredentials: {
         admin: { 
-          email: process.env.DEV_ADMIN_EMAIL || '', 
-          password: process.env.DEV_ADMIN_PASSWORD || '' 
+          email: '', // Will be set by NUXT_PUBLIC_TEST_ADMIN_EMAIL
+          password: '' 
         },
         staff: { 
-          email: process.env.DEV_STAFF_EMAIL || '', 
-          password: process.env.DEV_STAFF_PASSWORD || '' 
+          email: '', 
+          password: '' 
         },
         partner: { 
-          email: process.env.DEV_PARTNER_EMAIL || '', 
-          password: process.env.DEV_PARTNER_PASSWORD || '' 
+          email: '', 
+          password: '' 
         }
       }
     }

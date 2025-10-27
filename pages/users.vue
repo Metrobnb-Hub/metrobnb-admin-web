@@ -420,18 +420,27 @@ const regeneratePasswordAction = async (user) => {
   if (confirm(`Regenerate password for ${user.name}?\n\nThis will create a new temporary password that the user must change on next login.`)) {
     try {
       const response = await regeneratePassword(user.id)
-      if (response.success) {
+      
+      // Check if response has the data we need
+      if (response && (response.email || response.data?.email)) {
+        const responseData = response.data || response
         regeneratedPasswordData.value = {
-          email: response.data.email,
-          temporaryPassword: response.data.temporary_password
+          email: responseData.email,
+          temporaryPassword: responseData.temporary_password,
+          requiresPasswordChange: responseData.requires_password_change || true
         }
         showPasswordModal.value = true
+        
+        // Refresh user list to show updated status
+        await loadUsers()
+        
         const { notifySuccess } = useNotify()
         notifySuccess(`Password regenerated for ${user.name}`)
       } else {
-        throw new Error(response.message || 'Failed to regenerate password')
+        throw new Error('Invalid response format')
       }
     } catch (error) {
+      console.error('Error regenerating password:', error)
       const { notifyError } = useNotify()
       const errorMessage = error.message?.includes('admin/owner') 
         ? 'Only admin/owner can regenerate passwords'
@@ -566,19 +575,25 @@ const handleUserSubmit = async () => {
         accessible_partners: selectedPartners.value
       })
       
-      if (response.success) {
+      // Check if response has the data we need (handle both wrapped and direct responses)
+      if (response && (response.email || response.data?.email || response.success)) {
+        const responseData = response.data || response
+        
         // Show success modal with credentials
         createdUserData.value = {
-          email: response.data.email,
-          temporaryPassword: response.data.temporary_password,
-          message: response.data.message || 'User must change password on first login.'
+          email: responseData.email,
+          temporaryPassword: responseData.temporary_password,
+          message: responseData.message || 'User must change password on first login.'
         }
         
         closeModal()
         showSuccessModal.value = true
         await loadUsers()
+        
+        const { notifySuccess } = useNotify()
+        notifySuccess(`User ${responseData.email} created successfully`)
       } else {
-        throw new Error(response.message || 'Failed to create user')
+        throw new Error('Invalid response format')
       }
     }
   } catch (error) {
