@@ -18,8 +18,8 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      apiBaseUrl: '', // Will be set by NUXT_PUBLIC_API_BASE_URL
-      dev: process.env.NODE_ENV === 'prod',
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://metrobnb-api.onrender.com', // Default to production API
+      dev: process.env.NODE_ENV === 'development',
       devMode: false, // Will be set by NUXT_PUBLIC_DEV_MODE
       testCredentials: {
         admin: { 
