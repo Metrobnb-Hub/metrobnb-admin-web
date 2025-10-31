@@ -111,7 +111,17 @@ const isImporting = ref(false)
 const importResults = ref(null)
 
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
-const { importAirbnbBookings } = useApi()
+// Use fallback API approach
+const importAirbnbBookingsWithFallback = async (data: any) => {
+  try {
+    const typedApi = useTypedApi()
+    return await typedApi.importAirbnbBookings(data)
+  } catch (error) {
+    console.error('Typed API failed, using fallback:', error)
+    const { importAirbnbBookings: fallback } = useApi()
+    return await fallback(data)
+  }
+}
 
 const partnerOptions = computed(() => {
   if (!Array.isArray(partners.value)) return []

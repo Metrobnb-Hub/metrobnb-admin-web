@@ -69,7 +69,7 @@
         </div>
         
         <div class="flex justify-end space-x-3 mt-6">
-          <UButton color="gray" variant="ghost" to="/journal-entries">Cancel</UButton>
+          <UButton color="gray" variant="ghost" to="/accounting/journal-entries">Cancel</UButton>
           <UButton type="submit" color="primary" :loading="loading">Create Entry</UButton>
         </div>
       </UForm>

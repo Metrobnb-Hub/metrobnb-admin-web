@@ -9,7 +9,7 @@
         <UIcon name="i-heroicons-exclamation-triangle" class="mx-auto h-12 w-12 text-red-400 mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Invoice Not Found</h3>
         <p class="text-gray-600 dark:text-gray-400 mb-6">{{ error }}</p>
-        <UButton to="/invoices" color="primary">Back to Invoices</UButton>
+        <UButton to="/accounting/invoices" color="primary">Back to Invoices</UButton>
       </div>
     </UCard>
   </div>
@@ -21,7 +21,7 @@
         <!-- Mobile Header -->
         <div class="sm:hidden mb-4">
           <div class="flex items-center justify-between mb-3">
-            <UButton to="/invoices" variant="ghost" size="sm">
+            <UButton to="/accounting/invoices" variant="ghost" size="sm">
               <UIcon name="i-heroicons-arrow-left" class="mr-1 text-gray-600 dark:text-gray-400" />
               Back
             </UButton>
@@ -50,7 +50,7 @@
         <!-- Desktop Header -->
         <div class="hidden sm:flex justify-between items-center mb-4">
           <div class="flex items-center space-x-3">
-            <UButton to="/invoices" variant="ghost" size="sm">
+            <UButton to="/accounting/invoices" variant="ghost" size="sm">
               <UIcon name="i-heroicons-arrow-left" class="mr-1 text-gray-600 dark:text-gray-400" />
               Back to Invoices
             </UButton>

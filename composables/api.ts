@@ -29,8 +29,8 @@ export interface CreateJournalEntryRequest {
 
 const apiClient = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const nuxtApp = useNuxtApp()
-  const separator = endpoint.includes('?') ? '&' : '?'
-  const url = `${endpoint}${separator}_t=${Date.now()}`
+  // Removed cache busting to prevent 500 errors
+  const url = endpoint
   
   try {
     const response = await nuxtApp.$api(url, {

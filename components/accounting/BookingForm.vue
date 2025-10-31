@@ -235,7 +235,6 @@ const state = reactive({
 })
 
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
-const { getBookingSources, getPaymentMethods } = useApi()
 
 const bookingSources = ref([])
 const paymentMethods = ref([])
@@ -340,15 +339,37 @@ const onSubmit = () => {
 
 onMounted(async () => {
   try {
-    const [, , sources, methods] = await Promise.all([
+    console.log('Loading booking form data...')
+    
+    // Load partners and units first
+    await Promise.all([
       loadPartners(),
-      loadUnits(),
-      getBookingSources(),
-      getPaymentMethods()
+      loadUnits()
     ])
-    bookingSources.value = sources || []
-    paymentMethods.value = methods || []
+    
+    // Then try to load booking sources and payment methods
+    try {
+      const { getBookingSources, getPaymentMethods } = useApi()
+      const [sourcesResponse, methodsResponse] = await Promise.all([
+        getBookingSources(),
+        getPaymentMethods()
+      ])
+      
+      const { extractData } = useApiResponse()
+      bookingSources.value = extractData(sourcesResponse) || []
+      paymentMethods.value = extractData(methodsResponse) || []
+      
+      console.log('Booking sources loaded:', bookingSources.value)
+      console.log('Payment methods loaded:', paymentMethods.value)
+    } catch (apiError) {
+      console.error('Failed to load booking sources/payment methods:', apiError)
+      // Set empty arrays as fallback
+      bookingSources.value = []
+      paymentMethods.value = []
+    }
+    
   } catch (error) {
+    console.error('Failed to load booking form data:', error)
     bookingSources.value = []
     paymentMethods.value = []
   }

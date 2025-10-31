@@ -195,7 +195,18 @@ const isOpen = computed({
 })
 
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
-const { updateBooking, getBookingSources, getPaymentMethods } = useApi()
+
+// Use fallback for updateBooking
+const updateBookingWithFallback = async (id: string, data: any) => {
+  try {
+    const typedApi = useTypedApi()
+    return await typedApi.updateBooking(id, data)
+  } catch (error) {
+    console.error('Typed API failed, using fallback:', error)
+    const { updateBooking: fallback } = useApi()
+    return await fallback(id, data)
+  }
+}
 
 const loading = ref(false)
 const paymentMethods = ref([])
@@ -272,7 +283,7 @@ const state = reactive({
   amountPaid: 0,
   paymentReceivedBy: 'partner',
   payoutDate: '',
-  invoiced: false,
+  invoiced: 'false',
   notes: ''
 })
 
@@ -308,8 +319,8 @@ const paymentReceivedByOptions = [
 ]
 
 const invoiceStatusOptions = [
-  { label: 'Not Invoiced', value: false },
-  { label: 'Invoiced', value: true }
+  { label: 'Not Invoiced', value: 'false' },
+  { label: 'Invoiced', value: 'true' }
 ]
 
 
@@ -351,6 +362,10 @@ const onSubmit = async () => {
   const { notifySuccess, notifyError } = useNotify()
   
   loading.value = true
+  
+  // Minimum loading time to show loader
+  const minLoadingTime = new Promise(resolve => setTimeout(resolve, 800))
+  
   try {
     const updatedData = {
       guest_name: state.guestName,
@@ -368,18 +383,29 @@ const onSubmit = async () => {
       amount_paid: state.amountPaid,
       payment_received_by: state.paymentReceivedBy,
       payout_date: state.payoutDate || null,
-      invoiced: state.invoiced,
+      invoiced: state.invoiced === 'true',
       notes: state.notes
     }
     
-    await updateBooking(props.booking.id, updatedData)
+    const [response] = await Promise.all([
+      updateBookingWithFallback(props.booking.id, updatedData),
+      minLoadingTime
+    ])
     
-    notifySuccess(`Booking for ${state.guestName} has been updated`)
-    
-    emit('updated')
-    isOpen.value = false
+    if (response?.success !== false) {
+      notifySuccess(`Booking for ${state.guestName} updated successfully!`)
+      
+      // Small delay before closing to show success
+      setTimeout(() => {
+        emit('updated')
+        isOpen.value = false
+      }, 500)
+    } else {
+      throw new Error(response?.message || 'Update failed')
+    }
   } catch (error) {
-    notifyError('Failed to update booking')
+    console.error('Update booking error:', error)
+    notifyError(error?.message || 'Failed to update booking. Please try again.')
   } finally {
     loading.value = false
   }
@@ -417,7 +443,7 @@ watch(() => props.booking, (booking) => {
       amountPaid: parseFloat(booking.amount_paid) || 0,
       paymentReceivedBy: booking.payment_received_by || 'partner',
       payoutDate: booking.payout_date || '',
-      invoiced: booking.invoiced || false,
+      invoiced: booking.invoiced ? 'true' : 'false',
       notes: booking.notes || ''
     })
     

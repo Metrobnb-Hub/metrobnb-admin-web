@@ -7,7 +7,7 @@
           <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">Expenses</h1>
           <p class="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">Manage partner expenses and charges</p>
         </div>
-        <UButton v-if="!isPartner" to="/expenses/create" color="primary" size="xs" class="sm:size-sm">
+        <UButton v-if="!isPartner" to="/accounting/expenses/create" color="primary" size="xs" class="sm:size-sm">
           <UIcon name="i-heroicons-plus" class="sm:mr-1" />
           <span class="hidden sm:inline">Add Expense</span>
         </UButton>
@@ -85,6 +85,10 @@
             <UButton size="sm" color="gray" @click="bulkMarkNonBillable">
               <UIcon name="i-heroicons-minus" class="mr-1" />
               Mark Non-Billable ({{ selectedExpenses.length }})
+            </UButton>
+            <UButton size="sm" color="red" @click="bulkDelete">
+              <UIcon name="i-heroicons-trash" class="mr-1" />
+              Delete ({{ selectedExpenses.length }})
             </UButton>
             <UButton size="sm" color="red" variant="outline" @click="clearSelection">
               Clear Selection
@@ -304,11 +308,11 @@
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No expenses yet</h3>
           <p class="text-gray-600 dark:text-gray-400 mb-6">Start by recording your first expense</p>
           <div class="flex space-x-3">
-          <UButton to="/expenses/capture" color="primary" variant="outline">
+          <UButton to="/accounting/expenses/capture" color="primary" variant="outline">
             <UIcon name="i-heroicons-camera" class="mr-2" />
             Capture Receipt
           </UButton>
-          <UButton to="/expenses/create" color="primary">Add Expense</UButton>
+          <UButton to="/accounting/expenses/create" color="primary">Add Expense</UButton>
         </div>
         </div>
       </div>
@@ -917,6 +921,27 @@ watch(() => filterPartner.value, () => {
 // Removed auto-apply watchers - now requires Apply button
 
 // loadPartners and loadUnits are now provided by useGlobalCache()
+
+const bulkDelete = async () => {
+  const { notifySuccess, notifyError } = useNotify()
+  
+  if (selectedExpenses.value.length === 0) return
+  
+  const confirmed = confirm(`Are you sure you want to delete ${selectedExpenses.value.length} expenses? This action cannot be undone.`)
+  if (!confirmed) return
+  
+  try {
+    for (const expenseId of selectedExpenses.value) {
+      await deleteExpense(expenseId)
+    }
+    
+    await loadExpensesData()
+    clearSelection()
+    notifySuccess(`Deleted ${selectedExpenses.value.length} expenses successfully`)
+  } catch (error) {
+    notifyError('Failed to delete expenses')
+  }
+}
 
 onMounted(async () => {
   try {

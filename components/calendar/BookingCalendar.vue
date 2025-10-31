@@ -24,7 +24,17 @@ const emit = defineEmits<{
   eventClick: [booking: Booking]
 }>()
 
-const { getBookings } = useApi()
+// Use fallback API approach
+const getBookingsWithFallback = async (params?: any) => {
+  try {
+    const typedApi = useTypedApi()
+    return await typedApi.getBookings(params)
+  } catch (error) {
+    console.error('Typed API failed, using fallback:', error)
+    const { getBookings: fallback } = useApi()
+    return await fallback(params)
+  }
+}
 const { transformBookingsToEvents } = useCalendarEvents()
 
 const events = ref([])

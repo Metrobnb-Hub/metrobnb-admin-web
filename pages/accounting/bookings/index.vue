@@ -8,16 +8,12 @@
           <p class="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">Manage booking payments and records</p>
         </div>
         <div class="flex gap-2">
-          <UButton @click="testLogout" color="red" variant="outline" size="xs" class="sm:size-sm">
-            <UIcon name="i-heroicons-arrow-right-on-rectangle" class="sm:mr-1" />
-            <span class="hidden sm:inline">Logout</span>
-          </UButton>
           <div v-if="!isPartner" class="flex gap-2">
             <UButton @click="showImportModal = true" color="primary" variant="outline" size="xs" class="sm:size-sm">
               <UIcon name="i-heroicons-arrow-up-tray" class="sm:mr-1" />
               <span class="hidden sm:inline">Import</span>
             </UButton>
-            <UButton to="/bookings/create" color="primary" size="xs" class="sm:size-sm">
+            <UButton to="/accounting/bookings/create" color="primary" size="xs" class="sm:size-sm">
               <UIcon name="i-heroicons-plus" class="sm:mr-1" />
               <span class="hidden sm:inline">Add</span>
             </UButton>
@@ -625,12 +621,6 @@ const handleSearchInput = () => {
 const handlePageChange = (page: number) => {
   currentPage.value = page
   loadBookings()
-}
-
-const testLogout = async () => {
-  const { logout } = useAuth()
-  await logout()
-  await navigateTo('/login')
 }
 
 onMounted(async () => {

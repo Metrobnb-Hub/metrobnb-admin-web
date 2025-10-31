@@ -64,7 +64,7 @@
           <UIcon name="i-heroicons-document-plus" class="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No invoices yet</h3>
           <p class="text-gray-600 dark:text-gray-400 mb-4">Your invoices will appear here once they're generated</p>
-          <UButton to="/invoices" color="primary" variant="outline">
+          <UButton to="/accounting/invoices" color="primary" variant="outline">
             View Invoices
           </UButton>
         </div>

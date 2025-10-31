@@ -4,9 +4,9 @@
     <div class="flex justify-between items-center">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Journal Entries</h1>
-        <p class="text-gray-600 dark:text-gray-400">Manage partner credits, debits, and corrections</p>
+        <p class="text-gray-600 dark:text-gray-400">MetroBNB perspective - Track money flow</p>
       </div>
-      <UButton to="/journal-entries/create" color="primary">
+      <UButton to="/accounting/journal-entries/create" color="primary">
         <UIcon name="i-heroicons-plus" class="mr-2" />
         New Entry
       </UButton>
@@ -16,11 +16,11 @@
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <UCard>
         <div class="flex items-center">
-          <div class="p-3 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-lg">
-            <UIcon name="i-heroicons-plus-circle" class="h-6 w-6 text-metrobnb-600 dark:text-metrobnb-400" />
+          <div class="p-3 bg-red-100 dark:bg-red-900 rounded-lg">
+            <UIcon name="i-heroicons-minus-circle" class="h-6 w-6 text-red-600 dark:text-red-400" />
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Credits</p>
+            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Credits (We Pay)</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white">₱{{ totalCredits.toLocaleString() }}</p>
           </div>
         </div>
@@ -28,11 +28,11 @@
       
       <UCard>
         <div class="flex items-center">
-          <div class="p-3 bg-red-100 dark:bg-red-900 rounded-lg">
-            <UIcon name="i-heroicons-minus-circle" class="h-6 w-6 text-red-600 dark:text-red-400" />
+          <div class="p-3 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-lg">
+            <UIcon name="i-heroicons-plus-circle" class="h-6 w-6 text-metrobnb-600 dark:text-metrobnb-400" />
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Debits</p>
+            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Debits (They Pay)</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white">₱{{ totalDebits.toLocaleString() }}</p>
           </div>
         </div>
@@ -74,7 +74,7 @@
           title="No journal entries found"
           message="Create your first journal entry to track partner credits and debits."
           action-text="Create Entry"
-          action-to="/journal-entries/create"
+          action-to="/accounting/journal-entries/create"
         />
       </div>
       
@@ -86,7 +86,7 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Partner</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Description</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Amount</th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Amount (MetroBNB View)</th>
               <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -101,7 +101,7 @@
               <td class="px-6 py-4 whitespace-nowrap">
                 <span 
                   class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                  :class="entry.type === 'credit' ? 'bg-metrobnb-100 text-metrobnb-800 dark:bg-metrobnb-900 dark:text-metrobnb-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'"
+                  :class="entry.type === 'credit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-metrobnb-100 text-metrobnb-800 dark:bg-metrobnb-900 dark:text-metrobnb-200'"
                 >
                   {{ entry.type === 'credit' ? 'Credit' : 'Debit' }}
                 </span>
@@ -113,8 +113,8 @@
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium"
-                  :class="entry.type === 'credit' ? 'text-metrobnb-600 dark:text-metrobnb-400' : 'text-red-600 dark:text-red-400'">
-                {{ entry.type === 'credit' ? '+' : '-' }}₱{{ getAmountValue(entry.amount).toLocaleString() }}
+                  :class="entry.type === 'debit' ? 'text-metrobnb-600 dark:text-metrobnb-400' : 'text-red-600 dark:text-red-400'">
+                {{ entry.type === 'debit' ? '+' : '-' }}₱{{ getAmountValue(entry.amount).toLocaleString() }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <UDropdown :items="getActions(entry)">
@@ -184,7 +184,7 @@ const totalDebits = computed(() =>
   entries.value.filter(e => e.type === 'debit').reduce((sum, e) => sum + getAmountValue(e.amount), 0)
 )
 
-const netBalance = computed(() => totalCredits.value - totalDebits.value)
+const netBalance = computed(() => totalDebits.value - totalCredits.value)
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()

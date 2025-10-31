@@ -172,6 +172,9 @@ const handleSubmit = async (event: any) => {
     formData.append('amount', form.value.amount.toString())
     formData.append('type', form.value.type)
     formData.append('date', form.value.date)
+    formData.append('paid_by', form.value.paidBy)
+    formData.append('billable', form.value.billable.toString())
+    formData.append('notes', form.value.notes || '')
     
     if (selectedFile.value) {
       formData.append('receipt_file', selectedFile.value)
@@ -184,12 +187,62 @@ const handleSubmit = async (event: any) => {
       body: formData
     })
     
-    notifySuccess('Expense added successfully')
-    router.push('/expenses')
-  } catch (error: any) {
+    console.log('Expense created successfully, showing toast...')
     
-    const errorMessage = error.data?.error?.message || error.message || 'Failed to add expense'
+    // Try both approaches
+    const toast = useToast()
+    toast.add({
+      title: 'Success!',
+      description: 'Expense added successfully',
+      color: 'green',
+      timeout: 5000
+    })
+    
+    // Also try the global one
+    notifySuccess('Expense added successfully', 5000)
+    
+    console.log('Toast should be visible now')
+    
+    // Wait before redirecting to let user see the toast
+    setTimeout(() => {
+      console.log('Redirecting...')
+      router.push('/accounting/expenses')
+    }, 2000)
+  } catch (error: any) {
+    console.error('Expense creation error:', error)
+    
+    // Extract detailed error message
+    let errorMessage = 'Failed to add expense'
+    
+    if (error.data) {
+      // Handle different error response structures
+      if (error.data.detail) {
+        errorMessage = error.data.detail
+      } else if (error.data.message) {
+        errorMessage = error.data.message
+      } else if (error.data.error) {
+        errorMessage = typeof error.data.error === 'string' ? error.data.error : error.data.error.message
+      } else if (typeof error.data === 'string') {
+        errorMessage = error.data
+      }
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    // Show server status if available
+    if (error.status) {
+      errorMessage = `${errorMessage} (Status: ${error.status})`
+    }
+    
     notifyError(errorMessage)
+    
+    // Also show in console for debugging
+    console.error('Full error details:', {
+      status: error.status,
+      statusText: error.statusText,
+      data: error.data,
+      message: error.message
+    })
   } finally {
     loading.value = false
   }

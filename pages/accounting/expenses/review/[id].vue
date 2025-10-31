@@ -6,7 +6,7 @@
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Review Expense</h1>
         <p class="text-gray-600 dark:text-gray-400">Complete the expense details</p>
       </div>
-      <UButton to="/expenses" variant="ghost">
+      <UButton to="/accounting/expenses" variant="ghost">
         <UIcon name="i-heroicons-x-mark" class="mr-2" />
         Cancel
       </UButton>
@@ -90,7 +90,7 @@
           </UFormGroup>
 
           <div class="flex justify-end space-x-3 pt-4">
-            <UButton to="/expenses" variant="outline">
+            <UButton to="/accounting/expenses" variant="outline">
               Save as Draft
             </UButton>
             <UButton type="submit" color="primary" :loading="completing">

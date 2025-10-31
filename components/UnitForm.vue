@@ -11,7 +11,9 @@
         
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Unit Name</label>
+            <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+              Unit Name <span class="text-red-500">*</span>
+            </label>
             <UInput
               v-model="form.name"
               type="text"
@@ -21,7 +23,9 @@
           </div>
           
           <div>
-            <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Partner</label>
+            <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+              Partner <span class="text-red-500">*</span>
+            </label>
             <USelect
               v-model="form.partner_id"
               :options="partnerOptions"
@@ -38,7 +42,7 @@
             <USelect
               v-model="form.type"
               :options="typeOptions"
-              placeholder="Select Type"
+              placeholder="Select Type (Optional)"
             />
           </div>
           
@@ -47,6 +51,7 @@
             <USelect
               v-model="form.status"
               :options="statusOptions"
+              placeholder="Select Status (Optional)"
             />
           </div>
           
@@ -338,6 +343,7 @@
 
 <script setup lang="ts">
 import type { Unit } from '~/types/api'
+import type { UnitCreate, UnitUpdate } from '~/types/generated-api'
 
 const props = defineProps<{
   unit?: Unit | null
@@ -350,7 +356,8 @@ const emit = defineEmits<{
 }>()
 
 const { user } = useAuth()
-const { getPartners, createUnit, updateUnit } = useApi()
+// Use the new typed API client
+const typedApi = useTypedApi()
 
 const isEdit = computed(() => !!props.unit)
 const saving = ref(false)
@@ -403,8 +410,9 @@ if (props.preselectedPartner) {
 }
 
 const partnerOptions = computed(() => {
+  if (!partners.value || !Array.isArray(partners.value)) return []
   return partners.value.map(partner => ({
-    label: partner.name,
+    label: partner.name || partner.company_name || `Partner ${partner.id}`,
     value: partner.id
   }))
 })
@@ -442,9 +450,14 @@ watch(amenitiesText, (value) => {
 
 const loadPartners = async () => {
   try {
-    const response = await getPartners()
-    partners.value = Array.isArray(response) ? response : []
+    const response = await typedApi.getPartners()
+    console.log('Partners response:', response)
+    // Extract data from nested response structure
+    const partnersData = response?.data || response || []
+    partners.value = Array.isArray(partnersData) ? partnersData : []
+    console.log('Partners options:', partnerOptions.value)
   } catch (error) {
+    console.error('Failed to load partners:', error)
     partners.value = []
   }
 }
@@ -456,9 +469,9 @@ const handleSubmit = async () => {
     let response
     
     if (isEdit.value && props.unit) {
-      response = await updateUnit(props.unit.id, form.value)
+      response = await typedApi.updateUnit(props.unit.id, form.value)
     } else {
-      response = await createUnit(form.value)
+      response = await typedApi.createUnit(form.value)
     }
     
     if (response) {

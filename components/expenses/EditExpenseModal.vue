@@ -176,7 +176,29 @@ const paidByOptions = [
 ]
 
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
-const { updateExpense, uploadFile } = useApi()
+
+// Use fallback API approach
+const updateExpenseWithFallback = async (id: string, data: any) => {
+  try {
+    const typedApi = useTypedApi()
+    return await typedApi.updateExpense(id, data)
+  } catch (error) {
+    console.error('Typed API failed, using fallback:', error)
+    const { updateExpense: fallback } = useApi()
+    return await fallback(id, data)
+  }
+}
+
+const uploadFileWithFallback = async (file: File, folder?: string) => {
+  try {
+    const typedApi = useTypedApi()
+    return await typedApi.uploadFile(file, folder)
+  } catch (error) {
+    console.error('Typed API failed, using fallback:', error)
+    const { uploadFile: fallback } = useApi()
+    return await fallback(file, folder)
+  }
+}
 
 const loading = ref(false)
 

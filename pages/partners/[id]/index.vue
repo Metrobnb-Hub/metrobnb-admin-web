@@ -63,7 +63,7 @@
         <template #header>
           <div class="flex justify-between items-center">
             <h3 class="text-lg font-semibold">Recent Invoices</h3>
-            <UButton to="/invoices" size="sm" color="gray" variant="outline">View All</UButton>
+            <UButton to="/accounting/invoices" size="sm" color="gray" variant="outline">View All</UButton>
           </div>
         </template>
         

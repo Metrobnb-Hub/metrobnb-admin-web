@@ -22,7 +22,12 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  middleware: 'auth'
+})
+
 const { handleSubmit } = useBookingForm()
+const { notifySuccess, notifyError } = useNotify()
 const router = useRouter()
 const loading = ref(false)
 
@@ -31,21 +36,14 @@ const handleFormSubmit = async (data: any) => {
   try {
     await handleSubmit(data)
     
-    const toast = useToast()
-    toast.add({
-      title: 'Booking created',
-      description: 'Booking has been added successfully',
-      color: 'green'
-    })
+    notifySuccess('Booking created successfully!', 5000)
     
-    router.push('/accounting/bookings')
+    setTimeout(() => {
+      router.push('/accounting/bookings')
+    }, 1500)
   } catch (error) {
-    const toast = useToast()
-    toast.add({
-      title: 'Error',
-      description: 'Failed to create booking',
-      color: 'red'
-    })
+    console.error('Create booking error:', error)
+    notifyError('Failed to create booking. Please try again.')
   } finally {
     loading.value = false
   }

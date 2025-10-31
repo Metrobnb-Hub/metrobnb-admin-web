@@ -157,9 +157,9 @@ const allNavigationGroups = [
     roles: ['admin', 'manager', 'staff', 'partner', 'owner'], // Added 'owner'
     items: [
       { name: 'Bookings', href: '/accounting/bookings', icon: 'i-heroicons-calendar-days', roles: ['admin', 'manager', 'staff', 'partner', 'owner'] },
-      { name: 'Expenses', href: '/expenses', icon: 'i-heroicons-receipt-percent', roles: ['admin', 'manager', 'staff', 'partner', 'owner'] },
-      { name: 'Journal Entries', href: '/journal-entries', icon: 'i-heroicons-document-plus', roles: ['admin', 'manager', 'owner'] },
-      { name: 'Invoices', href: '/invoices', icon: 'i-heroicons-document-text', roles: ['admin', 'manager', 'staff', 'partner', 'owner'] },
+      { name: 'Expenses', href: '/accounting/expenses', icon: 'i-heroicons-receipt-percent', roles: ['admin', 'manager', 'staff', 'partner', 'owner'] },
+      { name: 'Journal Entries', href: '/accounting/journal-entries', icon: 'i-heroicons-document-plus', roles: ['admin', 'manager', 'owner'] },
+      { name: 'Invoices', href: '/accounting/invoices', icon: 'i-heroicons-document-text', roles: ['admin', 'manager', 'staff', 'partner', 'owner'] },
       { name: 'Partners & Earnings', href: '/accounting/partners', icon: 'i-heroicons-chart-bar-square', roles: ['admin', 'manager', 'owner'] },
     ]
   },
