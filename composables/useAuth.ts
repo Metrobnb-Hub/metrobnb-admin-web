@@ -88,6 +88,7 @@ export const useAuth = () => {
     try {
       response = await fetch(apiUrl, {
         ...options,
+        keepalive: true, // Keep connection alive during tab switches
         headers: {
           'Content-Type': 'application/json',
           ...(authToken.value && { Authorization: `Bearer ${authToken.value}` }),
@@ -97,7 +98,12 @@ export const useAuth = () => {
       
       data = await response.json()
     } catch (error) {
-      // Handle network/CORS errors that might indicate token expiry
+      // Handle network/CORS errors that might indicate token expiry or connection issues
+      if (error.name === 'AbortError' || error.message?.includes('cancelled')) {
+        // Request was cancelled - don't logout, just return null
+        return null
+      }
+      
       if (authToken.value && (error.message?.includes('CORS') || error.message?.includes('fetch') || error.name === 'TypeError')) {
         if (process.client) {
           const toast = useToast()
@@ -162,6 +168,17 @@ export const useAuth = () => {
       // For login endpoint, don't redirect - just throw the error
       if (endpoint === '/login') {
         throw { data, status: response.status }
+      }
+      
+      // Try to refresh token first
+      if (refreshToken.value && endpoint !== '/refresh') {
+        try {
+          await refreshAccessToken()
+          // Retry the original request with new token
+          return await apiRequest(endpoint, options)
+        } catch (refreshError) {
+          // Refresh failed, proceed with logout
+        }
       }
       
       // Show session expired warning for other endpoints
@@ -377,6 +394,24 @@ export const useAuth = () => {
       }
       return response.data
     } catch (error) {
+      // Try to refresh token if /me fails
+      if (refreshToken.value) {
+        try {
+          await refreshAccessToken()
+          const retryResponse = await apiRequest('/me')
+          if (retryResponse.success && retryResponse.data) {
+            user.value = retryResponse.data.user
+            organization.value = retryResponse.data.organization
+            userCookie.value = retryResponse.data.user
+            orgCookie.value = retryResponse.data.organization
+            return retryResponse.data
+          }
+        } catch (refreshError) {
+          // Refresh failed, logout
+          await logout()
+          await navigateTo('/login')
+        }
+      }
       return null
     }
   }

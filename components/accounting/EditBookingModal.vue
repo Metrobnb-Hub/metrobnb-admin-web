@@ -199,7 +199,7 @@ const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 // Use fallback for updateBooking
 const updateBookingWithFallback = async (id: string, data: any) => {
   try {
-    const typedApi = useTypedApi()
+    const typedApi = useApi()
     return await typedApi.updateBooking(id, data)
   } catch (error) {
     console.error('Typed API failed, using fallback:', error)

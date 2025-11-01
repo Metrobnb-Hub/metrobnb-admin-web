@@ -94,7 +94,7 @@ function encodeQueryValue(input) {
 function encodeQueryKey(text) {
   return encodeQueryValue(text).replace(EQUAL_RE, "%3D");
 }
-function decode(text = "") {
+function decode$1(text = "") {
   try {
     return decodeURIComponent("" + text);
   } catch {
@@ -102,10 +102,10 @@ function decode(text = "") {
   }
 }
 function decodeQueryKey(text) {
-  return decode(text.replace(PLUS_RE, " "));
+  return decode$1(text.replace(PLUS_RE, " "));
 }
 function decodeQueryValue(text) {
-  return decode(text.replace(PLUS_RE, " "));
+  return decode$1(text.replace(PLUS_RE, " "));
 }
 
 function parseQuery(parametersString = "") {
@@ -154,6 +154,8 @@ function stringifyQuery(query) {
 const PROTOCOL_STRICT_REGEX = /^[\s\w\0+.-]{2,}:([/\\]{1,2})/;
 const PROTOCOL_REGEX = /^[\s\w\0+.-]{2,}:([/\\]{2})?/;
 const PROTOCOL_RELATIVE_REGEX = /^([/\\]\s*){2,}[^/\\]/;
+const PROTOCOL_SCRIPT_RE = /^[\s\0]*(blob|data|javascript|vbscript):$/i;
+const TRAILING_SLASH_RE = /\/$|\/\?|\/#/;
 const JOIN_LEADING_SLASH_RE = /^\.?\//;
 function hasProtocol(inputString, opts = {}) {
   if (typeof opts === "boolean") {
@@ -164,20 +166,52 @@ function hasProtocol(inputString, opts = {}) {
   }
   return PROTOCOL_REGEX.test(inputString) || (opts.acceptRelative ? PROTOCOL_RELATIVE_REGEX.test(inputString) : false);
 }
+function isScriptProtocol(protocol) {
+  return !!protocol && PROTOCOL_SCRIPT_RE.test(protocol);
+}
 function hasTrailingSlash(input = "", respectQueryAndFragment) {
-  {
+  if (!respectQueryAndFragment) {
     return input.endsWith("/");
   }
+  return TRAILING_SLASH_RE.test(input);
 }
 function withoutTrailingSlash(input = "", respectQueryAndFragment) {
-  {
+  if (!respectQueryAndFragment) {
     return (hasTrailingSlash(input) ? input.slice(0, -1) : input) || "/";
   }
+  if (!hasTrailingSlash(input, true)) {
+    return input || "/";
+  }
+  let path = input;
+  let fragment = "";
+  const fragmentIndex = input.indexOf("#");
+  if (fragmentIndex !== -1) {
+    path = input.slice(0, fragmentIndex);
+    fragment = input.slice(fragmentIndex);
+  }
+  const [s0, ...s] = path.split("?");
+  const cleanPath = s0.endsWith("/") ? s0.slice(0, -1) : s0;
+  return (cleanPath || "/") + (s.length > 0 ? `?${s.join("?")}` : "") + fragment;
 }
 function withTrailingSlash(input = "", respectQueryAndFragment) {
-  {
+  if (!respectQueryAndFragment) {
     return input.endsWith("/") ? input : input + "/";
   }
+  if (hasTrailingSlash(input, true)) {
+    return input || "/";
+  }
+  let path = input;
+  let fragment = "";
+  const fragmentIndex = input.indexOf("#");
+  if (fragmentIndex !== -1) {
+    path = input.slice(0, fragmentIndex);
+    fragment = input.slice(fragmentIndex);
+    if (!path) {
+      return fragment;
+    }
+  }
+  const [s0, ...s] = path.split("?");
+  return s0 + "/" + (s.length > 0 ? `?${s.join("?")}` : "") + fragment;
 }
 function hasLeadingSlash(input = "") {
   return input.startsWith("/");
@@ -330,6 +364,211 @@ function stringifyParsedURL(parsed) {
   const host = parsed.host || "";
   const proto = parsed.protocol || parsed[protocolRelative] ? (parsed.protocol || "") + "//" : "";
   return proto + auth + host + pathname + search + hash;
+}
+
+function parse(str, options) {
+  if (typeof str !== "string") {
+    throw new TypeError("argument str must be a string");
+  }
+  const obj = {};
+  const opt = {};
+  const dec = opt.decode || decode;
+  let index = 0;
+  while (index < str.length) {
+    const eqIdx = str.indexOf("=", index);
+    if (eqIdx === -1) {
+      break;
+    }
+    let endIdx = str.indexOf(";", index);
+    if (endIdx === -1) {
+      endIdx = str.length;
+    } else if (endIdx < eqIdx) {
+      index = str.lastIndexOf(";", eqIdx - 1) + 1;
+      continue;
+    }
+    const key = str.slice(index, eqIdx).trim();
+    if (opt?.filter && !opt?.filter(key)) {
+      index = endIdx + 1;
+      continue;
+    }
+    if (void 0 === obj[key]) {
+      let val = str.slice(eqIdx + 1, endIdx).trim();
+      if (val.codePointAt(0) === 34) {
+        val = val.slice(1, -1);
+      }
+      obj[key] = tryDecode(val, dec);
+    }
+    index = endIdx + 1;
+  }
+  return obj;
+}
+function decode(str) {
+  return str.includes("%") ? decodeURIComponent(str) : str;
+}
+function tryDecode(str, decode2) {
+  try {
+    return decode2(str);
+  } catch {
+    return str;
+  }
+}
+
+const fieldContentRegExp = /^[\u0009\u0020-\u007E\u0080-\u00FF]+$/;
+function serialize$2(name, value, options) {
+  const opt = options || {};
+  const enc = opt.encode || encodeURIComponent;
+  if (typeof enc !== "function") {
+    throw new TypeError("option encode is invalid");
+  }
+  if (!fieldContentRegExp.test(name)) {
+    throw new TypeError("argument name is invalid");
+  }
+  const encodedValue = enc(value);
+  if (encodedValue && !fieldContentRegExp.test(encodedValue)) {
+    throw new TypeError("argument val is invalid");
+  }
+  let str = name + "=" + encodedValue;
+  if (void 0 !== opt.maxAge && opt.maxAge !== null) {
+    const maxAge = opt.maxAge - 0;
+    if (Number.isNaN(maxAge) || !Number.isFinite(maxAge)) {
+      throw new TypeError("option maxAge is invalid");
+    }
+    str += "; Max-Age=" + Math.floor(maxAge);
+  }
+  if (opt.domain) {
+    if (!fieldContentRegExp.test(opt.domain)) {
+      throw new TypeError("option domain is invalid");
+    }
+    str += "; Domain=" + opt.domain;
+  }
+  if (opt.path) {
+    if (!fieldContentRegExp.test(opt.path)) {
+      throw new TypeError("option path is invalid");
+    }
+    str += "; Path=" + opt.path;
+  }
+  if (opt.expires) {
+    if (!isDate(opt.expires) || Number.isNaN(opt.expires.valueOf())) {
+      throw new TypeError("option expires is invalid");
+    }
+    str += "; Expires=" + opt.expires.toUTCString();
+  }
+  if (opt.httpOnly) {
+    str += "; HttpOnly";
+  }
+  if (opt.secure) {
+    str += "; Secure";
+  }
+  if (opt.priority) {
+    const priority = typeof opt.priority === "string" ? opt.priority.toLowerCase() : opt.priority;
+    switch (priority) {
+      case "low": {
+        str += "; Priority=Low";
+        break;
+      }
+      case "medium": {
+        str += "; Priority=Medium";
+        break;
+      }
+      case "high": {
+        str += "; Priority=High";
+        break;
+      }
+      default: {
+        throw new TypeError("option priority is invalid");
+      }
+    }
+  }
+  if (opt.sameSite) {
+    const sameSite = typeof opt.sameSite === "string" ? opt.sameSite.toLowerCase() : opt.sameSite;
+    switch (sameSite) {
+      case true: {
+        str += "; SameSite=Strict";
+        break;
+      }
+      case "lax": {
+        str += "; SameSite=Lax";
+        break;
+      }
+      case "strict": {
+        str += "; SameSite=Strict";
+        break;
+      }
+      case "none": {
+        str += "; SameSite=None";
+        break;
+      }
+      default: {
+        throw new TypeError("option sameSite is invalid");
+      }
+    }
+  }
+  if (opt.partitioned) {
+    str += "; Partitioned";
+  }
+  return str;
+}
+function isDate(val) {
+  return Object.prototype.toString.call(val) === "[object Date]" || val instanceof Date;
+}
+
+function parseSetCookie(setCookieValue, options) {
+  const parts = (setCookieValue || "").split(";").filter((str) => typeof str === "string" && !!str.trim());
+  const nameValuePairStr = parts.shift() || "";
+  const parsed = _parseNameValuePair(nameValuePairStr);
+  const name = parsed.name;
+  let value = parsed.value;
+  try {
+    value = options?.decode === false ? value : (options?.decode || decodeURIComponent)(value);
+  } catch {
+  }
+  const cookie = {
+    name,
+    value
+  };
+  for (const part of parts) {
+    const sides = part.split("=");
+    const partKey = (sides.shift() || "").trimStart().toLowerCase();
+    const partValue = sides.join("=");
+    switch (partKey) {
+      case "expires": {
+        cookie.expires = new Date(partValue);
+        break;
+      }
+      case "max-age": {
+        cookie.maxAge = Number.parseInt(partValue, 10);
+        break;
+      }
+      case "secure": {
+        cookie.secure = true;
+        break;
+      }
+      case "httponly": {
+        cookie.httpOnly = true;
+        break;
+      }
+      case "samesite": {
+        cookie.sameSite = partValue;
+        break;
+      }
+      default: {
+        cookie[partKey] = partValue;
+      }
+    }
+  }
+  return cookie;
+}
+function _parseNameValuePair(nameValuePairStr) {
+  let name = "";
+  let value = "";
+  const nameValueArr = nameValuePairStr.split("=");
+  if (nameValueArr.length > 1) {
+    name = nameValueArr.shift();
+    value = nameValueArr.join("=");
+  } else {
+    value = nameValuePairStr;
+  }
+  return { name, value };
 }
 
 const NODE_TYPES = {
@@ -955,6 +1194,47 @@ function sanitizeStatusCode(statusCode, defaultStatusCode = 200) {
     return defaultStatusCode;
   }
   return statusCode;
+}
+
+function getDistinctCookieKey(name, opts) {
+  return [name, opts.domain || "", opts.path || "/"].join(";");
+}
+
+function parseCookies(event) {
+  return parse(event.node.req.headers.cookie || "");
+}
+function getCookie(event, name) {
+  return parseCookies(event)[name];
+}
+function setCookie(event, name, value, serializeOptions = {}) {
+  if (!serializeOptions.path) {
+    serializeOptions = { path: "/", ...serializeOptions };
+  }
+  const newCookie = serialize$2(name, value, serializeOptions);
+  const currentCookies = splitCookiesString(
+    event.node.res.getHeader("set-cookie")
+  );
+  if (currentCookies.length === 0) {
+    event.node.res.setHeader("set-cookie", newCookie);
+    return;
+  }
+  const newCookieKey = getDistinctCookieKey(name, serializeOptions);
+  event.node.res.removeHeader("set-cookie");
+  for (const cookie of currentCookies) {
+    const parsed = parseSetCookie(cookie);
+    const key = getDistinctCookieKey(parsed.name, parsed);
+    if (key === newCookieKey) {
+      continue;
+    }
+    event.node.res.appendHeader("set-cookie", cookie);
+  }
+  event.node.res.appendHeader("set-cookie", newCookie);
+}
+function deleteCookie(event, name, serializeOptions) {
+  setCookie(event, name, "", {
+    ...serializeOptions,
+    maxAge: 0
+  });
 }
 function splitCookiesString(cookiesString) {
   if (Array.isArray(cookiesString)) {
@@ -2454,10 +2734,11 @@ function createNodeFetch() {
     return l(input, { ...nodeFetchOptions, ...init });
   };
 }
-const fetch = globalThis.fetch ? (...args) => globalThis.fetch(...args) : createNodeFetch();
+const fetch$1 = globalThis.fetch ? (...args) => globalThis.fetch(...args) : createNodeFetch();
 const Headers$1 = globalThis.Headers || s$1;
 const AbortController = globalThis.AbortController || i;
-createFetch({ fetch, Headers: Headers$1, AbortController });
+const ofetch = createFetch({ fetch: fetch$1, Headers: Headers$1, AbortController });
+const $fetch$1 = ofetch;
 
 function wrapToPromise(value) {
   if (!value || typeof value.then !== "function") {
@@ -3244,6 +3525,16 @@ function useStorage(base = "") {
 
 function serialize$1(o){return typeof o=="string"?`'${o}'`:new c().serialize(o)}const c=/*@__PURE__*/function(){class o{#t=new Map;compare(t,r){const e=typeof t,n=typeof r;return e==="string"&&n==="string"?t.localeCompare(r):e==="number"&&n==="number"?t-r:String.prototype.localeCompare.call(this.serialize(t,true),this.serialize(r,true))}serialize(t,r){if(t===null)return "null";switch(typeof t){case "string":return r?t:`'${t}'`;case "bigint":return `${t}n`;case "object":return this.$object(t);case "function":return this.$function(t)}return String(t)}serializeObject(t){const r=Object.prototype.toString.call(t);if(r!=="[object Object]")return this.serializeBuiltInType(r.length<10?`unknown:${r}`:r.slice(8,-1),t);const e=t.constructor,n=e===Object||e===void 0?"":e.name;if(n!==""&&globalThis[n]===e)return this.serializeBuiltInType(n,t);if(typeof t.toJSON=="function"){const i=t.toJSON();return n+(i!==null&&typeof i=="object"?this.$object(i):`(${this.serialize(i)})`)}return this.serializeObjectEntries(n,Object.entries(t))}serializeBuiltInType(t,r){const e=this["$"+t];if(e)return e.call(this,r);if(typeof r?.entries=="function")return this.serializeObjectEntries(t,r.entries());throw new Error(`Cannot serialize ${t}`)}serializeObjectEntries(t,r){const e=Array.from(r).sort((i,a)=>this.compare(i[0],a[0]));let n=`${t}{`;for(let i=0;i<e.length;i++){const[a,l]=e[i];n+=`${this.serialize(a,true)}:${this.serialize(l)}`,i<e.length-1&&(n+=",");}return n+"}"}$object(t){let r=this.#t.get(t);return r===void 0&&(this.#t.set(t,`#${this.#t.size}`),r=this.serializeObject(t),this.#t.set(t,r)),r}$function(t){const r=Function.prototype.toString.call(t);return r.slice(-15)==="[native code] }"?`${t.name||""}()[native]`:`${t.name}(${t.length})${r.replace(/\s*\n\s*/g,"")}`}$Array(t){let r="[";for(let e=0;e<t.length;e++)r+=this.serialize(t[e]),e<t.length-1&&(r+=",");return r+"]"}$Date(t){try{return `Date(${t.toISOString()})`}catch{return "Date(null)"}}$ArrayBuffer(t){return `ArrayBuffer[${new Uint8Array(t).join(",")}]`}$Set(t){return `Set${this.$Array(Array.from(t).sort((r,e)=>this.compare(r,e)))}`}$Map(t){return this.serializeObjectEntries("Map",t.entries())}}for(const s of ["Error","RegExp","URL"])o.prototype["$"+s]=function(t){return `${s}(${t})`};for(const s of ["Int8Array","Uint8Array","Uint8ClampedArray","Int16Array","Uint16Array","Int32Array","Uint32Array","Float32Array","Float64Array"])o.prototype["$"+s]=function(t){return `${s}[${t.join(",")}]`};for(const s of ["BigInt64Array","BigUint64Array"])o.prototype["$"+s]=function(t){return `${s}[${t.join("n,")}${t.length>0?"n":""}]`};return o}();
 
+function isEqual(object1, object2) {
+  if (object1 === object2) {
+    return true;
+  }
+  if (serialize$1(object1) === serialize$1(object2)) {
+    return true;
+  }
+  return false;
+}
+
 const e=globalThis.process?.getBuiltinModule?.("crypto")?.hash,r="sha256",s="base64url";function digest(t){if(e)return e(r,t,s);const o=createHash(r).update(t);return globalThis.process?.versions?.webcontainer?o.digest().toString(s):o.digest(s)}
 
 function hash$1(input) {
@@ -3862,7 +4153,7 @@ const appConfig0 = defineAppConfig({
 const inlineAppConfig = {
   "nuxt": {},
   "icon": {
-    "provider": "iconify",
+    "provider": "server",
     "class": "",
     "aliases": {},
     "iconifyApiEndpoint": "https://api.iconify.design",
@@ -4134,6 +4425,9 @@ function splitByCase(str, separators) {
   parts.push(buff);
   return parts;
 }
+function upperFirst(str) {
+  return str ? str[0].toUpperCase() + str.slice(1) : "";
+}
 function kebabCase(str, joiner) {
   return str ? (Array.isArray(str) ? str : splitByCase(str)).map((p) => p.toLowerCase()).join(joiner) : "";
 }
@@ -4182,7 +4476,7 @@ function _expandFromEnv(value) {
 const _inlineRuntimeConfig = {
   "app": {
     "baseURL": "/",
-    "buildId": "ce493de3-4c23-4b75-8e34-2157a2c08bf1",
+    "buildId": "d4d81a76-0971-4920-9784-024436736452",
     "buildAssetsDir": "/_nuxt/",
     "cdnURL": ""
   },
@@ -4382,6 +4676,28 @@ const defaultNamespace = _globalThis[globalKey] || (_globalThis[globalKey] = cre
 const getContext = (key, opts = {}) => defaultNamespace.get(key, opts);
 const asyncHandlersKey = "__unctx_async_handlers__";
 const asyncHandlers = _globalThis[asyncHandlersKey] || (_globalThis[asyncHandlersKey] = /* @__PURE__ */ new Set());
+function executeAsync(function_) {
+  const restores = [];
+  for (const leaveHandler of asyncHandlers) {
+    const restore2 = leaveHandler();
+    if (restore2) {
+      restores.push(restore2);
+    }
+  }
+  const restore = () => {
+    for (const restore2 of restores) {
+      restore2();
+    }
+  };
+  let awaitable = function_();
+  if (awaitable && typeof awaitable === "object" && "catch" in awaitable) {
+    awaitable = awaitable.catch((error) => {
+      restore();
+      throw error;
+    });
+  }
+  return [awaitable, restore];
+}
 
 getContext("nitro-app", {
   asyncContext: false,
@@ -4689,6 +5005,9 @@ function defineRenderHandler(render) {
   });
 }
 
+function baseURL() {
+  return useRuntimeConfig().app.baseURL;
+}
 function buildAssetsDir() {
   return useRuntimeConfig().app.buildAssetsDir;
 }
@@ -4702,6 +5021,7 @@ function publicAssetsURL(...path) {
 }
 
 const collections = {
+  'heroicons': () => import('../_/icons.mjs').then(m => m.default),
 };
 
 const DEFAULT_ENDPOINT = "https://api.iconify.design";
@@ -4757,7 +5077,7 @@ const _Mx0gMn = defineCachedEventHandler(async (event) => {
 
 const _SxA8c9 = defineEventHandler(() => {});
 
-const _lazy_b7Vxek = () => import('../routes/renderer.mjs');
+const _lazy_b7Vxek = () => import('../routes/renderer.mjs').then(function (n) { return n.r; });
 
 const handlers = [
   { route: '/__nuxt_error', handler: _lazy_b7Vxek, lazy: true, middleware: false, method: undefined },
@@ -4917,5 +5237,5 @@ const listener = function(req, res) {
   return handler(req, res);
 };
 
-export { getResponseStatus as a, buildAssetsURL as b, getQuery as c, defineRenderHandler as d, createError$1 as e, getRouteRules as f, getResponseStatusText as g, useNitroApp as h, listener as l, publicAssetsURL as p, useRuntimeConfig as u };
+export { $fetch$1 as $, createHooks as A, executeAsync as B, toRouteMatcher as C, createRouter$1 as D, destr as E, getRequestHeader as F, setCookie as G, getCookie as H, deleteCookie as I, upperFirst as J, listener as K, getResponseStatus as a, buildAssetsURL as b, getQuery as c, defineRenderHandler as d, createError$1 as e, getRouteRules as f, getResponseStatusText as g, useNitroApp as h, defuFn as i, defu as j, createDefu as k, parseQuery as l, hasProtocol as m, isScriptProtocol as n, joinURL as o, publicAssetsURL as p, klona as q, sanitizeStatusCode as r, serialize$1 as s, getContext as t, useRuntimeConfig as u, withTrailingSlash as v, withQuery as w, withoutTrailingSlash as x, isEqual as y, baseURL as z };
 //# sourceMappingURL=nitro.mjs.map

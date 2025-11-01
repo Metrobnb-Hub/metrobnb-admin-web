@@ -13,6 +13,10 @@
         </div>
         <div class="flex space-x-3">
           <UButton color="gray" variant="ghost" to="/partners">Back to Partners</UButton>
+          <UButton @click="showEditPartnerModal = true" color="gray" variant="outline">
+            <UIcon name="i-heroicons-pencil-square" class="mr-2" />
+            Edit Partner
+          </UButton>
           <UButton @click="showInvoiceModal = true" color="gray" variant="outline">
             <UIcon name="i-heroicons-document-text" class="mr-2" />
             Generate Invoice
@@ -177,6 +181,13 @@
       :preselected-partner-id="partnerId"
     />
     
+    <!-- Edit Partner Modal -->
+    <PartnersEditPartnerModal 
+      v-model="showEditPartnerModal" 
+      :partner="partner"
+      @updated="loadPartner"
+    />
+    
     <!-- Edit Unit Modal -->
     <UModal v-model="showEditModal">
       <UCard>
@@ -216,11 +227,18 @@ const partnerId = route.params.id as string
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { updateUnit: apiUpdateUnit, deleteUnit: apiDeleteUnit, getInvoices } = useApi()
 
+const loadPartner = () => {
+  // Just invalidate cache, let the reactive system handle the rest
+  const { invalidateCache } = useApiCache()
+  invalidateCache('partners')
+}
+
 const partnerInvoices = ref([])
 const { notifySuccess, notifyError } = useNotify()
 
 const isLoading = ref(true)
 const showInvoiceModal = ref(false)
+const showEditPartnerModal = ref(false)
 const showEditModal = ref(false)
 const isUpdating = ref(false)
 const editingUnit = ref(null)

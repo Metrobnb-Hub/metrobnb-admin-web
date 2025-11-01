@@ -53,7 +53,7 @@ class ApiCache {
 const apiCache = new ApiCache()
 
 export const useApiCache = () => {
-  const typedApi = useTypedApi()
+  const typedApi = useApi() // Fix: use useApi() instead of useTypedApi()
 
   // Cached API methods
   const getCachedPartners = async (force = false) => {

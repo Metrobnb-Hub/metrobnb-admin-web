@@ -43,5 +43,13 @@ export default defineNuxtConfig({
       '/.well-known/**': { headers: { 'Access-Control-Allow-Origin': '*' } }
     }
   },
-  ssr: false
+  ssr: true,
+  app: {
+    keepalive: true // Enable keepalive globally
+  },
+  $fetch: {
+    timeout: 30000,
+    retry: 1,
+    retryDelay: 1000
+  }
 })

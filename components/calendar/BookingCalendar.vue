@@ -27,7 +27,7 @@ const emit = defineEmits<{
 // Use fallback API approach
 const getBookingsWithFallback = async (params?: any) => {
   try {
-    const typedApi = useTypedApi()
+    const typedApi = useApi()
     return await typedApi.getBookings(params)
   } catch (error) {
     console.error('Typed API failed, using fallback:', error)
