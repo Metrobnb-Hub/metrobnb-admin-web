@@ -1,4 +1,4 @@
-import process from 'node:process';globalThis._importMeta_=globalThis._importMeta_||{url:"file:///_entry.js",env:process.env};import http from 'node:http';
+import http from 'node:http';
 import https from 'node:https';
 import { EventEmitter } from 'node:events';
 import { Buffer as Buffer$1 } from 'node:buffer';
@@ -7,7 +7,6 @@ import { resolve, dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { getIcons } from '@iconify/utils';
 import { consola } from 'consola';
-import { createRequire } from 'node:module';
 
 const suspectProtoRx = /"(?:_|\\u0{2}5[Ff]){2}(?:p|\\u0{2}70)(?:r|\\u0{2}72)(?:o|\\u0{2}6[Ff])(?:t|\\u0{2}74)(?:o|\\u0{2}6[Ff])(?:_|\\u0{2}5[Ff]){2}"\s*:/;
 const suspectConstructorRx = /"(?:c|\\u0063)(?:o|\\u006[Ff])(?:n|\\u006[Ee])(?:s|\\u0073)(?:t|\\u0074)(?:r|\\u0072)(?:u|\\u0075)(?:c|\\u0063)(?:t|\\u0074)(?:o|\\u006[Ff])(?:r|\\u0072)"\s*:/;
@@ -4183,7 +4182,7 @@ function _expandFromEnv(value) {
 const _inlineRuntimeConfig = {
   "app": {
     "baseURL": "/",
-    "buildId": "197e438b-f6d0-499f-bd67-bd3aba1f5fc0",
+    "buildId": "ce493de3-4c23-4b75-8e34-2157a2c08bf1",
     "buildAssetsDir": "/_nuxt/",
     "cdnURL": ""
   },
@@ -4217,7 +4216,7 @@ const _inlineRuntimeConfig = {
     }
   },
   "public": {
-    "apiBaseUrl": "http://localhost:8000",
+    "apiBaseUrl": "https://metrobnb-api.onrender.com",
     "dev": false,
     "devMode": false,
     "testCredentials": {
@@ -4701,8 +4700,6 @@ function publicAssetsURL(...path) {
   const publicBase = app.cdnURL || app.baseURL;
   return path.length ? joinRelativeURL(publicBase, ...path) : publicBase;
 }
-
-createRequire(globalThis._importMeta_.url);
 
 const collections = {
 };

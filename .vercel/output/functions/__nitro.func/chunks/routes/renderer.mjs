@@ -13,7 +13,6 @@ import 'node:path';
 import 'node:crypto';
 import '@iconify/utils';
 import 'consola';
-import 'node:module';
 
 const VueResolver = (_, value) => {
   return isRef(value) ? toValue(value) : value;

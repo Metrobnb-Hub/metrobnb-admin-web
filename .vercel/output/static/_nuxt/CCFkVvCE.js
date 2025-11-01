@@ -1,1 +1,0 @@
-import{f as n,g as a,n as o,c as s,o as _}from"./zXFNaa3H.js";const m=n({__name:"index",async setup(c){let e,t;return[e,t]=a(()=>o("/login")),await e,t(),(r,i)=>(_(),s("div"))}});export{m as default};

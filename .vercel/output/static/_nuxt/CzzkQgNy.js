@@ -1,1 +1,0 @@
-import{b2 as u,b4 as i,n}from"./zXFNaa3H.js";import{u as o}from"./DNPqPrvF.js";const p=u(async(e,f)=>{let t,r;const{getCurrentUser:s,user:a}=o();if(!(e.path==="/login"||e.path==="/register")&&(a.value||([t,r]=i(()=>s()),await t,r()),!a.value))return n("/login")});export{p as default};
