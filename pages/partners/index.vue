@@ -89,7 +89,7 @@
 
 <script setup lang="ts">
 const { user } = useAuth()
-const { partners, units, loadPartners, loadUnits } = useGlobalCache()
+const { partners, units, loadPartners, loadUnits, isLoading: cacheLoading } = useUnifiedCache()
 
 const isPartner = computed(() => user.value?.role === 'partner')
 

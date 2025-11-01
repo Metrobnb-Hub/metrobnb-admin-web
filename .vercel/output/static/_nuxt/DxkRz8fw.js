@@ -1,0 +1,1 @@
+import{b2 as s,b3 as t}from"./BbBUqUrL.js";import{u as r}from"./uEZHgSSx.js";const u=s(()=>{const{user:e}=r();if(!e.value||e.value.role==="partner")throw t({statusCode:403,statusMessage:"Access Denied - Admin Only"})});export{u as default};

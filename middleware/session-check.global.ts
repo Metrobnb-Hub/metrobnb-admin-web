@@ -1,6 +1,13 @@
 export default defineNuxtRouteMiddleware(async (to) => {
-  // Skip on server side and for login/register/password pages and invoice page
-  if (process.server || to.path === '/login' || to.path === '/register' || to.path === '/change-password' || to.path === '/set-password' || to.path === '/reset-password' || to.path === '/invoice') {
+  // Skip on server side and for login/register/password pages and invoice pages
+  if (process.server || 
+      to.path === '/login' || 
+      to.path === '/register' || 
+      to.path === '/change-password' || 
+      to.path === '/set-password' || 
+      to.path === '/reset-password' || 
+      to.path === '/invoice' ||
+      to.path.startsWith('/accounting/invoices')) {
     return
   }
 

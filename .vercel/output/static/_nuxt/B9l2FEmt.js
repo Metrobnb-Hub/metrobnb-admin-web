@@ -1,0 +1,1 @@
+import{b2 as i,b4 as u,n as o}from"./BbBUqUrL.js";import{u as n}from"./uEZHgSSx.js";const c=i(async(e,f)=>{let t,r;const{fetchUser:s,user:a}=n();if(!(e.path==="/login"||e.path==="/register")&&(a.value||([t,r]=u(()=>s()),await t,r()),!a.value))return o("/login?expired=1")});export{c as default};

@@ -205,9 +205,9 @@
         
         <!-- Pagination -->
         <div v-if="filteredInvoices.length && totalPages > 1" class="flex justify-center mt-6">
-          <UPagination 
-            v-model="currentPage" 
-            :page-count="totalPages" 
+          <UPagination
+            v-model="currentPage"
+            :page-count="totalPages"
             :total="totalItems"
             :per-page="itemsPerPage"
             @update:model-value="onPageChange"
@@ -239,7 +239,7 @@
 
 <script setup lang="ts">
 const { getInvoices, getArchivedInvoices, settleInvoice, deleteInvoice, cancelInvoice, refreshInvoice, approveInvoice, finalizeInvoice, sendInvoice } = useApi()
-const { partners, loadPartners } = useGlobalCache()
+const { partners, loadPartners, isLoading: cacheLoading } = useUnifiedCache()
 const { getInvoiceActions, getStatusText, getStatusColor, validateTransition } = useInvoiceWorkflow()
 const { user } = useAuth()
 
@@ -443,16 +443,16 @@ const deleteInvoiceAction = async (invoice: any) => {
 const loadInvoices = async () => {
   try {
     isLoading.value = true
-    
+
     const filters = {
       ...(filterStatus.value !== 'all' && { status: filterStatus.value }),
       ...(filterPartner.value !== 'all' && { partner_id: filterPartner.value }),
       page: currentPage.value,
       limit: itemsPerPage.value
     }
-    
+
     // Use archive endpoint if viewing archive
-    const result = showArchive.value 
+    const result = showArchive.value
       ? await getArchivedInvoices(filters)
       : await getInvoices(filters)
     

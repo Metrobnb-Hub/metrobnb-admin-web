@@ -29,15 +29,17 @@ export interface CreateJournalEntryRequest {
 
 const apiClient = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const nuxtApp = useNuxtApp()
-  // Removed cache busting to prevent 500 errors
+  const tokenCookie = useCookie('auth_token')
+
   const url = endpoint
-  
+
   try {
     const response = await nuxtApp.$api(url, {
       ...options,
       headers: {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
+        ...(tokenCookie.value && { 'Authorization': `Bearer ${tokenCookie.value}` }),
         ...options.headers
       }
     })
@@ -442,9 +444,9 @@ export const useApi = () => {
       if (filters.search) params.append('search', filters.search)
       if (filters.sort_by) params.append('sort_by', filters.sort_by)
       if (filters.sort_order) params.append('sort_order', filters.sort_order)
-      
+
       const query = params.toString()
-      return await apiClient<any>(`/api/invoices${query ? `?${query}` : ''}`)
+      return await apiClient<any>(`/api/invoices/${query ? `?${query}` : ''}`)
     },
     
     getArchivedInvoices: async (filters: any = {}) => {
@@ -456,7 +458,7 @@ export const useApi = () => {
       if (filters.search) params.append('search', filters.search)
       if (filters.sort_by) params.append('sort_by', filters.sort_by)
       if (filters.sort_order) params.append('sort_order', filters.sort_order)
-      
+
       const query = params.toString()
       return await apiClient<any>(`/api/invoices/archive${query ? `?${query}` : ''}`)
     },
