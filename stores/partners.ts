@@ -3,7 +3,7 @@ import type { Partner, Service } from '~/types/api'
 interface CreatePartnerData {
   name: string
   email?: string
-  sharePercentage: number
+  orgSharePercentage: number
   serviceIds: string[]
 }
 

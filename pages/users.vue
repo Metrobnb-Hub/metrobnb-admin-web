@@ -275,6 +275,11 @@
             </div>
           </div>
           
+          <!-- Error Display -->
+          <div v-if="userFormError" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+            <p class="text-red-600 dark:text-red-400 text-sm">{{ userFormError }}</p>
+          </div>
+          
           <div class="flex justify-end space-x-3 pt-4">
             <UButton
               @click="closeModal"
@@ -309,6 +314,7 @@ const { extractData } = useApiResponse()
 
 const loading = ref(false)
 const showCreateModal = ref(false)
+const userFormError = ref('')
 const showSuccessModal = ref(false)
 const showPasswordModal = ref(false)
 const editingUser = ref(null)
@@ -325,6 +331,13 @@ const userForm = ref({
   name: '',
   email: '',
   role: ''
+})
+
+// Clear error when user changes email
+watch(() => userForm.value.email, () => {
+  if (userFormError.value) {
+    userFormError.value = ''
+  }
 })
 
 const selectedPartners = ref([])
@@ -417,7 +430,12 @@ const editUser = (user) => {
 }
 
 const regeneratePasswordAction = async (user) => {
-  if (confirm(`Regenerate password for ${user.name}?\n\nThis will create a new temporary password that the user must change on next login.`)) {
+  const { confirm } = useConfirm()
+  if (await confirm(`Regenerate password for ${user.name}?\n\nThis will create a new temporary password that the user must change on next login.`, {
+    title: 'Regenerate Password',
+    confirmText: 'Regenerate',
+    confirmColor: 'orange'
+  })) {
     try {
       const response = await regeneratePassword(user.id)
       
@@ -451,7 +469,12 @@ const regeneratePasswordAction = async (user) => {
 }
 
 const deleteUserAction = async (user) => {
-  if (confirm(`Are you sure you want to delete ${user.name}?`)) {
+  const { confirm } = useConfirm()
+  if (await confirm(`Are you sure you want to delete ${user.name}?`, {
+    title: 'Delete User',
+    confirmText: 'Delete',
+    confirmColor: 'red'
+  })) {
     try {
       const response = await deleteUser(user.id)
       if (response.success) {
@@ -473,6 +496,7 @@ const deleteUserAction = async (user) => {
 
 const closeModal = () => {
   showCreateModal.value = false
+  userFormError.value = ''
   editingUser.value = null
   userForm.value = {
     name: '',
@@ -554,6 +578,7 @@ const copyToClipboard = async (text: string) => {
 }
 
 const handleUserSubmit = async () => {
+  userFormError.value = '' // Clear any previous errors
   saving.value = true
   
   try {
@@ -597,22 +622,24 @@ const handleUserSubmit = async () => {
       }
     }
   } catch (error) {
-    const { notifyError } = useNotify()
-    
     // Handle specific error cases
     let errorMessage = 'Failed to save user'
     
-    if (error.message.includes('User already exists') || error.message.includes('email_exists')) {
+    // Check for API error structure
+    if (error.data?.error?.message) {
+      errorMessage = error.data.error.message
+    } else if (error.message?.includes('User already exists') || error.message?.includes('email_exists')) {
       errorMessage = `A user with email "${userForm.value.email}" already exists. Please use a different email address.`
-    } else if (error.message.includes('422')) {
+    } else if (error.message?.includes('422')) {
       errorMessage = 'Invalid user data. Please check all fields and try again.'
-    } else if (error.message.includes('403') || error.message.includes('unauthorized')) {
+    } else if (error.message?.includes('403') || error.message?.includes('unauthorized')) {
       errorMessage = 'You do not have permission to create users.'
     } else if (error.message) {
       errorMessage = error.message
     }
     
-    notifyError(errorMessage)
+    // Show error in modal instead of toast
+    userFormError.value = errorMessage
   } finally {
     saving.value = false
   }

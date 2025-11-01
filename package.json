@@ -6,9 +6,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "generate-api": "node scripts/generate-api.js",
-    "api:sync": "curl -s http://localhost:8000/openapi.json > openapi.json && echo 'OpenAPI spec synced'"
+    "postinstall": "nuxt prepare"
   },
   "devDependencies": {
     "@nuxt/devtools": "latest",

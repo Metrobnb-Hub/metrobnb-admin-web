@@ -94,9 +94,9 @@ const isGenerating = ref(false)
 
 // Mock data
 const mockPartners = [
-  { id: 'partner-1', name: 'Casa Aurea Properties', sharePercentage: 15 },
-  { id: 'partner-2', name: 'Azure Bahamas Resort', sharePercentage: 20 },
-  { id: 'partner-3', name: 'Metro Condos Inc', sharePercentage: 35 }
+  { id: 'partner-1', name: 'Casa Aurea Properties', orgSharePercentage: 15 },
+  { id: 'partner-2', name: 'Azure Bahamas Resort', orgSharePercentage: 20 },
+  { id: 'partner-3', name: 'Metro Condos Inc', orgSharePercentage: 35 }
 ]
 
 const mockUnits = [
@@ -415,7 +415,7 @@ const onSubmit = async () => {
     const invoiceData = {
       partnerName: partner.name,
       period,
-      sharePercentage: partner.sharePercentage,
+      orgSharePercentage: partner.orgSharePercentage,
       bookings: filteredBookings.map(booking => ({
         date: booking.date,
         guestName: booking.guestName,
@@ -437,7 +437,7 @@ const onSubmit = async () => {
     }
     
     localStorage.setItem('current-invoice', JSON.stringify(invoiceData))
-    await navigateTo('/invoice-demo')
+    await navigateTo('/partners')
     isOpen.value = false
     
   } catch (error) {

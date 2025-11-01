@@ -35,7 +35,7 @@
         
         <UFormGroup label="Billable" name="billable">
           <UToggle v-model="form.billable" />
-          <span class="ml-2 text-sm text-gray-600">{{ form.billable ? 'Bill to partner' : 'MetroBNB absorbs' }}</span>
+          <span class="ml-2 text-sm text-gray-600">{{ form.billable ? 'Bill to partner' : `${orgName} absorbs` }}</span>
         </UFormGroup>
         
         <!-- Receipt Upload -->
@@ -88,8 +88,11 @@
 <script setup lang="ts">
 const { partners, units, loadPartners, loadUnits } = useGlobalCache()
 const { createExpense, uploadFile } = useApi()
+const { organization } = useAuth()
 const router = useRouter()
 const toast = useToast()
+
+const orgName = computed(() => organization.value?.name || 'Organization')
 
 const loading = ref(false)
 const selectedFile = ref<File | null>(null)
@@ -128,12 +131,12 @@ const expenseTypes = [
   { label: 'Miscellaneous', value: 'Miscellaneous' }
 ]
 
-const paidByOptions = [
-  { label: 'MetroBNB', value: 'metrobnb' },
+const paidByOptions = computed(() => [
+  { label: orgName.value, value: 'metrobnb' },
   { label: 'Partner', value: 'partner' },
   { label: 'Employee', value: 'employee' },
   { label: 'Owner', value: 'owner' }
-]
+])
 
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement

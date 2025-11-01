@@ -216,8 +216,13 @@
         
         <div v-else-if="!filteredInvoices.length && !isLoading" class="text-center py-12">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No invoices yet</h3>
-          <p class="text-gray-600 dark:text-gray-400 mb-6">Generate your first invoice from the partners page</p>
-          <UButton to="/partners" color="primary">Go to Partners</UButton>
+          <template v-if="user?.role === 'partner'">
+            <p class="text-gray-600 dark:text-gray-400 mb-6">No invoices have been generated for your properties yet. Please follow up with your property manager if you have any questions.</p>
+          </template>
+          <template v-else>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">Generate your first invoice from the partners page</p>
+            <UButton to="/partners" color="primary">Go to Partners</UButton>
+          </template>
         </div>
       </div>
     </UCard>
@@ -318,7 +323,12 @@ const executeInvoiceAction = async (invoice: any, action: string) => {
         notifySuccess('Invoice approved successfully')
         break
       case 'finalize':
-        const confirmed = confirm(`Finalize Invoice ${invoice.invoice_number}?\n\nThis will lock the invoice and prevent further edits.`)
+        const { confirm } = useConfirm()
+        const confirmed = await confirm(`Finalize Invoice ${invoice.invoice_number}?\n\nThis will lock the invoice and prevent further edits.`, {
+          title: 'Finalize Invoice',
+          confirmText: 'Finalize',
+          confirmColor: 'primary'
+        })
         if (!confirmed) return
         await finalizeInvoice(invoice.id)
         notifySuccess('Invoice finalized successfully')
@@ -393,7 +403,7 @@ const getInvoiceActionsForDropdown = (invoice: any) => {
 }
 
 const viewInvoice = (invoice: any) => {
-  navigateTo(`/invoices/${invoice.id}`)
+  navigateTo(`/accounting/invoices/${invoice.id}`)
 }
 
 
@@ -401,7 +411,12 @@ const viewInvoice = (invoice: any) => {
 const deleteInvoiceAction = async (invoice: any) => {
   const { notifySuccess, notifyError } = useNotify()
   
-  const confirmed = confirm(`Cancel Invoice ${invoice.invoice_number}?\n\nThis will:\n• Mark the invoice as cancelled\n• Move it to the archive\n• Preserve audit trail\n\nThis action can be undone by regenerating the invoice.`)
+  const { confirm } = useConfirm()
+  const confirmed = await confirm(`Cancel Invoice ${invoice.invoice_number}?\n\nThis will:\n• Mark the invoice as cancelled\n• Move it to the archive\n• Preserve audit trail\n\nThis action can be undone by regenerating the invoice.`, {
+    title: 'Cancel Invoice',
+    confirmText: 'Cancel Invoice',
+    confirmColor: 'red'
+  })
   
   if (!confirmed) return
   
@@ -512,11 +527,11 @@ const handleDraftCreated = (invoice: any) => {
   if (invoice?.id) {
     notifySuccess(`Draft invoice created: ${invoice.invoice_number || invoice.id}`)
     // Navigate to the draft invoice preview
-    navigateTo(`/invoices/${invoice.id}`)
+    navigateTo(`/accounting/invoices/${invoice.id}`)
   } else if (invoice?.data?.id) {
     // Handle nested response structure
     notifySuccess(`Draft invoice created: ${invoice.data.invoice_number || invoice.data.id}`)
-    navigateTo(`/invoices/${invoice.data.id}`)
+    navigateTo(`/accounting/invoices/${invoice.data.id}`)
   } else {
     const { notifyError } = useNotify()
     notifyError('Draft created but could not navigate to invoice. Check the invoices list.')

@@ -102,6 +102,7 @@
                   type="email"
                   placeholder="Email address"
                   size="lg"
+                  autocomplete="email"
                   required
                   class="w-full"
                 />
@@ -111,6 +112,7 @@
                   :type="showPassword ? 'text' : 'password'"
                   placeholder="Password"
                   size="lg"
+                  autocomplete="current-password"
                   required
                   class="w-full"
                 >

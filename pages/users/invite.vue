@@ -80,6 +80,13 @@ const success = ref('')
 const tempPassword = ref('')
 const loading = ref(false)
 
+// Clear error when user changes email
+watch(() => form.value.email, () => {
+  if (error.value) {
+    error.value = ''
+  }
+})
+
 const roleOptions = [
   { label: 'Admin', value: 'admin' },
   { label: 'Staff', value: 'staff' },
@@ -115,7 +122,14 @@ const handleInvite = async () => {
       error.value = response.error?.message || 'Failed to send invitation'
     }
   } catch (err: any) {
-    error.value = err.message || 'Failed to send invitation'
+    // Handle API error responses
+    if (err.data?.error?.message) {
+      error.value = err.data.error.message
+    } else if (err.message) {
+      error.value = err.message
+    } else {
+      error.value = 'Failed to send invitation'
+    }
   } finally {
     loading.value = false
   }

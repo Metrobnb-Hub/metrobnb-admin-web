@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import type { JournalEntryResponse } from '~/types/generated-api'
+import type { JournalEntry } from '~/composables/api'
 
 const props = defineProps<{
   partnerId?: string

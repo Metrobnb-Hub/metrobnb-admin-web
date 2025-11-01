@@ -170,6 +170,7 @@ definePageMeta({
 })
 
 const { user, organization } = useAuth()
+const { notifySuccess, notifyError } = useNotify()
 
 
 
@@ -212,10 +213,9 @@ const updateProfile = async () => {
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     // Show success message
-    // TODO: Add toast notification
-    alert('Profile updated successfully')
+    notifySuccess('Profile updated successfully')
   } catch (error) {
-    alert('Failed to update profile')
+    notifyError('Failed to update profile')
   } finally {
     updatingProfile.value = false
   }
@@ -223,7 +223,7 @@ const updateProfile = async () => {
 
 const handleChangePassword = async () => {
   if (!passwordsMatch.value) {
-    alert('Passwords do not match')
+    notifyError('Passwords do not match')
     return
   }
   
@@ -233,7 +233,7 @@ const handleChangePassword = async () => {
     const { changePassword } = useAuth()
     await changePassword(passwordForm.value)
     
-    alert('Password changed successfully')
+    notifySuccess('Password changed successfully')
     // Clear form
     passwordForm.value = {
       current_password: '',
@@ -241,7 +241,7 @@ const handleChangePassword = async () => {
       confirm_password: ''
     }
   } catch (error) {
-    alert('Failed to change password')
+    notifyError('Failed to change password')
   } finally {
     changingPassword.value = false
   }

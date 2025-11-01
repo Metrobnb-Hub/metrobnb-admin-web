@@ -9,9 +9,11 @@ export interface Service {
 export interface Partner {
   id: string
   name: string
-  share_percentage: number
-  services: Service[]
   email?: string
+  phone?: string
+  org_share_percentage: number
+  partner_code: string
+  services: Service[]
   created_at: string
   updated_at: string
 }

@@ -82,7 +82,7 @@
             </div>
             <div>
               <h4 class="font-medium text-gray-900 dark:text-white">{{ partner.name }}</h4>
-              <p class="text-sm text-gray-500">{{ partner.share_percentage || partner.sharePercentage }}% share • {{ partner.unitCount }} units</p>
+              <p class="text-sm text-gray-500">{{ partner.org_share_percentage || partner.orgSharePercentage }}% share • {{ partner.unitCount }} units</p>
             </div>
           </div>
           <div class="text-right">
@@ -218,7 +218,7 @@ const revenueByPartner = computed(() => {
     id: partner.partner_id,
     name: partner.partner_name,
     revenue: parseFloat(partner.revenue),
-    sharePercentage: partner.metrobnb_share_percentage,
+    orgSharePercentage: partner.metrobnb_share_percentage,
     outstanding: parseFloat(partner.actual_invoice),
     unitCount: Math.floor(Math.random() * 5) + 1 // Mock unit count
   }))

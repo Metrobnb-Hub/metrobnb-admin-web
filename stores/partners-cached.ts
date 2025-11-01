@@ -1,5 +1,5 @@
 // Updated partner store with smart caching
-import type { PartnerResponse } from '~/types/generated-api'
+import type { Partner } from '~/types/api'
 
 export const useCachedPartnerStore = defineStore('cachedPartners', () => {
   const partners = ref<PartnerResponse[]>([])

@@ -9,7 +9,7 @@
         <UIcon name="i-heroicons-exclamation-triangle" class="mx-auto h-12 w-12 text-red-400 mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Invoice Not Found</h3>
         <p class="text-gray-600 dark:text-gray-400 mb-6">{{ error }}</p>
-        <UButton to="/accounting/invoices" color="primary">Back to Invoices</UButton>
+        <UButton to="/dashboard" color="primary">Back to Dashboard</UButton>
       </div>
     </UCard>
   </div>
@@ -123,9 +123,14 @@
               <div class="font-medium text-sm">{{ invoiceData.period }}</div>
             </div>
             <div class="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
-              <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Net Due:</span>
-              <div class="font-bold text-lg" :class="invoiceData.summary?.net_due > 0 ? 'text-red-600 dark:text-red-400' : 'text-metrobnb-600 dark:text-metrobnb-400'">
-                ₱{{ formatAmount(invoiceData.summary?.net_due || 0) }}
+              <span class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Amount Due:
+              </span>
+              <div class="font-bold text-lg" 
+                   :class="invoiceData.summary?.net_due?.toString().startsWith('-') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'"
+                   :style="invoiceData.summary?.net_due?.toString().startsWith('-') ? 'color: red !important;' : 'color: green !important;'">
+                ₱{{ parseFloat(invoiceData.summary?.net_due || 0).toLocaleString() }}
+                <small class="text-xs block">{{ invoiceData.summary?.net_due }}</small>
               </div>
             </div>
           </div>
@@ -145,9 +150,13 @@
               <div class="font-medium">{{ invoiceData.period }}</div>
             </div>
             <div>
-              <span class="text-gray-600 dark:text-gray-400">Net Due:</span>
-              <div class="font-bold text-lg" :class="invoiceData.summary?.net_due > 0 ? 'text-red-600 dark:text-red-400' : 'text-metrobnb-600 dark:text-metrobnb-400'">
-                ₱{{ formatAmount(invoiceData.summary?.net_due || 0) }}
+              <span class="text-gray-600 dark:text-gray-400">
+                Amount Due:
+              </span>
+              <div class="font-bold text-lg" 
+                   :class="(invoiceData.summary?.net_due || 0) < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'"
+                   :style="(invoiceData.summary?.net_due || 0) < 0 ? 'color: red !important;' : 'color: green !important;'">
+                ₱{{ parseFloat(invoiceData.summary?.net_due || 0).toLocaleString() }}
               </div>
             </div>
           </div>
@@ -155,7 +164,7 @@
       </UCard>
     </div>
     
-    <PartnerInvoice :invoice="invoiceData" />
+    <PartnerInvoice :invoice="invoiceData" :org-name="orgName" />
     
     <!-- Settlement Modal -->
     <UModal v-model="showSettleModal">
@@ -214,10 +223,13 @@
 
 <script setup lang="ts">
 const route = useRoute()
-const { user } = useAuth()
+const { user, organization } = useAuth()
 const { getInvoiceById, refreshInvoice, approveInvoice, rejectInvoice, finalizeInvoice, sendInvoice: sendInvoiceAPI, settleInvoice } = useApi()
 const { notifyError, notifySuccess } = useNotify()
+const { confirm } = useConfirm()
 const { getInvoiceActions, getStatusText, getStatusColor, validateTransition } = useInvoiceWorkflow()
+
+const orgName = computed(() => organization.value?.name || 'Organization')
 
 const invoiceData = ref(null)
 const isLoading = ref(true)
@@ -249,14 +261,14 @@ const loadInvoice = async () => {
       invoice_number: invoice.invoice_number || 'Draft Invoice',
       partnerName: invoice.partner_name || 'Unknown Partner',
       period: invoice.period || 'Unknown Period',
-      sharePercentage: parseFloat(invoice.share_percentage) || 0,
+      orgSharePercentage: parseFloat(invoice.org_share_percentage) || 0,
       rejection_notes: invoice.rejection_notes,
       rejected_at: invoice.rejected_at,
       summary: {
         total_gross_earnings: parseFloat(invoice.summary?.total_gross_earnings || 0),
-        metrobnb_share: parseFloat(invoice.summary?.metrobnb_share || 0),
+        org_share: parseFloat(invoice.summary?.org_share || 0),
         total_expenses: parseFloat(invoice.summary?.total_expenses || 0),
-        total_received_by_metrobnb: parseFloat(invoice.summary?.total_received_by_metrobnb || 0),
+        total_received_by_org: parseFloat(invoice.summary?.total_received_by_org || 0),
         net_journal_entries: parseFloat(invoice.summary?.net_journal_entries || 0),
         net_due: parseFloat(invoice.summary?.net_due || 0)
       },
@@ -308,7 +320,7 @@ const handleAction = async (action: any) => {
   
   // Show confirmation if required
   if (action.requiresConfirmation) {
-    const confirmed = confirm(action.confirmationMessage || `Are you sure you want to ${action.label.toLowerCase()}?`)
+    const confirmed = await confirm(action.confirmationMessage || `Are you sure you want to ${action.label.toLowerCase()}?`)
     if (!confirmed) return
   }
   

@@ -185,8 +185,8 @@ const allNavigationGroups = [
     name: 'Development',
     roles: ['admin', 'owner'], // Added 'owner'
     items: [
-      { name: 'Mock Demo', href: '/mock-demo', icon: 'i-heroicons-beaker', roles: ['admin', 'owner'] },
-      { name: 'Refresh Data', href: '/admin/refresh-data', icon: 'i-heroicons-arrow-path', roles: ['admin', 'owner'] },
+
+
     ]
   }
 ]

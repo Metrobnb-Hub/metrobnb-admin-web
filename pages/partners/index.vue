@@ -42,7 +42,7 @@
           <div class="flex justify-between items-start">
             <h3 class="font-semibold text-gray-900 dark:text-white">{{ partner.name }}</h3>
             <span class="text-sm font-medium text-blue-600 dark:text-blue-400">
-              {{ partner.share_percentage || partner.sharePercentage || 'N/A' }}%
+              {{ formatPercentage(partner.org_share_percentage || partner.orgSharePercentage) }}
             </span>
           </div>
           
@@ -112,6 +112,13 @@ const getUnitCount = (partnerId: string) => {
   return units ? units.length : 0
 }
 
+const formatPercentage = (value: number | null | undefined) => {
+  if (value === null || value === undefined || isNaN(Number(value))) {
+    return 'N/A'
+  }
+  return `${value}%`
+}
+
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A'
   try {
@@ -150,8 +157,8 @@ const filteredPartners = computed(() => {
         bVal = b.name || ''
         break
       case 'share':
-        aVal = a.share_percentage || a.sharePercentage || 0
-        bVal = b.share_percentage || b.sharePercentage || 0
+        aVal = a.org_share_percentage || a.orgSharePercentage || 0
+        bVal = b.org_share_percentage || b.orgSharePercentage || 0
         break
       case 'created':
         aVal = new Date(a.created_at || a.createdAt || 0)

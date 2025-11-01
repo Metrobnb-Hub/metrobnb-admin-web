@@ -214,7 +214,7 @@ const onSubmit = async () => {
     const invoiceData = {
       partnerName: invoice.partner_name,
       period: invoice.period,
-      sharePercentage: invoice.share_percentage,
+      orgSharePercentage: invoice.org_share_percentage,
       bookings: invoice.bookings.map(booking => ({
         date: booking.date,
         endDate: booking.end_date,
@@ -249,7 +249,7 @@ const onSubmit = async () => {
     
     // Refresh invoices list if on invoices page
     const route = useRoute()
-    if (route.path === '/invoices') {
+    if (route.path === '/accounting/invoices') {
       // Trigger refresh of invoices list
       await refreshCookie('invoices-refresh', Date.now().toString())
     }
@@ -258,7 +258,7 @@ const onSubmit = async () => {
     notifySuccess(`Invoice generated: ${invoice.invoice_number}`)
     
     // Optional: Navigate only if user clicks "View Invoice" button
-    // navigateTo(`/invoices/${invoice.id}`)
+    // navigateTo(`/accounting/invoices/${invoice.id}`)
     
   } catch (error) {
     const { notifyError } = useNotify()

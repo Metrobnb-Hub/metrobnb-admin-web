@@ -592,11 +592,16 @@ const getPartnerName = (expense: any) => {
   }
   
   // Then check by partner_id in partners array
-  if (expense?.partner_id && Array.isArray(partners.value)) {
+  if (expense?.partner_id && Array.isArray(partners.value) && partners.value.length > 0) {
     const partner = partners.value.find(p => p && p.id === expense.partner_id)
     if (partner?.name) {
       return partner.name
     }
+  }
+  
+  // Return loading state if partners haven't loaded yet
+  if (!Array.isArray(partners.value) || partners.value.length === 0) {
+    return 'Loading...'
   }
   
   return 'Unknown Partner'
@@ -609,11 +614,16 @@ const getUnitName = (expense: any) => {
   }
   
   // Then check by unit_id in units array
-  if (expense?.unit_id && Array.isArray(units.value)) {
+  if (expense?.unit_id && Array.isArray(units.value) && units.value.length > 0) {
     const unit = units.value.find(u => u && u.id === expense.unit_id)
     if (unit?.name) {
       return unit.name
     }
+  }
+  
+  // Return loading state if units haven't loaded yet
+  if (!Array.isArray(units.value) || units.value.length === 0) {
+    return 'Loading...'
   }
   
   return 'No Unit'
@@ -927,7 +937,12 @@ const bulkDelete = async () => {
   
   if (selectedExpenses.value.length === 0) return
   
-  const confirmed = confirm(`Are you sure you want to delete ${selectedExpenses.value.length} expenses? This action cannot be undone.`)
+  const { confirm } = useConfirm()
+  const confirmed = await confirm(`Are you sure you want to delete ${selectedExpenses.value.length} expenses? This action cannot be undone.`, {
+    title: 'Delete Expenses',
+    confirmText: 'Delete',
+    confirmColor: 'red'
+  })
   if (!confirmed) return
   
   try {
@@ -945,12 +960,12 @@ const bulkDelete = async () => {
 
 onMounted(async () => {
   try {
-    await Promise.all([
-      loadPartners(),
-      loadUnits(),
-      loadExpensesData()
-    ])
+    // Load partners and units first, then expenses
+    await loadPartners()
+    await loadUnits()
+    await loadExpensesData()
   } catch (error) {
+    console.error('Error loading data:', error)
   }
 })
 </script>

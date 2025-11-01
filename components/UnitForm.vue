@@ -19,6 +19,7 @@
               type="text"
               required
               placeholder="e.g., Downtown Loft A"
+              :disabled="readonly"
             />
           </div>
           
@@ -31,7 +32,7 @@
               :options="partnerOptions"
               placeholder="Select Partner"
               required
-              :disabled="!canChangePartner"
+              :disabled="!canChangePartner || readonly"
             />
           </div>
         </div>
@@ -163,8 +164,8 @@
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
         <h4 class="text-md font-semibold mb-4 text-gray-900 dark:text-white">Pricing</h4>
         
-        <div class="grid grid-cols-3 gap-4">
-          <div>
+        <div class="grid grid-cols-4 gap-4">
+          <div class="col-span-2">
             <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Base Price (per night)</label>
             <UInput
               v-model.number="form.base_price"
@@ -172,6 +173,17 @@
               min="0"
               step="0.01"
               placeholder="100.00"
+              :disabled="readonly"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Currency</label>
+            <USelect
+              v-model="form.currency"
+              :options="currencyOptions"
+              placeholder="PHP"
+              :disabled="readonly"
             />
           </div>
           
@@ -326,10 +338,11 @@
           @click="$emit('close')"
           variant="ghost"
         >
-          Cancel
+          {{ readonly ? 'Close' : 'Cancel' }}
         </UButton>
         
         <UButton
+          v-if="!readonly"
           type="submit"
           :loading="saving"
           color="primary"
@@ -343,11 +356,11 @@
 
 <script setup lang="ts">
 import type { Unit } from '~/types/api'
-import type { UnitCreate, UnitUpdate } from '~/types/generated-api'
 
 const props = defineProps<{
   unit?: Unit | null
   preselectedPartner?: string
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -356,8 +369,8 @@ const emit = defineEmits<{
 }>()
 
 const { user } = useAuth()
-// Use the new typed API client
-const typedApi = useTypedApi()
+const { notifyError } = useNotify()
+const { createUnit, updateUnit, getPartners } = useApi()
 
 const isEdit = computed(() => !!props.unit)
 const saving = ref(false)
@@ -373,6 +386,7 @@ const form = ref({
   building: '',
   landmarks: [] as string[],
   base_price: 0,
+  currency: 'PHP',
   extra_guest_fee: 0,
   cleaning_fee: 0,
   amenities: [] as string[],
@@ -431,6 +445,13 @@ const statusOptions = [
   { label: 'Maintenance', value: 'maintenance' }
 ]
 
+const currencyOptions = [
+  { label: 'PHP', value: 'PHP' },
+  { label: 'USD', value: 'USD' },
+  { label: 'EUR', value: 'EUR' },
+  { label: 'SGD', value: 'SGD' }
+]
+
 const canChangePartner = computed(() => {
   // If preselected partner, don't allow change unless admin/manager
   if (props.preselectedPartner && !isEdit.value) {
@@ -450,7 +471,7 @@ watch(amenitiesText, (value) => {
 
 const loadPartners = async () => {
   try {
-    const response = await typedApi.getPartners()
+    const response = await getPartners()
     console.log('Partners response:', response)
     // Extract data from nested response structure
     const partnersData = response?.data || response || []
@@ -469,16 +490,16 @@ const handleSubmit = async () => {
     let response
     
     if (isEdit.value && props.unit) {
-      response = await typedApi.updateUnit(props.unit.id, form.value)
+      response = await updateUnit(props.unit.id, form.value)
     } else {
-      response = await typedApi.createUnit(form.value)
+      response = await createUnit(form.value)
     }
     
     if (response) {
       emit('saved')
     }
   } catch (error) {
-    alert('Failed to save unit')
+    notifyError('Failed to save unit')
   } finally {
     saving.value = false
   }

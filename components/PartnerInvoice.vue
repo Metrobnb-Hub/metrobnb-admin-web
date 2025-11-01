@@ -4,13 +4,13 @@
     <div class="border-b-2 border-gray-200 pb-6 mb-8">
       <div class="flex justify-between items-start">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2 print:text-gray-900">MetroBNB Partner Invoice</h1>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2 print:text-gray-900">{{ orgName }} Partner Invoice</h1>
           <p class="text-lg text-gray-600 dark:text-gray-300 print:text-gray-600">Partner: <span class="font-semibold">{{ invoice.partnerName }}</span></p>
           <p class="text-lg text-gray-600 dark:text-gray-300 print:text-gray-600">Period: <span class="font-semibold">{{ invoice.period }}</span></p>
         </div>
         <div class="text-right">
           <p class="text-sm text-gray-500 dark:text-gray-400 print:text-gray-500">Generated: {{ new Date().toLocaleDateString() }}</p>
-          <p class="text-sm text-gray-500 dark:text-gray-400 print:text-gray-500">MetroBNB Share: {{ invoice.sharePercentage }}%</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 print:text-gray-500">{{ orgName }} Share: {{ invoice.orgSharePercentage }}%</p>
         </div>
       </div>
     </div>
@@ -20,7 +20,7 @@
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 print:text-gray-900">📊 Booking Summary</h2>
       
       <!-- No Bookings Message -->
-      <div v-if="!partnerBookings.length && !metrobnbBookings.length" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+      <div v-if="!partnerBookings.length && !orgBookings.length" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
         <div class="flex items-center">
           <UIcon name="i-heroicons-information-circle" class="h-5 w-5 text-yellow-600 dark:text-yellow-400 mr-2" />
           <p class="text-sm text-yellow-700 dark:text-yellow-300">
@@ -76,9 +76,9 @@
 
       </div>
       
-      <!-- Payments Received by MetroBNB -->
-      <div v-if="metrobnbBookings.length">
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3 print:text-gray-900">🏦 Payments Received by MetroBNB (To be deducted)</h3>
+      <!-- Payments Received by Organization -->
+      <div v-if="orgBookings.length">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3 print:text-gray-900">🏦 Payments Received by {{ orgName }} (To be deducted)</h3>
         <div class="overflow-x-auto">
           <table class="w-full border-collapse border border-gray-300 dark:border-gray-600 print:border-gray-300">
             <thead>
@@ -93,7 +93,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="booking in sortedMetroBNBBookings" :key="booking.date + booking.guestName">
+              <tr v-for="booking in sortedOrgBookings" :key="booking.date + booking.guestName">
                 <td class="border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900 w-32">{{ formatDateRange(booking.date, booking.endDate) }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.guestName }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 print:border-gray-300 print:text-gray-900">{{ booking.unitName }}</td>
@@ -104,17 +104,17 @@
               </tr>
             </tbody>
             <tfoot class="bg-blue-50 dark:bg-blue-900 print:bg-blue-50">
-              <tr v-for="(breakdown, source) in metrobnbBreakdownBySource" :key="source">
+              <tr v-for="(breakdown, source) in orgBreakdownBySource" :key="source">
                 <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">{{ source }} Base:</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-semibold text-right text-gray-700 dark:text-gray-300 print:border-gray-300 print:text-gray-700">₱{{ breakdown.base.toLocaleString() }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-semibold text-right text-gray-700 dark:text-gray-300 print:border-gray-300 print:text-gray-700">₱{{ breakdown.addons.toLocaleString() }}</td>
                 <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-semibold text-right text-gray-700 dark:text-gray-300 print:border-gray-300 print:text-gray-700">₱{{ breakdown.total.toLocaleString() }}</td>
               </tr>
               <tr>
-                <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">MetroBNB Total:</td>
-                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-blue-700 dark:text-blue-400 print:border-gray-300 print:text-blue-700">₱{{ metrobnbBaseTotal.toLocaleString() }}</td>
-                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-blue-700 dark:text-blue-400 print:border-gray-300 print:text-blue-700">₱{{ metrobnbAddonsTotal.toLocaleString() }}</td>
-                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-blue-700 dark:text-blue-400 print:border-gray-300 print:text-blue-700">₱{{ totalReceivedByMetroBNB.toLocaleString() }}</td>
+                <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">{{ orgName }} Total:</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-blue-700 dark:text-blue-400 print:border-gray-300 print:text-blue-700">₱{{ orgBaseTotal.toLocaleString() }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-blue-700 dark:text-blue-400 print:border-gray-300 print:text-blue-700">₱{{ orgAddonsTotal.toLocaleString() }}</td>
+                <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-blue-700 dark:text-blue-400 print:border-gray-300 print:text-blue-700">₱{{ totalReceivedByOrg.toLocaleString() }}</td>
               </tr>
             </tfoot>
           </table>
@@ -235,7 +235,7 @@
           </tbody>
           <tfoot class="bg-gray-50 dark:bg-gray-800 print:bg-gray-50">
             <tr>
-              <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Total MetroBNB Expenses:</td>
+              <td colspan="4" class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">Total {{ orgName }} Expenses:</td>
               <td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-bold text-right text-gray-900 dark:text-white print:border-gray-300 print:text-gray-900">₱{{ totalExpenses.toLocaleString() }}</td>
             </tr>
           </tfoot>
@@ -255,11 +255,11 @@
             <td class="py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:text-gray-900">₱{{ totalGrossEarnings.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-gray-200 dark:border-gray-600">
-            <td class="py-2 text-sm font-medium text-gray-900 dark:text-gray-100 print:text-gray-900">MetroBNB Share ({{ invoice.sharePercentage }}%)</td>
-            <td class="py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:text-gray-900">+₱{{ metroBNBShare.toLocaleString() }}</td>
+            <td class="py-2 text-sm font-medium text-gray-900 dark:text-gray-100 print:text-gray-900">{{ orgName }} Share ({{ invoice.orgSharePercentage }}%)</td>
+            <td class="py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:text-gray-900">+₱{{ orgShare.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-gray-200 dark:border-gray-600">
-            <td class="py-2 text-sm font-medium text-gray-900 dark:text-gray-100 print:text-gray-900">MetroBNB Expenses</td>
+            <td class="py-2 text-sm font-medium text-gray-900 dark:text-gray-100 print:text-gray-900">{{ orgName }} Expenses</td>
             <td class="py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:text-gray-900">+₱{{ totalExpenses.toLocaleString() }}</td>
           </tr>
           <tr v-if="invoice.journalEntries && invoice.journalEntries.length" class="border-b border-gray-200 dark:border-gray-600">
@@ -267,26 +267,36 @@
             <td class="py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:text-gray-900">{{ netJournalEntries >= 0 ? '-' : '+' }}₱{{ Math.abs(netJournalEntries).toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-gray-200 dark:border-gray-600">
-            <td class="py-2 text-sm font-medium text-gray-900 dark:text-gray-100 print:text-gray-900">Less: Payments Received by MetroBNB</td>
-            <td class="py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:text-gray-900">-₱{{ totalReceivedByMetroBNB.toLocaleString() }}</td>
+            <td class="py-2 text-sm font-medium text-gray-900 dark:text-gray-100 print:text-gray-900">Less: Payments Received by {{ orgName }}</td>
+            <td class="py-2 text-sm text-right text-gray-900 dark:text-gray-100 print:text-gray-900">-₱{{ totalReceivedByOrg.toLocaleString() }}</td>
           </tr>
           <tr class="border-t-2 border-gray-400">
             <td class="py-3 text-lg font-bold text-gray-900 dark:text-white print:text-gray-900">
-              {{ netDue >= 0 ? 'Amount Due to MetroBNB' : 'Amount Due to Partner' }}
+              Amount Due
             </td>
-            <td class="py-3 text-lg font-bold text-right print:text-gray-900" :class="netDue >= 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
-              ₱{{ Math.abs(netDue).toLocaleString() }}
+            <td class="py-3 text-lg font-bold text-right print:text-gray-900" :class="netDue < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'">
+              ₱{{ netDue.toLocaleString() }}
             </td>
           </tr>
         </tbody>
       </table>
+      
+      <!-- Partner Note when org owes money -->
+      <div v-if="netDue < 0 && isPartner" class="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+        <div class="flex items-start">
+          <UIcon name="i-heroicons-check-circle" class="h-5 w-5 text-green-600 dark:text-green-400 mr-2 mt-0.5 flex-shrink-0" />
+          <p class="text-sm text-green-700 dark:text-green-300">
+            <strong>Good news!</strong> {{ orgName }} owes you ₱{{ Math.abs(netDue).toLocaleString() }}. No payment is required from you.
+          </p>
+        </div>
+      </div>
     </div>
 
     <!-- Print & Download Buttons -->
     <div class="mt-8 text-center print:hidden">
       <div class="space-y-2">
         <p class="text-sm text-gray-600 dark:text-gray-400">
-          {{ (partnerBookings?.length || 0) + (metrobnbBookings?.length || 0) }} bookings, {{ invoice?.expenses?.length || 0 }} expenses
+          {{ (partnerBookings?.length || 0) + (orgBookings?.length || 0) }} bookings, {{ invoice?.expenses?.length || 0 }} expenses
         </p>
         <div class="flex justify-center">
           <UButton @click="printInvoice" color="primary" size="lg">
@@ -309,7 +319,7 @@ interface Booking {
   baseAmount: number
   addons: number
   total: number
-  paymentReceivedBy: 'metrobnb' | 'partner'
+  paymentReceivedBy: 'org' | 'partner'
   actualAmountReceived: number
   bookingStatus?: 'confirmed' | 'canceled' | 'refunded'
 }
@@ -334,7 +344,7 @@ interface JournalEntry {
 interface PartnerInvoice {
   partnerName: string
   period: string
-  sharePercentage: number
+  orgSharePercentage: number
   bookings: Booking[]
   expenses: Expense[]
   journalEntries?: JournalEntry[]
@@ -342,15 +352,20 @@ interface PartnerInvoice {
 
 interface Props {
   invoice?: PartnerInvoice
+  orgName?: string
 }
 
 const props = defineProps<Props>()
+const { organization, user } = useAuth()
+
+const orgName = computed(() => props.orgName || organization.value?.name || 'Organization')
+const isPartner = computed(() => user.value?.role === 'partner')
 
 // Use prop data - no fallback to mock data
 const invoice: PartnerInvoice = props.invoice || {
   partnerName: 'No Data',
   period: 'No Data',
-  sharePercentage: 0,
+  orgSharePercentage: 0,
   bookings: [],
   expenses: [],
   journalEntries: []
@@ -373,8 +388,8 @@ const partnerBookings = computed(() =>
   confirmedBookings.value.filter(booking => booking.paymentReceivedBy === 'partner')
 )
 
-const metrobnbBookings = computed(() => 
-  confirmedBookings.value.filter(booking => booking.paymentReceivedBy === 'metrobnb')
+const orgBookings = computed(() => 
+  confirmedBookings.value.filter(booking => booking.paymentReceivedBy === 'org')
 )
 
 const totalGrossEarnings = computed(() => {
@@ -392,11 +407,11 @@ const partnerPaymentsTotal = computed(() =>
   partnerBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
 )
 
-const totalReceivedByMetroBNB = computed(() => {
-  if (invoice?.summary?.total_received_by_metrobnb !== undefined) {
-    return parseFloat(invoice.summary.total_received_by_metrobnb)
+const totalReceivedByOrg = computed(() => {
+  if (invoice?.summary?.total_received_by_org !== undefined) {
+    return parseFloat(invoice.summary.total_received_by_org)
   }
-  return metrobnbBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
+  return orgBookings.value.reduce((sum, booking) => sum + booking.actualAmountReceived, 0)
 })
 
 const totalExpenses = computed(() => {
@@ -406,11 +421,11 @@ const totalExpenses = computed(() => {
   return invoice?.expenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0
 })
 
-const metroBNBShare = computed(() => {
-  if (invoice?.summary?.metrobnb_share !== undefined) {
-    return parseFloat(invoice.summary.metrobnb_share)
+const orgShare = computed(() => {
+  if (invoice?.summary?.org_share !== undefined) {
+    return parseFloat(invoice.summary.org_share)
   }
-  return Math.round(totalGrossEarnings.value * (invoice.sharePercentage / 100))
+  return Math.round(totalGrossEarnings.value * (invoice.orgSharePercentage / 100))
 })
 
 const netDue = computed(() => {
@@ -419,7 +434,7 @@ const netDue = computed(() => {
     return parseFloat(invoice.summary.net_due)
   }
   // Fallback calculation
-  return metroBNBShare.value + totalExpenses.value - netJournalEntries.value - totalReceivedByMetroBNB.value
+  return orgShare.value + totalExpenses.value - netJournalEntries.value - totalReceivedByOrg.value
 })
 
 const { formatDate, formatDateShort } = useDateFormat()
@@ -436,8 +451,8 @@ const sortedPartnerBookings = computed(() =>
   [...partnerBookings.value].sort((a, b) => new Date(a.date) - new Date(b.date))
 )
 
-const sortedMetroBNBBookings = computed(() => 
-  [...metrobnbBookings.value].sort((a, b) => new Date(a.date) - new Date(b.date))
+const sortedOrgBookings = computed(() => 
+  [...orgBookings.value].sort((a, b) => new Date(a.date) - new Date(b.date))
 )
 
 const sortedExpenses = computed(() => 
@@ -472,9 +487,9 @@ const partnerBreakdownBySource = computed(() => {
   return breakdown
 })
 
-const metrobnbBreakdownBySource = computed(() => {
+const orgBreakdownBySource = computed(() => {
   const breakdown: Record<string, {base: number, addons: number, total: number}> = {}
-  metrobnbBookings.value.forEach(booking => {
+  orgBookings.value.forEach(booking => {
     if (!breakdown[booking.source]) {
       breakdown[booking.source] = { base: 0, addons: 0, total: 0 }
     }
@@ -494,12 +509,12 @@ const partnerAddonsTotal = computed(() =>
   partnerBookings.value.reduce((sum, booking) => sum + booking.addons, 0)
 )
 
-const metrobnbBaseTotal = computed(() => 
-  metrobnbBookings.value.reduce((sum, booking) => sum + booking.baseAmount, 0)
+const orgBaseTotal = computed(() => 
+  orgBookings.value.reduce((sum, booking) => sum + booking.baseAmount, 0)
 )
 
-const metrobnbAddonsTotal = computed(() => 
-  metrobnbBookings.value.reduce((sum, booking) => sum + booking.addons, 0)
+const orgAddonsTotal = computed(() => 
+  orgBookings.value.reduce((sum, booking) => sum + booking.addons, 0)
 )
 
 const printInvoice = () => {
@@ -508,7 +523,7 @@ const printInvoice = () => {
 
 const downloadInvoice = () => {
   // Get unique unit names from bookings
-  const allBookings = [...partnerBookings.value, ...metrobnbBookings.value];
+  const allBookings = [...partnerBookings.value, ...orgBookings.value];
   const unitNames = [...new Set(allBookings.map(b => b.unitName))].filter(Boolean);
   
   // Create filename: partner_name-unit_name(s)-month

@@ -6,15 +6,15 @@ export default defineNuxtRouteMiddleware((to) => {
   const rolePermissions = {
     admin: ['*'], // Admin can access everything
     manager: [
-      '/dashboard', '/analytics', '/accounting', '/expenses', '/invoices', 
+      '/dashboard', '/analytics', '/accounting', '/expenses', '/accounting/invoices', 
       '/journal-entries', '/partners', '/admin/units'
     ],
     staff: [
-      '/dashboard', '/accounting/bookings', '/expenses', '/invoices', 
+      '/dashboard', '/accounting/bookings', '/expenses', '/accounting/invoices', 
       '/analytics/own-units'
     ],
     partner: [
-      '/dashboard', '/accounting/bookings', '/expenses', '/invoices'
+      '/dashboard', '/accounting/bookings', '/expenses', '/accounting/invoices'
     ]
   }
   

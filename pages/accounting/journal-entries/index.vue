@@ -219,7 +219,12 @@ const getActions = (entry: JournalEntry) => [
 ]
 
 const deleteEntry = async (entry: JournalEntry) => {
-  if (confirm(`Are you sure you want to delete this ${entry.type} entry?`)) {
+  const { confirm } = useConfirm()
+  if (await confirm(`Are you sure you want to delete this ${entry.type} entry?`, {
+    title: 'Delete Entry',
+    confirmText: 'Delete',
+    confirmColor: 'red'
+  })) {
     try {
       await deleteJournalEntry(entry.id)
       await loadData()

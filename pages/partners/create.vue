@@ -14,8 +14,8 @@
           <UInput v-model="form.email" type="email" placeholder="contact@partner.com" />
         </UFormGroup>
         
-        <UFormGroup label="Share Percentage" name="sharePercentage">
-          <UInput v-model="form.sharePercentage" type="number" min="0" max="100" placeholder="15" />
+        <UFormGroup label="Share Percentage" name="orgSharePercentage">
+          <UInput v-model="form.orgSharePercentage" type="number" min="0" max="100" placeholder="15" />
         </UFormGroup>
         
         <UFormGroup label="Services" name="services">
@@ -51,11 +51,11 @@ const selectedServices = ref<string[]>([])
 const form = ref({
   name: '',
   email: '',
-  sharePercentage: 0
+  orgSharePercentage: 0
 })
 
 const handleSubmit = async () => {
-  if (!form.value.name || !form.value.sharePercentage) {
+  if (!form.value.name || !form.value.orgSharePercentage) {
     notifyError('Please fill in all required fields')
     return
   }
@@ -65,9 +65,12 @@ const handleSubmit = async () => {
     await createPartner({
       name: form.value.name,
       email: form.value.email,
-      sharePercentage: form.value.sharePercentage,
+      org_share_percentage: form.value.orgSharePercentage,
       serviceIds: selectedServices.value
     })
+    
+    // Reload partners list to show the new partner
+    await loadPartners()
     
     notifySuccess('Partner added successfully')
     router.push('/partners')

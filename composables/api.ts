@@ -306,6 +306,13 @@ export const useApi = () => {
         body: JSON.stringify(expenseData)
       })
     },
+
+    updateExpenseOCR: async (expenseId: string, ocrData: any) => {
+      return await apiClient<any>(`/api/expenses/${expenseId}/ocr-results`, {
+        method: 'PATCH',
+        body: JSON.stringify(ocrData)
+      })
+    },
     
     createExpense: async (expense: Omit<Expense, 'id' | 'created_at' | 'updated_at'>): Promise<Expense> => {
       return await apiClient<Expense>('/api/expenses', {
@@ -323,6 +330,45 @@ export const useApi = () => {
     
     deleteExpense: async (id: string): Promise<void> => {
       await apiClient<void>(`/api/expenses/${id}`, { method: 'DELETE' })
+    },
+
+    // Bulk operations
+    bulkUpdateExpenses: async (updates: Array<{ id: string; [key: string]: any }>): Promise<any> => {
+      return await apiClient<any>('/api/expenses/bulk-update', {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      })
+    },
+
+    bulkMarkExpensesPaid: async (expenseIds: string[], paidDate?: string): Promise<any> => {
+      const params = new URLSearchParams()
+      if (paidDate) params.append('paid_date', paidDate)
+      
+      return await apiClient<any>(`/api/expenses/bulk-mark-paid${params.toString() ? `?${params.toString()}` : ''}`, {
+        method: 'PATCH',
+        body: JSON.stringify(expenseIds)
+      })
+    },
+
+    bulkAssignPartner: async (expenseIds: string[], partnerId: string): Promise<any> => {
+      return await apiClient<any>(`/api/expenses/bulk-assign-partner?partner_id=${partnerId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(expenseIds)
+      })
+    },
+
+    bulkSetBillable: async (expenseIds: string[], billable: boolean): Promise<any> => {
+      return await apiClient<any>(`/api/expenses/bulk-set-billable?billable=${billable}`, {
+        method: 'PATCH',
+        body: JSON.stringify(expenseIds)
+      })
+    },
+
+    bulkDeleteExpenses: async (expenseIds: string[]): Promise<any> => {
+      return await apiClient<any>('/api/expenses/bulk-delete', {
+        method: 'DELETE',
+        body: JSON.stringify(expenseIds)
+      })
     },
     
     // Analytics
@@ -440,6 +486,10 @@ export const useApi = () => {
         method: 'PUT',
         body: JSON.stringify(data)
       })
+    },
+
+    regenerateInvoice: async (invoiceId: string) => {
+      return await apiClient<any>(`/api/invoices/${invoiceId}/regenerate`, { method: 'POST' })
     },
     
     // Journal Entries
@@ -582,6 +632,28 @@ export const useApi = () => {
     
     deleteUser: async (userId: string) => {
       return await apiClient<any>(`/api/users/${userId}`, { method: 'DELETE' })
+    },
+
+    // Reports
+    getEarningsSummary: async (startDate: string, endDate: string, organizationId?: string) => {
+      const params = new URLSearchParams({ start_date: startDate, end_date: endDate })
+      if (organizationId) params.append('organization_id', organizationId)
+      
+      return await apiClient<any>(`/api/reports/earnings-summary?${params.toString()}`)
+    },
+
+    getCurrentMonthEarnings: async (organizationId?: string) => {
+      const params = new URLSearchParams()
+      if (organizationId) params.append('organization_id', organizationId)
+      
+      return await apiClient<any>(`/api/reports/earnings-summary/current-month${params.toString() ? `?${params.toString()}` : ''}`)
+    },
+
+    getLastMonthEarnings: async (organizationId?: string) => {
+      const params = new URLSearchParams()
+      if (organizationId) params.append('organization_id', organizationId)
+      
+      return await apiClient<any>(`/api/reports/earnings-summary/last-month${params.toString() ? `?${params.toString()}` : ''}`)
     },
     
     // Helpers

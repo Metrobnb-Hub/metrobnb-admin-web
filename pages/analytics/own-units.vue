@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Own Units Analytics</h1>
-        <p class="text-gray-600 dark:text-gray-400">Performance analytics for MetroBNB's directly owned units</p>
+        <p class="text-gray-600 dark:text-gray-400">Performance analytics for {{ orgName }}'s directly owned units</p>
       </div>
       <UButton to="/analytics" variant="ghost">
         <UIcon name="i-heroicons-arrow-left" class="mr-2" />
@@ -109,7 +109,7 @@
           </div>
           <div class="text-right">
             <p class="font-semibold text-metrobnb-600 dark:text-metrobnb-400">₱{{ parseFloat(booking.total_amount).toLocaleString() }}</p>
-            <p class="text-xs text-gray-500">100% to MetroBNB</p>
+            <p class="text-xs text-gray-500">100% to {{ orgName }}</p>
           </div>
         </div>
         
@@ -124,15 +124,18 @@
 <script setup lang="ts">
 const { partners, units, loadPartners, loadUnits } = useDataManager()
 const { getDashboardMetrics } = useApi()
+const { organization } = useAuth()
+
+const orgName = computed(() => organization.value?.name || 'Organization')
 
 const dashboardData = ref(null)
 
-// Filter own units (units without partner_id or partner_id is MetroBNB)
+// Filter own units (units without partner_id or partner_id is organization)
 const ownUnits = computed(() => {
   if (!Array.isArray(units.value)) return []
   
   // Mock data for now - replace with real logic to identify own units
-  return units.value.filter(unit => !unit.partner_id || unit.partner_id === 'metrobnb').map(unit => ({
+  return units.value.filter(unit => !unit.partner_id || unit.partner_id === 'org').map(unit => ({
     ...unit,
     revenue: Math.floor(Math.random() * 50000) + 20000, // Mock revenue
     bookings: Math.floor(Math.random() * 15) + 5 // Mock bookings
@@ -148,7 +151,7 @@ const avgRevenuePerUnit = computed(() => ownUnitsCount.value > 0 ? Math.floor(ow
 const ownUnitBookings = computed(() => {
   const bookings = dashboardData.value?.recent_bookings || []
   // Mock filter - replace with real logic
-  return bookings.filter(booking => !booking.partner_name || booking.partner_name === 'MetroBNB')
+  return bookings.filter(booking => !booking.partner_name || booking.partner_name === orgName.value)
 })
 
 const formatDate = (dateString: string) => {

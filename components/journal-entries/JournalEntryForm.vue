@@ -94,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import type { JournalEntryCreate } from '~/types/generated-api'
+import type { CreateJournalEntryRequest } from '~/composables/api'
 
 const emit = defineEmits<{
   created: [entry: any]

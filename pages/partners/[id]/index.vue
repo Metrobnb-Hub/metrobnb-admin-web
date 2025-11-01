@@ -40,7 +40,7 @@
           
           <div>
             <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Share Percentage</label>
-            <p class="text-gray-900 dark:text-white">{{ partner.share_percentage }}%</p>
+            <p class="text-gray-900 dark:text-white">{{ partner.org_share_percentage }}%</p>
           </div>
           
           <div v-if="partner.services && partner.services.length">
@@ -273,7 +273,7 @@ const getPartnerStatusDescription = (status: string) => {
 }
 
 const viewInvoice = (invoice: any) => {
-  navigateTo(`/invoices/${invoice.id}`)
+  navigateTo(`/accounting/invoices/${invoice.id}`)
 }
 
 const formatDate = (dateString: string) => {
@@ -338,7 +338,12 @@ const updateUnit = async () => {
 }
 
 const deleteUnitConfirm = async (unit: any) => {
-  if (confirm(`Are you sure you want to delete "${unit.name}"?`)) {
+  const { confirm } = useConfirm()
+  if (await confirm(`Are you sure you want to delete "${unit.name}"?`, {
+    title: 'Delete Unit',
+    confirmText: 'Delete',
+    confirmColor: 'red'
+  })) {
     try {
       await apiDeleteUnit(unit.id)
       await loadUnits()

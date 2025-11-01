@@ -255,6 +255,7 @@ const removeReceipt = () => {
 
 const onSubmit = async () => {
   const { notifySuccess, notifyError } = useNotify()
+  const { updateExpense } = useApi()
   
   loading.value = true
   try {

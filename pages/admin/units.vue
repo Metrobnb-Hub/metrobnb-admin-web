@@ -31,7 +31,7 @@
       
       <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Revenue/Unit</h3>
-        <p class="text-2xl font-bold text-purple-600">${{ formatCurrency(summary.avg_revenue_per_unit) }}</p>
+        <p class="text-2xl font-bold text-purple-600">{{ formatCurrency(summary.avg_revenue_per_unit) }}</p>
       </div>
     </div>
 
@@ -100,7 +100,7 @@
           
           <div class="flex justify-between items-center mb-3">
             <span class="text-lg font-bold text-gray-900 dark:text-white">
-              ${{ unit.base_price || 0 }}/night
+              {{ formatCurrency(unit.base_price || 0, unit.currency) }}/night
             </span>
             <span class="text-sm text-gray-500 dark:text-gray-400">
               {{ getPartnerName(unit.partner_id) }}
@@ -143,6 +143,7 @@
     <UModal v-model="showCreateModal">
       <UnitForm
         :unit="editingUnit"
+        :readonly="isViewMode"
         @close="closeModal"
         @saved="handleUnitSaved"
       />
@@ -165,6 +166,7 @@ const { extractData } = useApiResponse()
 const loading = ref(false)
 const showCreateModal = ref(false)
 const editingUnit = ref<Unit | null>(null)
+const isViewMode = ref(false)
 
 const units = ref<Unit[]>([])
 const partners = ref([])
@@ -222,8 +224,10 @@ const getStatusClass = (status: string) => {
   return classes[status] || classes.active
 }
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US').format(amount)
+const formatCurrency = (amount: number, currency = 'PHP') => {
+  const symbols = { PHP: '₱', USD: '$', EUR: '€', SGD: 'S$' }
+  const symbol = symbols[currency] || '₱'
+  return `${symbol}${new Intl.NumberFormat('en-US').format(amount || 0)}`
 }
 
 const applyFilters = () => {
@@ -264,17 +268,24 @@ const loadPartners = async () => {
 }
 
 const viewUnit = (unitId: string) => {
-  navigateTo(`/admin/units/${unitId}`)
+  const unit = units.value.find(u => u.id === unitId)
+  if (unit) {
+    editingUnit.value = unit
+    isViewMode.value = true
+    showCreateModal.value = true
+  }
 }
 
 const editUnit = (unit: Unit) => {
   editingUnit.value = unit
+  isViewMode.value = false
   showCreateModal.value = true
 }
 
 const closeModal = () => {
   showCreateModal.value = false
   editingUnit.value = null
+  isViewMode.value = false
 }
 
 const handleUnitSaved = () => {

@@ -50,7 +50,7 @@
                 ₱{{ parseFloat(latestInvoice.total_amount).toLocaleString() }}
               </p>
             </div>
-            <UButton :to="`/invoices/${latestInvoice.id}`" color="primary" :class="parseFloat(latestInvoice.total_amount || 0) === 0 ? 'ml-auto' : ''">
+            <UButton :to="`/accounting/invoices/${latestInvoice.id}`" color="primary" :class="parseFloat(latestInvoice.total_amount || 0) === 0 ? 'ml-auto' : ''">
               <UIcon name="i-heroicons-eye" class="mr-2" />
               Check it out
             </UButton>
@@ -72,7 +72,7 @@
 
       <!-- Quick Links -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <UCard class="p-4 hover:shadow-md transition-shadow cursor-pointer" @click="$router.push('/invoices')">
+        <UCard class="p-4 hover:shadow-md transition-shadow cursor-pointer" @click="$router.push('/accounting/invoices')">
           <div class="flex items-center">
             <div class="p-3 bg-metrobnb-100 dark:bg-metrobnb-900 rounded-lg">
               <UIcon name="i-heroicons-document-text" class="h-6 w-6 text-metrobnb-600 dark:text-metrobnb-400" />
