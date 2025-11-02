@@ -622,7 +622,7 @@ export const useApi = () => {
       role: string
       accessible_partners?: string[]
     }) => {
-      return await apiClient<any>('/api/users', {
+      return await apiClient<any>('/api/users/', {
         method: 'POST',
         body: JSON.stringify(userData)
       })

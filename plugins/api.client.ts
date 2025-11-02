@@ -96,6 +96,7 @@ export default defineNuxtPlugin(() => {
   const api = $fetch.create({
     baseURL: config.public.apiBaseUrl,
     timeout: 30000,
+    redirect: 'follow', // Automatically follow redirects (307, 308, etc.)
 
     onRequest({ request, options }) {
       const tokenCookie = useCookie('auth_token')
@@ -154,7 +155,20 @@ export default defineNuxtPlugin(() => {
       const errorData = response?._data || {}
       const errorCode = errorData.error?.code
       const errorMessage = errorData.error?.message
-      
+
+      // Handle 307 Temporary Redirect (should be handled automatically, but log for debugging)
+      if (response.status === 307 || response.status === 308) {
+        if (process.dev) {
+          console.warn('[API] Redirect detected:', {
+            status: response.status,
+            location: response.headers.get('location'),
+            originalUrl: options.url
+          })
+        }
+        // $fetch should handle this automatically with redirect: 'follow'
+        return
+      }
+
       // Handle 403 Forbidden - Permission denied
       if (response.status === 403) {
         if (process.client) {
