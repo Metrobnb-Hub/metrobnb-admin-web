@@ -48,7 +48,7 @@ export default defineNuxtConfig({
     keepalive: true // Enable keepalive globally
   },
   $fetch: {
-    timeout: 30000,
+    timeout: 90000, // 90 seconds to handle Render cold starts
     retry: 1,
     retryDelay: 1000
   }

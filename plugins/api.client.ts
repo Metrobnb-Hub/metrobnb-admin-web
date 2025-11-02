@@ -95,7 +95,7 @@ export default defineNuxtPlugin(() => {
 
   const api = $fetch.create({
     baseURL: config.public.apiBaseUrl,
-    timeout: 30000,
+    timeout: 90000, // 90 seconds to handle Render cold starts (typically 30-60s)
     redirect: 'follow', // Automatically follow redirects (307, 308, etc.)
 
     onRequest({ request, options }) {
@@ -107,6 +107,27 @@ export default defineNuxtPlugin(() => {
 
       // Log request
       logApiRequest(options.method as string || 'GET', request as string, options)
+
+      // Show toast for potentially slow requests on Render
+      if (process.client && config.public.apiBaseUrl?.includes('render.com')) {
+        const lastRequestTime = (globalThis as any)._lastApiRequestTime || 0
+        const timeSinceLastRequest = Date.now() - lastRequestTime
+
+        // If it's been more than 10 minutes since last request, warn about cold start
+        if (timeSinceLastRequest > 10 * 60 * 1000) {
+          const toast = useToast()
+          toast.add({
+            title: 'Loading...',
+            description: 'First request may take 30-60 seconds as the server wakes up.',
+            color: 'blue',
+            timeout: 3000,
+            icon: 'i-heroicons-clock'
+          })
+        }
+
+        // Track last request time
+        ;(globalThis as any)._lastApiRequestTime = Date.now()
+      }
 
       if (tokenCookie.value) {
         options.headers = {
@@ -292,10 +313,16 @@ export default defineNuxtPlugin(() => {
     const requestPromise = retryWithBackoff(
       () => api<T>(url, options),
       {
-        maxRetries: 3,
+        maxRetries: 2, // Reduced from 3 to avoid excessive wait time
         initialDelay: 1000,
-        maxDelay: 10000,
+        maxDelay: 5000, // Reduced from 10s to 5s
         shouldRetry: (error: any, attempt: number) => {
+          // Don't retry on timeout errors (likely Render cold start, let first request complete)
+          const isTimeout = error.message?.includes('timeout') || error.name === 'TimeoutError'
+          if (isTimeout) {
+            return false // Don't retry timeouts - increase timeout instead
+          }
+
           // Don't retry on 4xx client errors (except 408 timeout and 429 rate limit)
           if (error.response?.status >= 400 && error.response?.status < 500) {
             return error.response.status === 408 || error.response.status === 429
