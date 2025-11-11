@@ -136,23 +136,7 @@
                 {{ loading ? 'Signing in...' : 'Sign in' }}
               </UButton>
             </form>
-            
-            <!-- Test Credentials Helper (Dev Mode Only) -->
-            <div v-if="config.public.devMode" class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Test Credentials (Dev Mode):</p>
-              <div class="space-y-1 text-xs">
-                <button @click="fillCredentials('admin')" class="block w-full text-left hover:bg-gray-100 dark:hover:bg-gray-600 p-1 rounded">
-                  <strong>Admin:</strong> {{ config.public.testCredentials.admin.email }} / {{ config.public.testCredentials.admin.password }}
-                </button>
-                <button @click="fillCredentials('staff')" class="block w-full text-left hover:bg-gray-100 dark:hover:bg-gray-600 p-1 rounded">
-                  <strong>Staff:</strong> {{ config.public.testCredentials.staff.email }} / {{ config.public.testCredentials.staff.password }}
-                </button>
-                <button @click="fillCredentials('partner')" class="block w-full text-left hover:bg-gray-100 dark:hover:bg-gray-600 p-1 rounded">
-                  <strong>Partner:</strong> {{ config.public.testCredentials.partner.email }} / {{ config.public.testCredentials.partner.password }}
-                </button>
-              </div>
-            </div>
-            
+
             <div class="mt-6 text-center space-y-3">
               <p class="text-gray-600 dark:text-gray-400 text-sm">
                 <NuxtLink to="/reset-password" class="font-semibold text-metrobnb-600 hover:text-metrobnb-500">
@@ -183,8 +167,8 @@ const router = useRouter()
 const config = useRuntimeConfig()
 
 const credentials = ref({
-  email: config.public.devMode ? config.public.testCredentials.admin.email : '',
-  password: config.public.devMode ? config.public.testCredentials.admin.password : ''
+  email: '',
+  password: ''
 })
 
 const error = ref('')
@@ -202,13 +186,6 @@ onMounted(() => {
     }, 5000)
   }
 })
-
-const fillCredentials = (role: string) => {
-  const testCreds = config.public.testCredentials[role as keyof typeof config.public.testCredentials]
-  if (testCreds) {
-    credentials.value = { email: testCreds.email, password: testCreds.password }
-  }
-}
 
 const handleLogin = async () => {
   error.value = ''

@@ -24,17 +24,20 @@
           </UFormGroup>
           
           <UFormGroup label="Services">
-            <USelectMenu 
+            <USelectMenu
               v-if="serviceOptions.length > 0"
-              v-model="form.service_ids" 
+              v-model="selectedServices"
               :options="serviceOptions"
+              by="value"
               multiple
               placeholder="Select services"
-              by="value"
             >
               <template #label>
-                <span v-if="selectedServiceNames.length === 0">Select services</span>
-                <span v-else>{{ selectedServiceNames.join(', ') }}</span>
+                <span v-if="!selectedServices || selectedServices.length === 0">Select services</span>
+                <span v-else>{{ selectedServices.map(s => s?.label || s).join(', ') }}</span>
+              </template>
+              <template #option="{ option }">
+                {{ option.label }}
               </template>
             </USelectMenu>
             <div v-else class="text-sm text-gray-500">Loading services...</div>
@@ -85,44 +88,62 @@ const serviceOptions = computed(() => {
   return options
 })
 
-// Computed to get selected service names
-const selectedServiceNames = computed(() => {
-  if (!form.service_ids.length || !services.value.length) return []
-  return form.service_ids.map(id => {
-    const service = services.value.find(s => s.id === id)
-    return service ? service.name : id
-  })
+// Computed to handle selected services as objects for USelectMenu
+const selectedServices = computed({
+  get: () => {
+    if (!form.service_ids.length || !serviceOptions.value.length) {
+      console.log('No service IDs or options available')
+      return []
+    }
+    const selected = form.service_ids
+      .map(id => serviceOptions.value.find(opt => opt.value === id))
+      .filter(Boolean) // Remove any undefined values
+    console.log('Selected services computed:', selected)
+    return selected
+  },
+  set: (selected) => {
+    console.log('Setting selected services:', selected)
+    form.service_ids = selected.map(s => s.value)
+    console.log('Form service_ids updated to:', form.service_ids)
+  }
 })
+
+// Full partner data with services
+const fullPartner = ref(null)
 
 // Single watcher for both modal opening and partner data
 watch([() => props.modelValue, () => props.partner], async ([isOpen, partner]) => {
-  if (isOpen) {
+  if (isOpen && partner) {
     // Load services first
     if (services.value.length === 0) {
       await loadServices()
     }
-    
-    // Then fill form data
-    if (partner) {
-      form.name = partner.name || ''
-      form.email = partner.email || ''
-      form.org_share_percentage = partner.org_share_percentage || 0
-      form.phone = partner.phone || ''
-      
+
+    // Fetch full partner details including services
+    await loadFullPartner(partner.id)
+
+    // Then fill form data from full partner details
+    if (fullPartner.value) {
+      form.name = fullPartner.value.name || ''
+      form.email = fullPartner.value.email || ''
+      form.org_share_percentage = fullPartner.value.org_share_percentage || 0
+      form.phone = fullPartner.value.phone || ''
+
       // Extract service IDs from partner.services array
       let serviceIds = []
-      if (Array.isArray(partner.services)) {
+      if (Array.isArray(fullPartner.value.services)) {
         // API returns services as array of objects with id
-        serviceIds = partner.services.map(s => s.id)
-      } else if (Array.isArray(partner.service_ids)) {
+        serviceIds = fullPartner.value.services.map(s => s.id)
+      } else if (Array.isArray(fullPartner.value.service_ids)) {
         // Fallback to service_ids if available
-        serviceIds = partner.service_ids
+        serviceIds = fullPartner.value.service_ids
       }
-      
-      console.log('Partner services:', partner.services)
+
+      console.log('Full partner loaded:', fullPartner.value)
+      console.log('Partner services:', fullPartner.value.services)
       console.log('Extracted service IDs:', serviceIds)
       console.log('Available services:', services.value)
-      
+
       form.service_ids = serviceIds
       console.log('Form service_ids set to:', form.service_ids)
     }
@@ -137,6 +158,18 @@ const loadServices = async () => {
   } catch (error) {
     console.error('Failed to load services:', error)
     services.value = []
+  }
+}
+
+const loadFullPartner = async (partnerId: string) => {
+  try {
+    const { getPartnerById } = useApi()
+    fullPartner.value = await getPartnerById(partnerId)
+    console.log('Full partner fetched:', fullPartner.value)
+  } catch (error) {
+    console.error('Failed to load full partner:', error)
+    // Fallback to props partner if API fails
+    fullPartner.value = props.partner
   }
 }
 
@@ -171,7 +204,7 @@ const updatePartner = async () => {
       email: form.email || undefined,
       phone: form.phone || undefined,
       org_share_percentage: form.org_share_percentage,
-      service_ids: form.service_ids.map(s => typeof s === 'string' ? s : s.value)
+      service_ids: form.service_ids // Already an array of IDs
     }
     
     await apiUpdatePartner(props.partner.id, payload)

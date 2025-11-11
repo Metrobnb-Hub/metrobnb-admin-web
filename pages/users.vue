@@ -309,7 +309,7 @@ definePageMeta({
 })
 
 const { user: currentUser } = useAuth()
-const { getPartners, getUserList, createUser, regeneratePassword, deleteUser } = useApi()
+const { getPartners, getUserList, createUser, updateUser, regeneratePassword, deleteUser } = useApi()
 const { extractData } = useApiResponse()
 
 const loading = ref(false)
@@ -425,7 +425,7 @@ const editUser = (user) => {
     email: user.email,
     role: user.role
   }
-  selectedPartners.value = user.accessible_partners || []
+  selectedPartners.value = user.accessible_partners?.map(p => p.id) || []
   showCreateModal.value = true
 }
 
@@ -438,9 +438,9 @@ const regeneratePasswordAction = async (user) => {
   })) {
     try {
       const response = await regeneratePassword(user.id)
-      
-      // Check if response has the data we need
-      if (response && (response.email || response.data?.email)) {
+
+      // Response may be unwrapped (direct data) or wrapped (with success/data)
+      if (response) {
         const responseData = response.data || response
         regeneratedPasswordData.value = {
           email: responseData.email,
@@ -448,10 +448,10 @@ const regeneratePasswordAction = async (user) => {
           requiresPasswordChange: responseData.requires_password_change || true
         }
         showPasswordModal.value = true
-        
+
         // Refresh user list to show updated status
         await loadUsers()
-        
+
         const { notifySuccess } = useNotify()
         notifySuccess(`Password regenerated for ${user.name}`)
       } else {
@@ -477,13 +477,11 @@ const deleteUserAction = async (user) => {
   })) {
     try {
       const response = await deleteUser(user.id)
-      if (response.success) {
-        const { notifySuccess } = useNotify()
-        notifySuccess(`User ${user.name} deleted successfully`)
-        await loadUsers()
-      } else {
-        throw new Error(response.message || 'Failed to delete user')
-      }
+      // Response may be unwrapped (void/empty) or wrapped (with success)
+      // If no error was thrown, consider it successful
+      const { notifySuccess } = useNotify()
+      notifySuccess(`User ${user.name} deleted successfully`)
+      await loadUsers()
     } catch (error) {
       const { notifyError } = useNotify()
       const errorMessage = error.message?.includes('admin/owner') 
@@ -590,8 +588,23 @@ const handleUserSubmit = async () => {
     }
     
     if (editingUser.value) {
-      // TODO: Implement user update when API is available
-      throw new Error('User update not implemented yet')
+      const response = await updateUser(editingUser.value.id, {
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        accessible_partners: selectedPartners.value
+      })
+
+      // Response may be unwrapped (just the user object) or wrapped (with success/data)
+      if (response) {
+        closeModal()
+        await loadUsers()
+
+        const { notifySuccess } = useNotify()
+        notifySuccess(`User ${userData.name} updated successfully`)
+      } else {
+        throw new Error('Invalid response format')
+      }
     } else {
       const response = await createUser({
         email: userData.email,
@@ -600,21 +613,21 @@ const handleUserSubmit = async () => {
         accessible_partners: selectedPartners.value
       })
       
-      // Check if response has the data we need (handle both wrapped and direct responses)
-      if (response && (response.email || response.data?.email || response.success)) {
+      // Response may be unwrapped (direct user object) or wrapped (with success/data)
+      if (response) {
         const responseData = response.data || response
-        
+
         // Show success modal with credentials
         createdUserData.value = {
           email: responseData.email,
           temporaryPassword: responseData.temporary_password,
           message: responseData.message || 'User must change password on first login.'
         }
-        
+
         closeModal()
         showSuccessModal.value = true
         await loadUsers()
-        
+
         const { notifySuccess } = useNotify()
         notifySuccess(`User ${responseData.email} created successfully`)
       } else {

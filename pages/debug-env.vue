@@ -27,12 +27,11 @@
         </div>
       </div>
       
-      <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded">
-        <h3 class="font-semibold mb-2">Test Credentials Available:</h3>
-        <div class="text-sm space-y-1">
-          <div>Admin Email: {{ config.public.testCredentials?.admin?.email || 'Not set' }}</div>
-          <div>Staff Email: {{ config.public.testCredentials?.staff?.email || 'Not set' }}</div>
-          <div>Partner Email: {{ config.public.testCredentials?.partner?.email || 'Not set' }}</div>
+      <div class="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+        <h3 class="font-semibold mb-2 text-yellow-800 dark:text-yellow-200">🔒 Security Notice:</h3>
+        <div class="text-sm text-yellow-700 dark:text-yellow-300">
+          Test credentials have been removed from public configuration for security reasons.
+          <div class="mt-2">They should never be exposed to browser JavaScript.</div>
         </div>
       </div>
       

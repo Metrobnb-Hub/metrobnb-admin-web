@@ -4,9 +4,9 @@
  * Automatically keeps Render API warm and provides diagnostics
  */
 
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig()
-  const { startWarmup } = useApiWarmup()
+  const { startWarmup, stopWarmup } = useApiWarmup()
 
   // Start API warmup to prevent cold starts
   if (config.public.apiBaseUrl?.includes('render.com')) {
@@ -15,6 +15,11 @@ export default defineNuxtPlugin(() => {
     if (process.dev) {
       console.log('🔥 API warmup started - Render cold starts prevention active')
     }
+
+    // Cleanup on app unmount
+    nuxtApp.hook('app:beforeUnmount', () => {
+      stopWarmup()
+    })
   }
 
   // Log helpful info in development

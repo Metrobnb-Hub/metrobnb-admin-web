@@ -1,4 +1,25 @@
-import type { Partner, Unit, Booking, Expense, BookingSource, Service, ApiFilters, PaginatedResponse } from '~/types/api'
+import type {
+  Partner,
+  Unit,
+  Booking,
+  Expense,
+  BookingSource,
+  Service,
+  ApiFilters,
+  PaginatedResponse,
+  BookingFilters,
+  ExpenseFilters,
+  CreateExpenseRequest,
+  UpdateExpenseRequest,
+  CreateBookingRequest,
+  UpdateBookingRequest,
+  CreatePartnerRequest,
+  UpdatePartnerRequest
+} from '~/types/api'
+import { apiClient } from './api/apiClient'
+import { usePartnerApi } from './api/usePartnerApi'
+import { useBookingApi } from './api/useBookingApi'
+import { useExpenseApi } from './api/useExpenseApi'
 
 export interface JournalEntry {
   id: string
@@ -27,76 +48,6 @@ export interface CreateJournalEntryRequest {
   created_by?: string
 }
 
-const apiClient = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
-  const nuxtApp = useNuxtApp()
-  const tokenCookie = useCookie('auth_token')
-
-  const url = endpoint
-
-  try {
-    const response = await nuxtApp.$api(url, {
-      ...options,
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        ...(tokenCookie.value && { 'Authorization': `Bearer ${tokenCookie.value}` }),
-        ...options.headers
-      }
-    })
-    
-    // Handle wrapped API responses - but preserve full structure for paginated endpoints and invoices
-    if (response && typeof response === 'object' && 'success' in response && 'data' in response) {
-      // For paginated responses (bookings, expenses, etc.), preserve full structure
-      if (response.data && typeof response.data === 'object' && ('items' in response.data || 'pagination' in response.data)) {
-        return response as T
-      }
-      // For invoice endpoints, preserve full response structure
-      if (endpoint.includes('/invoices/') && !endpoint.includes('/invoices?')) {
-        return response as T
-      }
-      // For simple array responses, extract data
-      return response.data as T
-    }
-    
-    return response as T
-  } catch (error: any) {
-    // Handle any error that might indicate session expiry
-    const tokenCookie = useCookie('auth_token')
-    const isNetworkError = error.message?.includes('fetch') || 
-                          error.name === 'TypeError' || 
-                          error.message?.includes('CORS') ||
-                          error.message?.includes('ERR_FAILED')
-    
-    if (tokenCookie.value && process.client && isNetworkError) {
-      const { handleSessionExpiry } = useSessionManager()
-      handleSessionExpiry()
-      return
-    }
-    
-    // For dashboard endpoint, return mock data to prevent UI breaks
-    if (endpoint.includes('dashboard')) {
-      return { 
-        success: false,
-        data: {
-          metrobnb_revenue: '0', 
-          partner_revenue: '0', 
-          metrobnb_expenses: '0', 
-          net_profit: '0', 
-          partner_count: 0, 
-          revenue_by_partner: [], 
-          expense_breakdown: [], 
-          monthly_trend: [], 
-          recent_bookings: [], 
-          recent_expenses: []
-        }
-      } as T
-    }
-    
-    // Re-throw the error for proper handling
-    throw error
-  }
-}
-
 export const useApi = () => {
   return {
     // Services
@@ -122,38 +73,8 @@ export const useApi = () => {
       await apiClient<void>(`/api/services/${id}`, { method: 'DELETE' })
     },
     
-    // Partners
-    getPartners: async (): Promise<Partner[]> => {
-      return await apiClient<Partner[]>('/api/partners')
-    },
-    
-    getPartnerById: async (id: string): Promise<Partner> => {
-      return await apiClient<Partner>(`/api/partners/${id}`)
-    },
-    
-    createPartner: async (partner: Omit<Partner, 'id' | 'created_at' | 'updated_at'> & { service_ids: string[] }): Promise<Partner> => {
-      const result = await apiClient<Partner>('/api/partners', {
-        method: 'POST',
-        body: JSON.stringify(partner)
-      })
-      const { invalidate } = useCache()
-      invalidate('/api/partners')
-      return result
-    },
-    
-    updatePartner: async (id: string, partner: Partial<Partner> & { service_ids?: string[] }): Promise<Partner> => {
-      const result = await apiClient<Partner>(`/api/partners/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(partner)
-      })
-      const { invalidate } = useCache()
-      invalidate('/api/partners')
-      return result
-    },
-    
-    deletePartner: async (id: string): Promise<void> => {
-      await apiClient<void>(`/api/partners/${id}`, { method: 'DELETE' })
-    },
+    // Partners - Now using usePartnerApi composable
+    ...usePartnerApi(),
     
     // Units
     getUnits: async (): Promise<Unit[]> => {
@@ -169,8 +90,8 @@ export const useApi = () => {
         method: 'POST',
         body: JSON.stringify(unit)
       })
-      const { invalidate } = useCache()
-      invalidate('/api/units')
+      const { invalidateCache } = useUnifiedCache()
+      invalidateCache('units')
       return result
     },
     
@@ -219,159 +140,11 @@ export const useApi = () => {
       }>>('/api/payment-methods')
     },
     
-    // Bookings
-    getBookings: async (filters: ApiFilters = {}): Promise<any> => {
-      const params = new URLSearchParams()
-      if (filters.partner_id) params.append('partner_id', filters.partner_id)
-      if (filters.unit_id) params.append('unit_id', filters.unit_id)
-      if (filters.month) params.append('month', filters.month)
-      if (filters.start_date) params.append('start_date', filters.start_date)
-      if (filters.end_date) params.append('end_date', filters.end_date)
-      if (filters.page) params.append('page', filters.page.toString())
-      if (filters.limit) params.append('limit', filters.limit.toString())
-      if (filters.search) params.append('search', filters.search)
-      if (filters.sort_by) params.append('sort_by', filters.sort_by)
-      if (filters.sort_order) params.append('sort_order', filters.sort_order)
-      if (filters.payment_status) params.append('payment_status', filters.payment_status)
-      if (filters.payment_received_by) params.append('payment_received_by', filters.payment_received_by)
-      if (filters.booking_source_id) params.append('booking_source_id', filters.booking_source_id)
-      if (filters.invoiced !== undefined) params.append('invoiced', filters.invoiced.toString())
-      
-      const query = params.toString()
-      return await apiClient<any>(`/api/bookings${query ? `?${query}` : ''}`)
-    },
+    // Bookings - Now using useBookingApi composable
+    ...useBookingApi(),
     
-    createBooking: async (booking: Omit<Booking, 'id' | 'created_at' | 'updated_at'>): Promise<Booking> => {
-      const result = await apiClient<Booking>('/api/bookings', {
-        method: 'POST',
-        body: JSON.stringify(booking)
-      })
-      const { invalidate } = useCache()
-      invalidate('/api/bookings')
-      invalidate('/api/analytics')
-      return result
-    },
-    
-    updateBooking: async (id: string, booking: Partial<Booking>): Promise<Booking> => {
-      return await apiClient<Booking>(`/api/bookings/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(booking)
-      })
-    },
-    
-    deleteBooking: async (id: string): Promise<void> => {
-      await apiClient<void>(`/api/bookings/${id}`, { method: 'DELETE' })
-    },
-    
-    // Expenses
-    getExpenses: async (filters: any = {}): Promise<any> => {
-      const params = new URLSearchParams()
-      if (filters.partner_id) params.append('partner_id', filters.partner_id)
-      if (filters.unit_id) params.append('unit_id', filters.unit_id)
-      if (filters.type) params.append('type', filters.type)
-      if (filters.status) params.append('status', filters.status)
-      if (filters.paid_by) params.append('paid_by', filters.paid_by)
-      if (filters.paid !== undefined) params.append('paid', filters.paid.toString())
-      if (filters.billable !== undefined) params.append('billable', filters.billable.toString())
-      if (filters.needs_review !== undefined) params.append('needs_review', filters.needs_review.toString())
-      if (filters.month) params.append('month', filters.month)
-      if (filters.date_from) params.append('date_from', filters.date_from)
-      if (filters.date_to) params.append('date_to', filters.date_to)
-      if (filters.amount_min) params.append('amount_min', filters.amount_min.toString())
-      if (filters.amount_max) params.append('amount_max', filters.amount_max.toString())
-      if (filters.search) params.append('search', filters.search)
-      if (filters.page) params.append('page', filters.page.toString())
-      if (filters.limit) params.append('limit', filters.limit.toString())
-      if (filters.sort_by) params.append('sort_by', filters.sort_by)
-      if (filters.sort_order) params.append('sort_order', filters.sort_order)
-      if (filters.start_date) params.append('date_from', filters.start_date)
-      if (filters.end_date) params.append('date_to', filters.end_date)
-      
-      const query = params.toString()
-      return await apiClient<any>(`/api/expenses${query ? `?${query}` : ''}`)
-    },
-    
-    getDraftExpenses: async () => {
-      return await apiClient<any>('/api/expenses/drafts')
-    },
-    
-    quickCaptureExpense: async (receiptData: any) => {
-      return await apiClient<any>('/api/expenses/quick-capture', {
-        method: 'POST',
-        body: JSON.stringify(receiptData)
-      })
-    },
-    
-    completeExpense: async (id: string, expenseData: any) => {
-      return await apiClient<any>(`/api/expenses/${id}/complete`, {
-        method: 'PATCH',
-        body: JSON.stringify(expenseData)
-      })
-    },
-
-    updateExpenseOCR: async (expenseId: string, ocrData: any) => {
-      return await apiClient<any>(`/api/expenses/${expenseId}/ocr-results`, {
-        method: 'PATCH',
-        body: JSON.stringify(ocrData)
-      })
-    },
-    
-    createExpense: async (expense: Omit<Expense, 'id' | 'created_at' | 'updated_at'>): Promise<Expense> => {
-      return await apiClient<Expense>('/api/expenses', {
-        method: 'POST',
-        body: JSON.stringify(expense)
-      })
-    },
-    
-    updateExpense: async (id: string, expense: Partial<Expense>): Promise<Expense> => {
-      return await apiClient<Expense>(`/api/expenses/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(expense)
-      })
-    },
-    
-    deleteExpense: async (id: string): Promise<void> => {
-      await apiClient<void>(`/api/expenses/${id}`, { method: 'DELETE' })
-    },
-
-    // Bulk operations
-    bulkUpdateExpenses: async (updates: Array<{ id: string; [key: string]: any }>): Promise<any> => {
-      return await apiClient<any>('/api/expenses/bulk-update', {
-        method: 'PATCH',
-        body: JSON.stringify(updates)
-      })
-    },
-
-    bulkMarkExpensesPaid: async (expenseIds: string[], paidDate?: string): Promise<any> => {
-      const params = new URLSearchParams()
-      if (paidDate) params.append('paid_date', paidDate)
-      
-      return await apiClient<any>(`/api/expenses/bulk-mark-paid${params.toString() ? `?${params.toString()}` : ''}`, {
-        method: 'PATCH',
-        body: JSON.stringify(expenseIds)
-      })
-    },
-
-    bulkAssignPartner: async (expenseIds: string[], partnerId: string): Promise<any> => {
-      return await apiClient<any>(`/api/expenses/bulk-assign-partner?partner_id=${partnerId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(expenseIds)
-      })
-    },
-
-    bulkSetBillable: async (expenseIds: string[], billable: boolean): Promise<any> => {
-      return await apiClient<any>(`/api/expenses/bulk-set-billable?billable=${billable}`, {
-        method: 'PATCH',
-        body: JSON.stringify(expenseIds)
-      })
-    },
-
-    bulkDeleteExpenses: async (expenseIds: string[]): Promise<any> => {
-      return await apiClient<any>('/api/expenses/bulk-delete', {
-        method: 'DELETE',
-        body: JSON.stringify(expenseIds)
-      })
-    },
+    // Expenses - Now using useExpenseApi composable
+    ...useExpenseApi(),
     
     // Analytics
     getPartnerEarnings: async (partnerId: string): Promise<number> => {
@@ -536,22 +309,6 @@ export const useApi = () => {
       await apiClient<void>(`/api/journal-entries/${id}`, { method: 'DELETE' })
     },
     
-    // Booking Stats
-    getBookingStats: async (filters: {
-      partner_id?: string
-      unit_id?: string
-      start_date?: string
-      end_date?: string
-    } = {}) => {
-      const params = new URLSearchParams()
-      if (filters.partner_id) params.append('partner_id', filters.partner_id)
-      if (filters.unit_id) params.append('unit_id', filters.unit_id)
-      if (filters.start_date) params.append('start_date', filters.start_date)
-      if (filters.end_date) params.append('end_date', filters.end_date)
-      
-      const query = params.toString()
-      return await apiClient<any>(`/api/bookings/stats/summary${query ? `?${query}` : ''}`)
-    },
     
     // Airbnb Import
     importAirbnbBookings: async (data: {
@@ -563,9 +320,8 @@ export const useApi = () => {
         method: 'POST',
         body: JSON.stringify(data)
       })
-      const { invalidate } = useCache()
-      invalidate('/api/bookings')
-      invalidate('/api/analytics')
+      const { invalidateCache } = useUnifiedCache()
+      invalidateCache() // Clear all cache since bookings affect multiple resources
       return result
     },
     
@@ -583,31 +339,6 @@ export const useApi = () => {
       }>('/api/files/upload', {
         method: 'POST',
         body: formData
-      })
-    },
-    
-    // Receipt Management
-    quickCaptureReceipt: async (data: {
-      receipt_url: string
-      receipt_public_id: string
-      notes?: string
-    }) => {
-      return await apiClient<any>('/api/expenses/quick-capture', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      })
-    },
-    
-    completeExpenseReceipt: async (expenseId: string, details: {
-      partner_id: string
-      unit_id: string
-      amount: string
-      type: string
-      paid_by?: string
-    }) => {
-      return await apiClient<any>(`/api/expenses/${expenseId}/complete`, {
-        method: 'PATCH',
-        body: JSON.stringify(details)
       })
     },
     
@@ -636,6 +367,19 @@ export const useApi = () => {
       return await apiClient<any>(`/api/users/${userId}`, { method: 'DELETE' })
     },
 
+    updateUser: async (userId: string, userData: {
+      name?: string
+      email?: string
+      role?: string
+      active?: boolean
+      accessible_partners?: string[]
+    }) => {
+      return await apiClient<any>(`/api/users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(userData)
+      })
+    },
+
     // Reports
     getEarningsSummary: async (startDate: string, endDate: string, organizationId?: string) => {
       const params = new URLSearchParams({ start_date: startDate, end_date: endDate })
@@ -657,13 +401,5 @@ export const useApi = () => {
       
       return await apiClient<any>(`/api/reports/earnings-summary/last-month${params.toString() ? `?${params.toString()}` : ''}`)
     },
-    
-    // Helpers
-    getBookingTotal: (booking: Booking): number => {
-      if (!booking) return 0
-      const baseAmount = parseFloat(booking.base_amount) || 0
-      const addonsTotal = booking.addons?.reduce((sum, addon) => sum + (addon.amount || 0), 0) || 0
-      return baseAmount + addonsTotal
-    }
   }
 }

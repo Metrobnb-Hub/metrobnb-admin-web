@@ -1,7 +1,8 @@
 /**
  * API Warmup - Keeps Render service awake
  *
- * Pings the API every 10 minutes to prevent cold starts
+ * Pings the API every X minutes to prevent cold starts
+ * Configurable via environment variables
  */
 
 export const useApiWarmup = () => {
@@ -10,11 +11,9 @@ export const useApiWarmup = () => {
 
   const pingApi = async () => {
     try {
-      // Use a lightweight endpoint for health check
-      // Note: /health endpoint doesn't have /api prefix
       await $fetch('/health', {
         baseURL: config.public.apiBaseUrl,
-        timeout: 5000,
+        timeout: config.public.warmupTimeout || 60000, // Default 60s for Render cold starts
         retry: 0
       })
 
@@ -22,23 +21,27 @@ export const useApiWarmup = () => {
         console.log('[API Warmup] Ping successful', new Date().toISOString())
       }
     } catch (error) {
-      if (process.dev) {
-        console.warn('[API Warmup] Ping failed', error)
+      // Silently fail - don't spam console with expected cold start timeouts
+      if (process.dev && !error.message?.includes('timeout')) {
+        console.warn('[API Warmup] Ping failed', error.message)
       }
     }
   }
 
   const startWarmup = () => {
-    if (warmupInterval) return
+    if (warmupInterval || !config.public.warmupEnabled) return
 
-    // Initial ping
-    pingApi()
+    const intervalMinutes = config.public.warmupInterval || 10
+    const initialDelay = config.public.warmupInitialDelay || 5000
 
-    // Ping every 10 minutes (Render spins down after 15 min of inactivity)
-    warmupInterval = setInterval(pingApi, 10 * 60 * 1000)
+    // Initial ping after delay
+    setTimeout(pingApi, initialDelay)
+
+    // Ping every X minutes
+    warmupInterval = setInterval(pingApi, intervalMinutes * 60 * 1000)
 
     if (process.dev) {
-      console.log('[API Warmup] Started - pinging every 10 minutes')
+      console.log(`[API Warmup] Started - pinging every ${intervalMinutes} minutes`)
     }
   }
 
@@ -51,12 +54,6 @@ export const useApiWarmup = () => {
         console.log('[API Warmup] Stopped')
       }
     }
-  }
-
-  // Auto-start on client
-  if (process.client) {
-    onMounted(() => startWarmup())
-    onUnmounted(() => stopWarmup())
   }
 
   return {

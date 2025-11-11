@@ -324,10 +324,11 @@
       />
     </UCard>
 
-    <!-- Edit Modal -->
-    <ExpensesEditExpenseModal 
-      v-model="showEditModal" 
-      :expense="selectedExpense" 
+    <!-- Edit Modal (Lazy Loaded) -->
+    <LazyExpensesEditExpenseModal
+      v-if="showEditModal"
+      v-model="showEditModal"
+      :expense="selectedExpense"
       @updated="handleUpdated"
     />
     

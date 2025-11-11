@@ -238,10 +238,11 @@
       />
     </UCard>
 
-    <!-- Edit Modal -->
-    <AccountingEditBookingModal 
-      v-model="showEditModal" 
-      :booking="selectedBooking" 
+    <!-- Edit Modal (Lazy Loaded - 456 lines) -->
+    <LazyAccountingEditBookingModal
+      v-if="showEditModal"
+      v-model="showEditModal"
+      :booking="selectedBooking"
       @updated="handleUpdated"
     />
     
